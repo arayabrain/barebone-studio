@@ -14,7 +14,7 @@ files/*
 Pipfile.lock
 *.egg-info
 .tox
-.snakemake
+.snakemake*
 .pytest_cache
 
 studio/test_data/output

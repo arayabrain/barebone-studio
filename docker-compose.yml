@@ -7,7 +7,9 @@ services:
       dockerfile: studio/config/docker/Dockerfile
     working_dir: /app
     volumes:
-      - ../optinist-docker-volumes/.snakemake/:/app/.snakemake
+      # TODO: temporary) commented out to used cached .snakemake.
+      # - ../optinist-docker-volumes/.snakemake/:/app/.snakemake
+
       - ../optinist-docker-volumes/logs/:/app/logs
       - ../optinist-docker-volumes/studio_data/:/app/studio_data
     ports:

@@ -29,6 +29,10 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install poetry
 RUN poetry install --no-root
 
+# TODO: temporary) copy .snakemake for caching.
+# * Place `.snakemake_for_docker/` manually in advance.
+COPY .snakemake_for_docker/ ./.snakemake
+
 # copy optinist files
 COPY frontend/build /app/frontend/build
 COPY studio /app/studio
