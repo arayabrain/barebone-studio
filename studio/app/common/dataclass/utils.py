@@ -1,6 +1,7 @@
 import copy
 
 import numpy as np
+from PIL import Image
 
 
 def create_images_list(data):
@@ -15,3 +16,14 @@ def create_images_list(data):
         images.append(_img.tolist())
 
     return images
+
+
+def save_thumbnail(plot_file):
+    try:
+        img = Image.open(plot_file)
+        img.thumbnail((100, 100))
+        img.save(plot_file.replace(".png", "_thumbnail.png"), "PNG")
+    except Exception as e:
+        print(f"An error occurred while processing the image: {e}")
+    finally:
+        img.close()
