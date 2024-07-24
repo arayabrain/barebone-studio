@@ -54,7 +54,7 @@ import {
 } from "store/slice/DisplayData/DisplayDataSelectors"
 import {
   selectingImageArea,
-  setImageItemClikedDataId,
+  setClickedRoiAndTimeSeries,
 } from "store/slice/VisualizeItem/VisualizeItemActions"
 import {
   selectImageItemShowticklabels,
@@ -77,6 +77,7 @@ import {
   selectImageItemAlpha,
   selectRoiItemOutputKeys,
   selectVisualizeItems,
+  selectClickedRoi,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
 import {
   incrementImageActiveIndex,
@@ -227,6 +228,7 @@ const ImagePlotChart = memo(function ImagePlotChart({
   const [startDragAddRoi, setStartDragAddRoi] = useState(false)
   const [action, setAction] = useState("")
   const [positionDrag, setChangeSize] = useState<PositionDrag | undefined>()
+  const clickedDataId = useSelector(selectClickedRoi(itemId))
 
   const outputKey: string | null = useSelector(selectRoiItemOutputKeys(itemId))
 
@@ -338,6 +340,12 @@ const ImagePlotChart = memo(function ImagePlotChart({
               return [offset, "#e134eb"]
             if (statusRoi.temp_add_roi.includes(i)) return [offset, "#3483eb"]
           }
+          if (clickedDataId !== null && i.toString() === clickedDataId) {
+            // eslint-disable-next-line no-console
+            console.log("#############\nImagePlot.tsx Change color")
+            return [offset, "#FF4500"] // Bright orange-red for clicked ROI
+          }
+
           return [offset, hex]
         }),
         zmin: 0,
@@ -360,6 +368,7 @@ const ImagePlotChart = memo(function ImagePlotChart({
       pointClick,
       action,
       statusRoi,
+      clickedDataId,
     ],
   )
 
@@ -455,22 +464,29 @@ const ImagePlotChart = memo(function ImagePlotChart({
   }
 
   const onChartClick = (event: PlotMouseEvent) => {
-    // use as unknown because original PlotDatum does not have z property
+        // use as unknown because original PlotDatum does not have z property
     const point: PlotDatum = event.points[0] as unknown as PlotDatum
-    if (point.curveNumber >= 1 && outputKey === "cell_roi") {
-      setSelectRoi({
-        x: Number(point.x),
-        y: Number(point.y),
-        z: Number(point.z),
-      })
-    }
     if (point.curveNumber >= 1 && point.z >= 0) {
-      dispatch(
-        setImageItemClikedDataId({
-          itemId,
-          clickedDataId: point.z.toString(),
-        }),
-      )
+      const newClickedDataId = point.z.toString()
+      // Handle merge/delete operations
+      if (outputKey === "cell_roi") {
+        setSelectRoi({
+          x: Number(point.x),
+          y: Number(point.y),
+          z: Number(point.z),
+        })
+      }
+
+      // Handle general ROI clicking
+      if (newClickedDataId === clickedDataId) {
+        dispatch(setClickedRoiAndTimeSeries({ itemId, clickedDataId: null }))
+        // eslint-disable-next-line no-console
+        console.log("#############\nImagePlot.tsx Clicked the same ROI, unselecting")
+      } else {
+        dispatch(setClickedRoiAndTimeSeries({ itemId, clickedDataId: newClickedDataId }))
+        // eslint-disable-next-line no-console
+        console.log("#############\nImagePlot.tsx Clicked a different ROI, selecting")
+      }
     }
   }
 

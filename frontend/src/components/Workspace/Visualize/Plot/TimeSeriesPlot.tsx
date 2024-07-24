@@ -41,7 +41,7 @@ import {
   selectVisualizeSaveFormat,
   selectImageItemRangeUnit,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
-import { setTimeSeriesItemDrawOrderList } from "store/slice/VisualizeItem/VisualizeItemSlice"
+import { setTimeSeriesItemDrawOrderList, setClickedData } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import { AppDispatch } from "store/store"
 
 export const TimeSeriesPlot = memo(function TimeSeriesPlot() {
@@ -281,11 +281,17 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
   }
 
   const onLegendClick = (event: LegendClickEvent) => {
-    const clickNumber = dataKeys[event.curveNumber]
+    // eslint-disable-next-line no-console
+    console.log("#############\n In TimeSeriesPlot.tsx onLegendClick 0")
+    const clickedSeriesId = dataKeys[event.curveNumber]
 
-    const newDrawOrderList = drawOrderList.includes(clickNumber)
-      ? drawOrderList.filter((value) => value !== clickNumber)
-      : [...drawOrderList, clickNumber]
+    dispatch(setClickedData({ itemId, clickedDataId: clickedSeriesId }))
+    // eslint-disable-next-line no-console
+    console.log("#############\n In TimeSeriesPlot.tsx onLegendClick 1")
+
+    const newDrawOrderList = drawOrderList.includes(clickedSeriesId)
+      ? drawOrderList.filter((value) => value !== clickedSeriesId)
+      : [...drawOrderList, clickedSeriesId]
 
     dispatch(
       setTimeSeriesItemDrawOrderList({
@@ -295,8 +301,10 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
     )
 
     // set DisplayNumbers
-    if (!drawOrderList.includes(clickNumber)) {
-      dispatch(getTimeSeriesDataById({ path, index: clickNumber }))
+    if (!drawOrderList.includes(clickedSeriesId)) {
+      dispatch(getTimeSeriesDataById({ path, index: clickedSeriesId }))
+      // eslint-disable-next-line no-console
+      console.log("#############\n In TimeSeriesPlot.tsx onLegendClick 4")
     }
 
     return false
