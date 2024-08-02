@@ -9,7 +9,7 @@ import { run, runByCurrentUid } from "store/slice/Pipeline/PipelineActions"
 import {
   deleteDisplayItem,
   selectingImageArea,
-  setClickedRoiAndTimeSeries ,
+  setImageItemClickedDataId,
   setNewDisplayDataPath,
 } from "store/slice/VisualizeItem/VisualizeItemActions"
 import {
@@ -919,7 +919,7 @@ export const visualaizeItemSlice = createSlice({
         }
         resetImageActiveIndexFn(state, { itemId })
       })
-      .addCase(setClickedRoiAndTimeSeries.fulfilled, (state, action) => {
+      .addCase(setImageItemClickedDataId.fulfilled, (state, action) => {
         const { itemId: imageItemId, clickedDataId } = action.meta.arg
         // Update clickedRois
         if (clickedDataId === state.clickedRois[imageItemId]) {

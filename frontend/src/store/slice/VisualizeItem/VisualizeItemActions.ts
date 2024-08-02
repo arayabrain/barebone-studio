@@ -12,12 +12,12 @@ import {
 } from "store/slice/VisualizeItem/VisualizeItemUtils"
 import { ThunkApiConfig } from "store/store"
 
-export const setClickedRoiAndTimeSeries = createAsyncThunk<
+export const setImageItemClickedDataId = createAsyncThunk<
   void,
   { itemId: number; clickedDataId: string | null },
   ThunkApiConfig
 >(
-  `${VISUALIZE_ITEM_SLICE_NAME}/setClickedRoiAndTimeSeries`,
+  `${VISUALIZE_ITEM_SLICE_NAME}/setImageItemClickedDataId`,
   ({ itemId, clickedDataId }, thunkAPI) => {
     // Update the clicked data id
     thunkAPI.dispatch(setClickedData({ itemId, clickedDataId }))
