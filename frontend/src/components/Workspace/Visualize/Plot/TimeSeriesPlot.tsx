@@ -10,6 +10,7 @@ import { LinearProgress, Typography } from "@mui/material"
 import { TimeSeriesData } from "api/outputs/Outputs"
 import { DisplayDataContext } from "components/Workspace/Visualize/DataContext"
 import {
+  clickRoi,
   getTimeSeriesDataById,
   getTimeSeriesInitData,
 } from "store/slice/DisplayData/DisplayDataActions"
@@ -297,6 +298,12 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
       setTimeSeriesItemDrawOrderList({
         itemId,
         drawOrderList: newDrawOrderList,
+      }),
+    )
+
+    dispatch(
+      clickRoi({
+        roiIndex: Number(clickNumber),
       }),
     )
 
