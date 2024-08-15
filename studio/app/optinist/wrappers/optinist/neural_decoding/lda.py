@@ -3,7 +3,7 @@ from studio.app.common.core.logger import AppLogger
 from studio.app.common.dataclass import BarData
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass import BehaviorData, FluoData, IscellData
-from studio.app.optinist.wrappers.optinist.utils import standard_norm
+from studio.app.optinist.wrappers.optinist.utils import param_check, standard_norm
 
 logger = AppLogger.get_logger()
 
@@ -27,13 +27,15 @@ def LDA(
     neural_data = neural_data.data
     behaviors_data = behaviors_data.data
 
+    IOparams = params["I/O"]
+
     # data should be time x component matrix
-    if params["transpose_x"]:
+    if IOparams["transpose_x"]:
         X = neural_data.transpose()
     else:
         X = neural_data
 
-    if params["transpose_y"]:
+    if IOparams["transpose_y"]:
         Y = behaviors_data.transpose()
     else:
         Y = behaviors_data
@@ -49,13 +51,17 @@ def LDA(
         ind = np.where(iscell > 0)[0]
         X = X[:, ind]
 
-    Y = Y[:, params["target_index"]].reshape(-1, 1)
+    Y = Y[:, IOparams["target_index"]].reshape(-1, 1)
 
     # preprocessing
-    tX = standard_norm(X, params["standard_x_mean"], params["standard_x_std"])
+    tX = standard_norm(X, IOparams["standard_x_mean"], IOparams["standard_x_std"])
+
+    params["cross_validation"] = param_check(params["cross_validation"])
 
     # cross validation of LDA model
-    skf = StratifiedKFold(**params["CV"])
+    skf = StratifiedKFold(**params["cross_validation"])
+
+    params["LDA"] = param_check(params["LDA"])
 
     score = []
     classifier = []

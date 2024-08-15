@@ -1,8 +1,12 @@
-transpose: False
 
+trigger_column: 1
+transpose: false
+trigger_type: 'cross'
+trigger_threshold: 0.5
+trigger_duration: [-10, 10]
 standard_mean: True
 standard_std: True
-
+feature_colums: [3,4]
 
 labels: 'tbc'
 #    int or string
@@ -42,17 +46,5 @@ n_iter: 0
 # int (default: 0)
 #    Number of iterations for randomized SVD solver (sklearn).
 
-trigger_column: 1
-
-trigger_type: 'down'
-
-trigger_threshold: 0
-
-trigger_duration: [-10, 10]
-
-feature_colums: [3,4]
-
-
 figure_components: [0,1]
-
 figure_features: ['t', 'b', 'c', 'tbc']

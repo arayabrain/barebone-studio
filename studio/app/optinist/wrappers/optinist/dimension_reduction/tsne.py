@@ -22,9 +22,10 @@ def TSNE(
     logger.info("start TSNE: %s", function_id)
 
     neural_data = neural_data.data
+    IOparams = params["I/O"]
 
     # data should be time x component matrix
-    if params["transpose"]:
+    if IOparams["transpose"]:
         X = neural_data.transpose()
     else:
         X = neural_data
@@ -35,7 +36,7 @@ def TSNE(
         X = X[:, ind]
 
     # preprocessing
-    tX = standard_norm(X, params["standard_mean"], params["standard_std"])
+    tX = standard_norm(X, IOparams["standard_mean"], IOparams["standard_std"])
 
     # calculate TSNE
     tsne = TSNE(**params["TSNE"])

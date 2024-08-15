@@ -2,6 +2,7 @@ from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.dataclass import ImageData
 from studio.app.optinist.dataclass import Suite2pData
+from studio.app.optinist.wrappers.optinist.utils import recursive_flatten_params
 
 logger = AppLogger.get_logger()
 
@@ -13,6 +14,10 @@ def suite2p_registration(
 
     function_id = ExptOutputPathIds(output_dir).function_id
     logger.info("start suite2p registration: %s", function_id)
+
+    flattened_params = {}
+    recursive_flatten_params(params, flattened_params)
+    params = flattened_params
 
     ops = ops.data
     refImg = ops["meanImg"]
