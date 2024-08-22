@@ -4,6 +4,7 @@ import { getTimeSeriesDataById } from "store/slice/DisplayData/DisplayDataAction
 import { selectRoiData } from "store/slice/DisplayData/DisplayDataSelectors"
 import { DATA_TYPE } from "store/slice/DisplayData/DisplayDataType"
 import { selectVisualizeItems } from "store/slice/VisualizeItem/VisualizeItemSelectors"
+import {setClickedData} from "store/slice/VisualizeItem/VisualizeItemSlice"
 import { VISUALIZE_ITEM_SLICE_NAME } from "store/slice/VisualizeItem/VisualizeItemType"
 import {
   isImageItem,
@@ -11,19 +12,25 @@ import {
 } from "store/slice/VisualizeItem/VisualizeItemUtils"
 import { ThunkApiConfig } from "store/store"
 
-export const setImageItemClikedDataId = createAsyncThunk<
+export const setImageItemClickedDataId = createAsyncThunk<
   void,
-  { itemId: number; clickedDataId: string },
+  { itemId: number; clickedDataId: string | null },
   ThunkApiConfig
 >(
-  `${VISUALIZE_ITEM_SLICE_NAME}/setImageItemClikedDataId`,
+  `${VISUALIZE_ITEM_SLICE_NAME}/setImageItemClickedDataId`,
   ({ itemId, clickedDataId }, thunkAPI) => {
+    // Update the clicked data id
+    thunkAPI.dispatch(setClickedData({ itemId, clickedDataId }))
+    // eslint-disable-next-line no-console
+    console.log("#############\nVisualizeItemActions.ts clickedDataId")
+    // Update the time series data if the clicked data is not included in the draw order list
     const items = selectVisualizeItems(thunkAPI.getState())
     Object.values(items).forEach((item) => {
       if (
         isTimeSeriesItem(item) &&
         item.filePath != null &&
         item.refImageItemId === itemId &&
+        clickedDataId &&
         !item.drawOrderList.includes(clickedDataId)
       ) {
         thunkAPI.dispatch(
@@ -31,7 +38,7 @@ export const setImageItemClikedDataId = createAsyncThunk<
         )
       }
     })
-  },
+  }
 )
 
 export const selectingImageArea = createAsyncThunk<

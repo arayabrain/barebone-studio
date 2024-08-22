@@ -608,3 +608,9 @@ export const selectImageItemRangeUnit =
       throw new Error("invalid VisualaizeItemType")
     }
   }
+
+  export const selectClickedRoi =
+  (itemId: number) => (state: RootState) =>
+    state.visualaizeItem.clickedRois[itemId] || null
+  // eslint-disable-next-line no-console
+  console.log("#############\nVisualizeItemSelectors.ts, selectClicledRoi")

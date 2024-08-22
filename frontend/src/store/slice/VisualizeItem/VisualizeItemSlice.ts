@@ -9,7 +9,7 @@ import { run, runByCurrentUid } from "store/slice/Pipeline/PipelineActions"
 import {
   deleteDisplayItem,
   selectingImageArea,
-  setImageItemClikedDataId,
+  setImageItemClickedDataId,
   setNewDisplayDataPath,
 } from "store/slice/VisualizeItem/VisualizeItemActions"
 import {
@@ -50,6 +50,7 @@ export const initialState: VisualaizeItem = {
   items: {},
   selectedItemId: null,
   layout: [],
+  clickedRois: {},
 }
 const displayDataCommonInitialValue = {
   itemType: VISUALIZE_ITEM_TYPE_SET.DISPLAY_DATA,
@@ -858,6 +859,17 @@ export const visualaizeItemSlice = createSlice({
         targetItem.selectedIndex = action.payload.selectedIndex
       }
     },
+
+    setClickedData: (
+      state,
+      action: PayloadAction<{
+        itemId: number,
+        clickedDataId: string | null
+      }>
+    ) => {
+      const { itemId, clickedDataId } = action.payload
+      state.clickedRois[itemId] = clickedDataId
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -907,20 +919,25 @@ export const visualaizeItemSlice = createSlice({
         }
         resetImageActiveIndexFn(state, { itemId })
       })
-      .addCase(setImageItemClikedDataId.fulfilled, (state, action) => {
+      .addCase(setImageItemClickedDataId.fulfilled, (state, action) => {
         const { itemId: imageItemId, clickedDataId } = action.meta.arg
-        const targetItem = state.items[imageItemId]
-        if (isImageItem(targetItem)) {
-          targetItem.clickedDataId = clickedDataId
+        // Update clickedRois
+        if (clickedDataId === state.clickedRois[imageItemId]) {
+          state.clickedRois[imageItemId] = null
+        } else {
+          state.clickedRois[imageItemId] = clickedDataId
         }
+        // Update drawOrderList for related time series items
         Object.values(state.items).forEach((item) => {
-          if (isTimeSeriesItem(item)) {
+          if (isTimeSeriesItem(item) && clickedDataId) {
             if (
               item.refImageItemId != null &&
               imageItemId === item.refImageItemId &&
               !item.drawOrderList.includes(clickedDataId)
             ) {
               item.drawOrderList.push(clickedDataId)
+              // eslint-disable-next-line no-console
+              console.log("#############\nVisualizeItemSlice.ts setClickedRoiAndTimeSeries")
             }
           }
         })
@@ -1026,6 +1043,7 @@ export const {
   setHistogramItemBins,
   setLineItemSelectedIndex,
   setPolartemItemSelectedIndex,
+  setClickedData,
   resetAllOrderList,
   reset,
 } = visualaizeItemSlice.actions

@@ -1,3 +1,6 @@
+import { createSelector } from "@reduxjs/toolkit"
+
+import { StatusROI } from "components/Workspace/Visualize/Plot/ImagePlot"
 import { RootState } from "store/store"
 
 const selectDisplayData = (state: RootState) => state.displayData
@@ -358,4 +361,12 @@ export const selectPolarDataError = (filePath: string) => (state: RootState) =>
     ? selectDisplayData(state).polar[filePath].error
     : null
 
-export const selectStatusRoi = (state: RootState) => state.displayData.statusRoi
+export const selectStatusRoi = createSelector(
+  [(state: RootState) => state.displayData.statusRoi],
+  (statusRoi): StatusROI => ({
+    temp_add_roi: statusRoi?.temp_add_roi || [],
+    temp_delete_roi: statusRoi?.temp_delete_roi || [],
+    temp_merge_roi: statusRoi?.temp_merge_roi || [],
+    temp_selected_roi: statusRoi?.temp_selected_roi || [],
+  }),
+)
