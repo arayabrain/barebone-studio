@@ -1,13 +1,16 @@
 from typing import Optional
 
+# import plotly.express as px
+# import plotly.io as pio
+import matplotlib.pyplot as plt
 import pandas as pd
-import plotly.express as px
-import plotly.io as pio
+from numpy import linspace, pi
 
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.utils.json_writer import JsonWriter
 from studio.app.common.core.workflow.workflow import OutputPath, OutputType
 from studio.app.common.dataclass.base import BaseData
+from studio.app.common.dataclass.utils import save_thumbnail
 from studio.app.common.schemas.outputs import PlotMetaData
 
 
@@ -32,13 +35,20 @@ class PolarData(BaseData):
 
     def save_plot(self, output_dir):
         for i in range(len(self.data)):
-            fig = px.line_polar(
-                r=self.data[i],
-                theta=self.columns,
-                direction="counterclockwise",
-                start_angle=0,
-                line_close=True,
+            theta = linspace(0, 2 * pi, len(self.columns))  # Convert theta to radians
+            plt.figure()
+            ax = plt.subplot(111, polar=True)
+            ax.plot(theta, self.data[i])
+            ax.set_theta_direction(-1)  # Counterclockwise
+            ax.set_theta_offset(pi / 2.0)  # Start angle at 0
+            # Close the plot line if needed
+            ax.plot(
+                [theta[-1], theta[0]],
+                [self.data[i][-1], self.data[i][0]],
+                linestyle="-",
+                linewidth=2,
             )
-            pio.write_image(
-                fig, join_filepath([output_dir, f"{self.file_name}_{i}.png"])
-            )
+            plot_file = join_filepath([output_dir, f"{self.file_name}_{i}.png"])
+            plt.savefig(plot_file)
+            plt.close()
+            save_thumbnail(plot_file)
