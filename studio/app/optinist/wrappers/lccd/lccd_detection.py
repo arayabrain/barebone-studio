@@ -28,8 +28,8 @@ def lccd_detect(
     assert len(D.shape) == 3, "input array should have dimensions (width, height, time)"
     roi = lccd.apply(D)
 
-    dff_f0_frames = params["dff"]["f0_frames"]
-    dff_f0_percentile = params["dff"]["f0_percentile"]
+    dff_f0_frames = params["f0_frames"]
+    dff_f0_percentile = params["f0_percentile"]
     num_cell = roi.shape[1]
     num_frames = D.shape[2]
     iscell = np.ones(num_cell, dtype=int)

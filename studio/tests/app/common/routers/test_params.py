@@ -8,8 +8,8 @@ def test_params(client):
     assert isinstance(data["border_nan"], str)
     assert data["border_nan"] == "copy"
 
-    assert isinstance(data["use_cuda"], bool)
-    assert data["use_cuda"] is False
+    assert isinstance(data["advanced"]["use_cuda"], bool)
+    assert data["advanced"]["use_cuda"] is False
 
 
 def test_snakemake_params(client):

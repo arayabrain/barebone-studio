@@ -10,9 +10,9 @@ from studio.app.optinist.wrappers.lccd.lccd_python.roi_integration import RoiInt
 
 class LCCD:
     def __init__(self, config):
-        self.blob_detector = BlobDetector(**config["blob_detector"])
-        self.roi_integration = RoiIntegration(**config["roi_integration"])
-        self.frame_divider = config["lccd"]["frame_divider"]
+        self.blob_detector = BlobDetector(**config)
+        self.roi_integration = RoiIntegration(**config)
+        self.frame_divider = config["frame_divider"]
 
     def apply(self, v):
         # lazy loading of v will make this method memory efficient.
