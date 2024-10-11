@@ -27,9 +27,10 @@ def Granger(
     logger.info("start granger: %s", function_id)
 
     neural_data = neural_data.data
+    IOparams = params["I/O"]
 
     # data should be time x component matrix
-    if params["transpose"]:
+    if IOparams["transpose"]:
         X = neural_data.transpose()
     else:
         X = neural_data
@@ -44,7 +45,7 @@ def Granger(
     num_comb = len(comb)
 
     # preprocessing
-    tX = standard_norm(X, params["standard_mean"], params["standard_std"])
+    tX = standard_norm(X, IOparams["standard_mean"], IOparams["standard_std"])
 
     # calculate dickey-fuller test
     # augmented dickey-fuller test
@@ -61,6 +62,7 @@ def Granger(
         "adf_critical_values": np.zeros([num_cell, 3], dtype="float64"),
         "adf_icbest": np.zeros([num_cell], dtype="float64"),
     }
+    params = params["Granger"]  # remove nested dict
 
     if params["use_adfuller_test"]:
         logger.info("Running adfuller test ")
@@ -70,12 +72,36 @@ def Granger(
 
             adf["adf_teststat"][i] = tp[0]
             adf["adf_pvalue"][i] = tp[1]
-            adf["adf_usedlag"][i] = tp[2]
-            adf["adf_nobs"][i] = tp[3]
-            adf["adf_critical_values"][i, :] = np.array(
-                [tp[4]["1%"], tp[4]["5%"], tp[4]["10%"]]
-            )
-            adf["adf_icbest"][i] = tp[5]
+            if len(tp) > 2:
+                if isinstance(tp[2], (int, float)):
+                    adf["adf_usedlag"][i] = tp[2]
+                elif isinstance(tp[2], dict):
+                    adf["adf_usedlag"][i] = tp[2].get("usedlag", 0)
+                else:
+                    adf["adf_usedlag"][i] = 0
+
+            if len(tp) > 3:
+                if isinstance(tp[3], (int, float)):
+                    adf["adf_nobs"][i] = tp[3]
+                elif isinstance(tp[3], dict):
+                    adf["adf_nobs"][i] = tp[3].get("nobs", 0)
+                else:
+                    adf["adf_nobs"][i] = 0
+
+            if len(tp) > 4:
+                if isinstance(tp[4], dict):
+                    adf["adf_critical_values"][i, :] = np.array(
+                        [tp[4].get("1%", 0), tp[4].get("5%", 0), tp[4].get("10%", 0)]
+                    )
+                else:
+                    adf["adf_critical_values"][i, :] = np.zeros(3)
+            else:
+                adf["adf_critical_values"][i, :] = np.zeros(3)
+
+            if len(tp) > 5:
+                adf["adf_icbest"][i] = tp[5] if isinstance(tp[5], (int, float)) else 0
+            else:
+                adf["adf_icbest"][i] = 0
 
     #  test for cointegration
     # augmented engle-granger two-step test

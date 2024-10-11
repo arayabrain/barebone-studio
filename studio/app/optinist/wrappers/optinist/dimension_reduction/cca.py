@@ -24,14 +24,15 @@ def CCA(
 
     neural_data = neural_data.data
     behaviors_data = behaviors_data.data
+    IOparams = params["I/O"]
 
     # data should be time x component matrix
-    if params["transpose_x"]:
+    if IOparams["transpose_x"]:
         X = neural_data.transpose()
     else:
         X = neural_data
 
-    if params["transpose_y"]:
+    if IOparams["transpose_y"]:
         Y = behaviors_data.transpose()
     else:
         Y = behaviors_data
@@ -47,11 +48,11 @@ def CCA(
         ind = np.where(iscell > 0)[0]
         X = X[:, ind]
 
-    Y = Y[:, params["target_index"]].reshape(-1, 1)
+    Y = Y[:, IOparams["target_index"]].reshape(-1, 1)
 
     # preprocessing
-    tX = standard_norm(X, params["standard_x_mean"], params["standard_x_std"])
-    tY = standard_norm(Y, params["standard_y_mean"], params["standard_y_std"])
+    tX = standard_norm(X, IOparams["standard_x_mean"], IOparams["standard_x_std"])
+    tY = standard_norm(Y, IOparams["standard_y_mean"], IOparams["standard_y_std"])
 
     # calculate CCA
     cca = CCA(**params["CCA"])

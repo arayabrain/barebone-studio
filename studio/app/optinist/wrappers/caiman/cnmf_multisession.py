@@ -12,8 +12,8 @@ from studio.app.optinist.wrappers.caiman.cnmf import (
     get_roi,
     util_download_model_files,
     util_get_memmap,
-    util_recursive_flatten_params,
 )
+from studio.app.optinist.wrappers.optinist.utils import recursive_flatten_params
 
 logger = AppLogger.get_logger()
 
@@ -33,30 +33,30 @@ def caiman_cnmf_multisession(
     # NOTE: evaluate_components requires cnn_model files in caiman_data directory.
     util_download_model_files()
 
-    # flatten cmnf params segments.
-    reshaped_params = {}
-    util_recursive_flatten_params(params, reshaped_params)
+    flattened_params = {}
+    recursive_flatten_params(params, flattened_params)
+    params = flattened_params
 
-    Ain = reshaped_params.pop("Ain", None)
-    roi_thr = reshaped_params.pop("roi_thr", None)
+    Ain = params.pop("Ain", None)
+    roi_thr = params.pop("roi_thr", None)
 
     # mulisiession params
-    n_reg_files = reshaped_params.pop("n_reg_files", 2)
+    n_reg_files = params.pop("n_reg_files", 2)
     if n_reg_files < 2:
         raise Exception(f"Set n_reg_files to a integer value gte 2. Now {n_reg_files}.")
-    reg_file_rate = reshaped_params.pop("reg_file_rate", 1.0)
+    reg_file_rate = params.pop("reg_file_rate", 1.0)
     if reg_file_rate > 1.0:
         logger.warn(
             f"reg_file_rate {reg_file_rate}, should be lte 1. Using 1.0 instead."
         )
         reg_file_rate = 1.0
 
-    align_flag = reshaped_params.pop("align_flag", True)
-    max_thr = reshaped_params.pop("max_thr", 0)
-    use_opt_flow = reshaped_params.pop("use_opt_flow", True)
-    thresh_cost = reshaped_params.pop("thresh_cost", 0.7)
-    max_dist = reshaped_params.pop("max_dist", 10)
-    enclosed_thr = reshaped_params.pop("enclosed_thr", None)
+    align_flag = params.pop("align_flag", True)
+    max_thr = params.pop("max_thr", 0)
+    use_opt_flow = params.pop("use_opt_flow", True)
+    thresh_cost = params.pop("thresh_cost", 0.7)
+    max_dist = params.pop("max_dist", 10)
+    enclosed_thr = params.pop("enclosed_thr", None)
 
     split_image_paths = images.split_image(output_dir, n_files=n_reg_files)
     n_split_images = len(split_image_paths)
@@ -66,10 +66,10 @@ def caiman_cnmf_multisession(
     nwbfile = kwargs.get("nwbfile", {})
     fr = nwbfile.get("imaging_plane", {}).get("imaging_rate", 30)
 
-    if reshaped_params is None:
+    if params is None:
         ops = CNMFParams()
     else:
-        ops = CNMFParams(params_dict={**reshaped_params, "fr": fr})
+        ops = CNMFParams(params_dict={**params, "fr": fr})
 
     if "dview" in locals():
         stop_server(dview=dview)  # noqa: F821

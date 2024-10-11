@@ -1,9 +1,9 @@
 transpose: False
 
-method:  'direct'
-
 # lags: int number of frames to show (+-frames)
-lags: 100
+lags: 10
+
+method: 'auto'
 
 # shuffle_sample_number: int
 # number of cross correlation caliculation for randomization

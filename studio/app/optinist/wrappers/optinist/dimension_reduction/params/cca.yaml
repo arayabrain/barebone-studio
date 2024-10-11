@@ -1,13 +1,11 @@
-standard_x_mean: True
-standard_x_std: True
-
-standard_y_mean: True
-standard_y_std: True
-
-transpose_x: True
-transpose_y: False
-
-target_index: 0
+I/O:
+  target_index: 1
+  transpose_x: True
+  transpose_y: False
+  standard_x_mean: True
+  standard_x_std: True
+  standard_y_mean: True
+  standard_y_std: True
 
 CCA:
   n_components: 2
