@@ -5,8 +5,6 @@ from glob import glob
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     BaseRemoteStorageController,
-    RemoteSyncAction,
-    RemoteSyncStatusFileUtil,
 )
 from studio.app.common.core.utils.filepath_creater import (
     create_directory,
@@ -46,6 +44,10 @@ class MockStorageController(BaseRemoteStorageController):
             [__class__.MOCK_OUTPUT_DIR, workspace_id, unique_id]
         )
         return experiment_remote_path
+
+    @property
+    def bucket_name(self) -> str:
+        return None  # Fixed with None in MockStorage
 
     async def download_all_experiments_metas(self, workspace_ids: list = None) -> bool:
         # ----------------------------------------
@@ -145,9 +147,6 @@ class MockStorageController(BaseRemoteStorageController):
         # exec downloading
         # ----------------------------------------
 
-        # clear remote_sync_status file.
-        RemoteSyncStatusFileUtil.delete_sync_status_file(workspace_id, unique_id)
-
         # cleaning data from local path
         if os.path.isdir(experiment_local_path):
             await self._clear_local_experiment_data(experiment_local_path)
@@ -155,11 +154,6 @@ class MockStorageController(BaseRemoteStorageController):
         # do copy data from remote storage
         shutil.copytree(
             experiment_remote_path, experiment_local_path, dirs_exist_ok=True
-        )
-
-        # creating remote_sync_status file.
-        RemoteSyncStatusFileUtil.create_sync_status_file_for_success(
-            None, workspace_id, unique_id, RemoteSyncAction.DOWNLOAD
         )
 
         return True
@@ -178,9 +172,6 @@ class MockStorageController(BaseRemoteStorageController):
         # ----------------------------------------
         # exec uploading
         # ----------------------------------------
-
-        # clear remote_sync_status file.
-        RemoteSyncStatusFileUtil.delete_sync_status_file(workspace_id, unique_id)
 
         # do copy data to remote storage
         if target_files:  # Target specified files.
@@ -210,11 +201,6 @@ class MockStorageController(BaseRemoteStorageController):
             shutil.copytree(
                 experiment_local_path, experiment_remote_path, dirs_exist_ok=True
             )
-
-        # creating remote_sync_status file.
-        RemoteSyncStatusFileUtil.create_sync_status_file_for_success(
-            None, workspace_id, unique_id, RemoteSyncAction.UPLOAD
-        )
 
         return True
 

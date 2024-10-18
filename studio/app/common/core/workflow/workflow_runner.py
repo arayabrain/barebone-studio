@@ -108,7 +108,7 @@ class WorkflowRunner:
 
             # creating remote_sync_status file.
             # - The status file is used to pass bucket info to subsequent processing.
-            RemoteSyncStatusFileUtil.create_sync_status_file_for_pending(
+            RemoteSyncStatusFileUtil.create_sync_status_file_for_processing(
                 self.remote_bucket_name,
                 self.workspace_id,
                 self.unique_id,

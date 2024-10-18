@@ -83,7 +83,7 @@ class EditRoiUtils:
 
             # creating remote_sync_status file.
             # - The status file is used to pass bucket info to subsequent processing.
-            RemoteSyncStatusFileUtil.create_sync_status_file_for_pending(
+            RemoteSyncStatusFileUtil.create_sync_status_file_for_processing(
                 remote_bucket_name,
                 workspace_id,
                 unique_id,

@@ -6,6 +6,12 @@ from snakemake import snakemake
 
 from studio.app.common.core.snakemake.smk import ForceRun, SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
+from studio.app.common.core.storage.remote_storage_controller import (
+    RemoteStorageController,
+    RemoteSyncAction,
+    RemoteSyncLockFileUtil,
+    RemoteSyncStatusFileUtil,
+)
 from studio.app.common.core.utils.filepath_creater import get_pickle_file, join_filepath
 from studio.app.common.core.workflow.workflow import Edge, Node
 from studio.app.dir_path import DIRPATH
@@ -13,7 +19,7 @@ from studio.app.dir_path import DIRPATH
 
 def snakemake_execute(workspace_id: str, unique_id: str, params: SmkParam):
     logger = SmkStatusLogger(workspace_id, unique_id)
-    snakemake(
+    result = snakemake(
         DIRPATH.SNAKEMAKE_FILEPATH,
         forceall=params.forceall,
         cores=params.cores,
@@ -32,6 +38,25 @@ def snakemake_execute(workspace_id: str, unique_id: str, params: SmkParam):
         log_handler=[logger.smk_logger],
     )
     logger.clean_up()
+
+    # result error handling
+    if not result:
+        # Operate remote storage.
+        if RemoteStorageController.is_available():
+            # force delete sync lock file
+            RemoteSyncLockFileUtil.delete_sync_lock_file(workspace_id, unique_id)
+
+            remote_bucket_name = RemoteSyncStatusFileUtil.get_remote_bucket_name(
+                workspace_id, unique_id
+            )
+
+            # force update sync status file
+            RemoteSyncStatusFileUtil.create_sync_status_file_for_error(
+                remote_bucket_name,
+                workspace_id,
+                unique_id,
+                RemoteSyncAction.UPLOAD,
+            )
 
 
 def delete_dependencies(

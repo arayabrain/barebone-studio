@@ -89,7 +89,7 @@ def test_RemoteSyncStatusFileUtil():
     RemoteSyncStatusFileUtil.create_sync_status_file_for_success(
         remote_bucket_name, workspace_id, unique_id, RemoteSyncAction.UPLOAD
     )
-    is_remote_sync_status_ok = RemoteSyncStatusFileUtil.check_sync_status_file_success(
+    is_remote_sync_status_ok = RemoteSyncStatusFileUtil.check_sync_status_success(
         workspace_id, unique_id
     )
     assert is_remote_sync_status_ok, "create_sync_status_file failed.."

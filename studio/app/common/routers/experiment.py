@@ -77,10 +77,8 @@ async def get_experiments(
             # Operate remote storage.
             if is_remote_storage_available:
                 # check remote synced status.
-                is_remote_synced = (
-                    RemoteSyncStatusFileUtil.check_sync_status_file_success(
-                        workspace_id, config.unique_id
-                    )
+                is_remote_synced = RemoteSyncStatusFileUtil.check_sync_status_success(
+                    workspace_id, config.unique_id
                 )
 
                 # extend config to ExptExtConfig
