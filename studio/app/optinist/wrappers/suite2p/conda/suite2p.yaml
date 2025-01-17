@@ -4,8 +4,8 @@ dependencies:
   - pyqt=5.15.*
   - pyqt5-sip=12.11.*
   - pip:
-    - numpy==1.23.*
+    - numpy==1.26.4
     - pyqtgraph==0.12.*
     - pandas==1.5.*
-    - suite2p==0.14.4
+    - suite2p==0.10.3
     - tifffile==2022.3.*

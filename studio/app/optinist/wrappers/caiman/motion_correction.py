@@ -61,7 +61,7 @@ def caiman_mc(
         .transpose(2, 0, 1)
     )
 
-    rois = rois.astype(np.float)
+    rois = rois.astype(np.float32)
 
     for i, _ in enumerate(rois):
         rois[i] *= i + 1
