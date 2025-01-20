@@ -77,5 +77,8 @@ class TimeSeriesData(BaseData):
     @property
     def output_path(self) -> OutputPath:
         return OutputPath(
-            path=self.json_path, type=OutputType.TIMESERIES, max_index=len(self.data)
+            path=self.json_path,
+            type=OutputType.TIMESERIES,
+            max_index=len(self.data),
+            data_shape=list(self.data.shape),
         )

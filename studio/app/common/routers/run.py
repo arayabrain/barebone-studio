@@ -1,9 +1,14 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from studio.app.common.core.logger import AppLogger
-from studio.app.common.core.workflow.workflow import Message, NodeItem, RunItem
+from studio.app.common.core.workflow.workflow import (
+    DataFilterParam,
+    Message,
+    NodeItem,
+    RunItem,
+)
 from studio.app.common.core.workflow.workflow_result import (
     WorkflowMonitor,
     WorkflowResult,
@@ -97,4 +102,19 @@ async def cancel_run(workspace_id: str, uid: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to cencel workflow.",
+        )
+
+
+@router.post("/filter/{workspace_id}/{uid}/{node_id}", response_model=bool)
+async def apply_filter(
+    workspace_id: str, uid: str, node_id: str, params: Optional[DataFilterParam] = None
+):
+    try:
+        WorkflowRunner.filter_node_data(workspace_id, uid, node_id, params)
+        return True
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to filter data.",
         )

@@ -44,7 +44,7 @@ class JsonReader:
     def read_as_timeseries(cls, filepath) -> JsonTimeSeriesData:
         json_data = cls.read(filepath)
         return JsonTimeSeriesData(
-            xrange=list(json_data["data"].keys()),
+            xrange=list([k for k, v in json_data["data"].items() if v is not None]),
             data=json_data["data"],
             std=json_data["std"] if "std" in json_data else None,
         )

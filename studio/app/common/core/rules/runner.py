@@ -8,6 +8,7 @@ from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 from filelock import FileLock
 
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
@@ -18,14 +19,17 @@ from studio.app.common.core.snakemake.smk import Rule
 from studio.app.common.core.utils.file_reader import JsonReader
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.utils.pickle_handler import PickleReader, PickleWriter
+from studio.app.common.core.workflow.workflow import DataFilterParam
 from studio.app.common.schemas.workflow import WorkflowPIDFileData
 from studio.app.const import DATE_FORMAT
 from studio.app.dir_path import DIRPATH
+from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.core.nwb.nwb_creater import (
     merge_nwbfile,
     overwrite_nwbfile,
     save_nwb,
 )
+from studio.app.optinist.dataclass import FluoData, IscellData, RoiData
 from studio.app.wrappers import wrapper_dict
 
 logger = AppLogger.get_logger()
@@ -54,7 +58,6 @@ class Runner:
 
             cls.__set_func_start_timestamp(os.path.dirname(__rule.output))
 
-            # output_info
             output_info = cls.__execute_function(
                 __rule.path,
                 __rule.params,
@@ -231,3 +234,71 @@ class Runner:
             return cls.__dict2leaf(root_dict[path], path_list)
         else:
             return root_dict[path]
+
+    @classmethod
+    def filter_data(
+        cls,
+        output_info: dict,
+        data_filter_param: DataFilterParam,
+        type: str,
+        output_dir=DIRPATH.OUTPUT_DIR,
+    ) -> dict:
+        im = output_info["edit_roi_data"].im
+        fluorescence = output_info["fluorescence"].data
+        dff = output_info["dff"].data if output_info.get("dff") else None
+        iscell = output_info["iscell"].data
+
+        # if data_filter_param.dim1:
+        #     dim1_filter_mask = data_filter_param.dim1_mask(max_size=im.shape[1])
+        #     im[:, ~dim1_filter_mask, :] = np.nan
+
+        # if data_filter_param.dim2:
+        #     dim2_filter_mask = data_filter_param.dim2_mask(max_size=im.shape[2])
+        #     im[:, :, ~dim2_filter_mask] = np.nan
+
+        if data_filter_param.dim1:
+            dim1_filter_mask = data_filter_param.dim1_mask(
+                max_size=fluorescence.shape[1]
+            )
+            fluorescence[:, ~dim1_filter_mask] = np.nan
+            if dff is not None:
+                dff[:, ~dim1_filter_mask] = np.nan
+
+        if data_filter_param.roi:
+            roi_filter_mask = data_filter_param.roi_mask(max_size=iscell.shape[0])
+            iscell[~roi_filter_mask] = False
+
+        nwbfile = output_info["nwbfile"]
+        function_id = list(nwbfile[type][NWBDATASET.POSTPROCESS].keys())[0]
+        nwbfile[type][NWBDATASET.COLUMN][function_id]["data"] = iscell
+        nwbfile[type][NWBDATASET.FLUORESCENCE][function_id]["Fluorescence"][
+            "data"
+        ] = fluorescence.T
+
+        info = {
+            **output_info,
+            "cell_roi": RoiData(
+                np.nanmax(im[iscell != 0], axis=0, initial=np.nan),
+                output_dir=output_dir,
+                file_name="cell_roi",
+            ),
+            "fluorescence": FluoData(fluorescence, file_name="fluorescence"),
+            "iscell": IscellData(iscell),
+            "nwbfile": nwbfile,
+        }
+
+        if dff is not None:
+            info["dff"] = FluoData(dff, file_name="dff")
+        else:
+            info["all_roi"] = RoiData(
+                np.nanmax(im, axis=0, initial=np.nan),
+                output_dir=output_dir,
+                file_name="all_roi",
+            )
+            info["non_cell_roi"] = RoiData(
+                np.nanmax(im[iscell == 0], axis=0, initial=np.nan),
+                output_dir=output_dir,
+                file_name="non_cell_roi",
+            )
+
+        return info

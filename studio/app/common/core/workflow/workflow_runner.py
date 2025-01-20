@@ -1,8 +1,13 @@
+import os
+import shutil
 import uuid
 from dataclasses import asdict
+from glob import glob
 from typing import Dict, List
 
+from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
 from studio.app.common.core.experiment.experiment_writer import ExptConfigWriter
+from studio.app.common.core.rules.runner import Runner
 from studio.app.common.core.snakemake.smk import FlowConfig, Rule, SmkParam
 from studio.app.common.core.snakemake.snakemake_executor import (
     delete_dependencies,
@@ -11,10 +16,15 @@ from studio.app.common.core.snakemake.snakemake_executor import (
 from studio.app.common.core.snakemake.snakemake_reader import SmkParamReader
 from studio.app.common.core.snakemake.snakemake_rule import SmkRule
 from studio.app.common.core.snakemake.snakemake_writer import SmkConfigWriter
+from studio.app.common.core.utils.filepath_creater import join_filepath
+from studio.app.common.core.utils.pickle_handler import PickleReader, PickleWriter
 from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil, RunItem
 from studio.app.common.core.workflow.workflow_params import get_typecheck_params
 from studio.app.common.core.workflow.workflow_reader import WorkflowConfigReader
 from studio.app.common.core.workflow.workflow_writer import WorkflowConfigWriter
+from studio.app.dir_path import DIRPATH
+from studio.app.optinist.core.nwb.nwb_creater import overwrite_nwb
+from studio.app.optinist.dataclass import FluoData, RoiData
 
 
 class WorkflowRunner:
@@ -22,8 +32,8 @@ class WorkflowRunner:
         self.workspace_id = workspace_id
         self.unique_id = unique_id
         self.runItem = runItem
-        self.nodeDict = WorkflowConfigReader.read_nodeDict(self.runItem.nodeDict)
-        self.edgeDict = WorkflowConfigReader.read_edgeDict(self.runItem.edgeDict)
+        self.nodeDict = self.runItem.nodeDict
+        self.edgeDict = self.runItem.edgeDict
 
         WorkflowConfigWriter(
             self.workspace_id,
@@ -140,3 +150,105 @@ class WorkflowRunner:
             if value == 0:
                 endNodeList.append(key)
         return endNodeList
+
+    @classmethod
+    def _check_data_filter(cls, workspace_id, uid, node_id):
+        expt_filepath = join_filepath(
+            [
+                DIRPATH.OUTPUT_DIR,
+                workspace_id,
+                uid,
+                DIRPATH.EXPERIMENT_YML,
+            ]
+        )
+        exp_config = ExptConfigReader.read(expt_filepath)
+
+        # assert exp_config.success == "success"
+        assert exp_config.function[node_id].success == "success"
+
+    @classmethod
+    def filter_node_data(cls, workspace_id, uid, node_id, params):
+        cls._check_data_filter(workspace_id, uid, node_id)
+
+        workflow_config = cls.get_workflow_config(workspace_id, uid, node_id)
+        node = workflow_config.nodeDict[node_id]
+
+        pkl_filepath = join_filepath(
+            [
+                DIRPATH.OUTPUT_DIR,
+                workspace_id,
+                uid,
+                node_id,
+                node.data.label.split(".")[0] + ".pkl",
+            ]
+        )
+
+        node_dirpath = os.path.dirname(pkl_filepath)
+        assert os.path.exists(pkl_filepath)
+
+        original_pkl_filepath = pkl_filepath + ".bak"
+
+        if params and not params.is_empty:
+            if not os.path.exists(original_pkl_filepath):
+                shutil.copyfile(pkl_filepath, original_pkl_filepath)
+                shutil.copytree(
+                    node_dirpath + "/tiff",
+                    node_dirpath + "/tiff.bak",
+                    dirs_exist_ok=True,
+                )
+
+            original_output_info = PickleReader.read(original_pkl_filepath)
+            original_output_info = Runner.filter_data(
+                original_output_info,
+                params,
+                type=node.data.label,
+                output_dir=node_dirpath,
+            )
+            PickleWriter.write(pkl_filepath, original_output_info)
+        else:
+            # reset filter
+            if not os.path.exists(original_pkl_filepath):
+                return
+            os.remove(pkl_filepath)
+            shutil.move(original_pkl_filepath, pkl_filepath)
+            shutil.rmtree(node_dirpath + "/tiff")
+            os.rename(node_dirpath + "/tiff.bak", node_dirpath + "/tiff")
+            original_output_info = PickleReader.read(pkl_filepath)
+
+        cls._save_json(original_output_info, node_dirpath)
+
+        # write config
+        node.data.dataFilterParam = params
+        node.data.isUpdateFilter = True
+        WorkflowConfigWriter(
+            workspace_id,
+            uid,
+            workflow_config.nodeDict,
+            workflow_config.edgeDict,
+        ).write()
+
+        return
+
+    @classmethod
+    def get_workflow_config(cls, workspace_id, uid, node_id):
+        workflow_filepath = join_filepath(
+            [
+                DIRPATH.OUTPUT_DIR,
+                workspace_id,
+                uid,
+                DIRPATH.WORKFLOW_YML,
+            ]
+        )
+        return WorkflowConfigReader.read(workflow_filepath)
+
+    @classmethod
+    def _save_json(cls, output_info, node_dirpath):
+        for k, v in output_info.items():
+            if isinstance(v, (FluoData, RoiData)):
+                v.save_json(node_dirpath)
+
+            if k == "nwbfile":
+                nwb_files = glob(join_filepath([node_dirpath, "[!tmp_]*.nwb"]))
+
+                if len(nwb_files) > 0:
+                    overwrite_nwb(v, node_dirpath, os.path.basename(nwb_files[0]))
