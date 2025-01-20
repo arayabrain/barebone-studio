@@ -122,7 +122,7 @@ def util_download_model_files():
     download model files for component evaluation
     """
     # NOTE: We specify the version of the CaImAn to download.
-    base_url = "https://github.com/flatironinstitute/CaImAn/raw/v1.9.12/model"
+    base_url = "https://github.com/flatironinstitute/CaImAn/raw/v1.11.3/model"
     model_files = [
         "cnn_model.h5",
         "cnn_model.h5.pb",
@@ -196,7 +196,7 @@ def caiman_cnmf(
         stop_server(dview=dview)  # noqa: F821
 
     c, dview, n_processes = setup_cluster(
-        backend="local", n_processes=None, single_thread=True
+        backend="local", n_processes=1, single_thread=False
     )
 
     if use_online:
