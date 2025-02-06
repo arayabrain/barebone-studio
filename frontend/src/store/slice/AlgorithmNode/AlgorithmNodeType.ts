@@ -20,7 +20,6 @@ type AlgorithmNodeType = {
   dataFilterParam?: TDataFilterParam
   draftDataFilterParam?: TDataFilterParam
   originalValue: unknown
-  originalDataFilterValue: unknown
   isUpdate: boolean
   loadingFilterParamApi?: boolean
 }

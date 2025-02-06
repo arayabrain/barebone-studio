@@ -65,7 +65,6 @@ describe("RunSelectors", () => {
           neucoeff: { type: "child", value: 0.7, path: "neucoeff" },
         },
         originalValue: false,
-        originalDataFilterValue: false,
         isUpdate: false,
       },
       suite2p_file_convert_m58owcejm0: {
@@ -87,7 +86,6 @@ describe("RunSelectors", () => {
           },
         },
         originalValue: false,
-        originalDataFilterValue: false,
         isUpdate: false,
       },
     },
@@ -592,7 +590,6 @@ describe("RunSelectors", () => {
           },
         },
         originalValue: true,
-        originalDataFilterValue: true,
         isUpdate: false,
       },
     },

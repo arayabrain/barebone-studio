@@ -99,8 +99,7 @@ export const algorithmNodeSlice = createSlice({
         Object.values(runPostData.nodeDict)
           .filter(isAlgorithmNodePostData)
           .forEach((node) => {
-            state[node.id].originalDataFilterValue =
-              state[node.id].dataFilterParam
+            state[node.id].dataFilterParam = node.data.dataFilterParam
           })
       })
       .addCase(runApplyFilter.pending, (state, action) => {
@@ -135,7 +134,6 @@ export const algorithmNodeSlice = createSlice({
                   dataFilterParam: node.data.dataFilterParam,
                   draftDataFilterParam: node.data.draftDataFilterParam,
                   originalValue: node.data.param,
-                  originalDataFilterValue: node.data.dataFilterParam,
                   isUpdate: false,
                 }
               }

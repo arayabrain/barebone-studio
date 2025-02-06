@@ -25,10 +25,8 @@ export const selectAlgorithmFilterParams =
     selectAlgorithmNodeById(nodeId)(state)?.draftDataFilterParam
 
 export const selectAlgorithmDataFilterParam =
-  (nodeId: string) => (state: RootState) => {
-    const s = selectAlgorithmNodeById(nodeId)(state)
-    return s?.draftDataFilterParam || s?.dataFilterParam
-  }
+  (nodeId: string) => (state: RootState) =>
+    selectAlgorithmNodeById(nodeId)(state)?.draftDataFilterParam
 export const selectAlgorithmFilterParamLoadingApi =
   (nodeId: string) => (state: RootState) => {
     return selectAlgorithmNodeById(nodeId)(state)?.loadingFilterParamApi

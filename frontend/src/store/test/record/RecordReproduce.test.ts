@@ -163,7 +163,6 @@ describe("RecordReproduce", () => {
     algorithmNode: {
       dummy_image2image_c8tqfxw0mq: {
         dataFilterParam: undefined,
-        originalDataFilterValue: undefined,
         name: "dummy_image2image",
         functionPath: "dummy/dummy_image2image",
         isUpdate: false,
@@ -178,7 +177,6 @@ describe("RecordReproduce", () => {
       },
       dummy_image2image8time_4mrz8h7hyk: {
         dataFilterParam: undefined,
-        originalDataFilterValue: undefined,
         name: "dummy_image2image8time",
         functionPath: "dummy/dummy_image2image8time",
         isUpdate: false,
