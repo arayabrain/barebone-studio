@@ -31,10 +31,10 @@ def get_roi(A, roi_thr, thr_method, swap_dim, dims):
         # we compute the cumulative sum of the energy of the Ath component
         # that has been ordered from least to highest
         patch_data = A.data[A.indptr[i] : A.indptr[i + 1]]
-        indx = np.argsort(patch_data)[::-1]
+        idx = np.argsort(patch_data)[::-1]
 
         if thr_method == "nrg":
-            cumEn = np.cumsum(patch_data[indx] ** 2)
+            cumEn = np.cumsum(patch_data[idx] ** 2)
             if len(cumEn) == 0:
                 pars = dict(
                     coordinates=np.array([]),
@@ -48,7 +48,7 @@ def get_roi(A, roi_thr, thr_method, swap_dim, dims):
                 cumEn /= cumEn[-1]
                 Bvec = np.ones(d)
                 # we put it in a similar matrix
-                Bvec[A.indices[A.indptr[i] : A.indptr[i + 1]][indx]] = cumEn
+                Bvec[A.indices[A.indptr[i] : A.indptr[i + 1]][idx]] = cumEn
         else:
             Bvec = np.zeros(d)
             Bvec[A.indices[A.indptr[i] : A.indptr[i + 1]]] = (

@@ -13,7 +13,7 @@ import {
   within,
 } from "@testing-library/react"
 
-import { renameExperiment } from "api/experiments/Experiments"
+import { renameExperimentApi } from "api/experiments/Experiments"
 import { ReproduceButton } from "components/Workspace/Experiment/Button/ReproduceButton"
 import {
   ExperimentTable,
@@ -30,7 +30,7 @@ import { reproduceWorkflow } from "store/slice/Workflow/WorkflowActions"
 import { RootState } from "store/store"
 
 jest.mock("api/experiments/Experiments", () => ({
-  renameExperiment: jest.fn(), // Mock the renameExperiment function
+  renameExperimentApi: jest.fn(), // Mock the renameExperimentApi function
 }))
 
 // Mock the getExperiments action
@@ -69,7 +69,7 @@ jest.mock("store/slice/Experiments/ExperimentsSelectors", () => ({
 
 // Mock necessary actions and API
 jest.mock("api/experiments/Experiments", () => ({
-  renameExperiment: jest.fn(),
+  renameExperimentApi: jest.fn(),
 }))
 
 const mockStore = configureStore<RootState, AnyAction>([])
@@ -220,22 +220,22 @@ describe("ExperimentTable", () => {
         loading: false,
       },
     })
-    ;(selectExperimentList as jest.Mock).mockReturnValue([
-      {
+    ;(selectExperimentList as jest.Mock).mockReturnValue({
+      1: {
         uid: "1",
         name: "Experiment 1",
         functions: {},
         startedAt: "2023-09-17",
         hasNWB: true,
       },
-      {
+      2: {
         uid: "2",
         name: "Experiment 2",
         functions: {},
         startedAt: "2023-09-15",
         hasNWB: true,
       },
-    ])
+    })
   })
 
   it("should render the experiment list", () => {
@@ -277,7 +277,6 @@ describe("ExperimentTable", () => {
     const selectAllCheckbox = within(selectAllCheckboxSpan).getByRole(
       "checkbox",
     )
-
     // Initially, all checkboxes should be unchecked
     const checkboxes = screen.getAllByRole("checkbox")
     checkboxes.forEach((checkbox) => {
@@ -560,9 +559,9 @@ describe("ExperimentTable", () => {
     // Simulate input losing focus (triggering onBlurEdit)
     fireEvent.blur(input)
 
-    // Wait for the renameExperiment API call
+    // Wait for the renameExperimentApi API call
     await waitFor(() => {
-      expect(renameExperiment).toHaveBeenCalledWith(
+      expect(renameExperimentApi).toHaveBeenCalledWith(
         1,
         "1",
         "New Experiment Name",

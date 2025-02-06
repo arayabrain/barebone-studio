@@ -68,6 +68,19 @@ export async function deleteExperimentByListApi(
   return response.data
 }
 
+export async function copyExperimentByListApi(
+  workspaceId: number,
+  uidList: Array<string>,
+): Promise<boolean> {
+  const response = await axios.post(
+    `${BASE_URL}/experiments/copy/${workspaceId}`,
+    {
+      uidList,
+    },
+  )
+  return response.data
+}
+
 export async function downloadExperimentNwbApi(
   workspaceId: number,
   uid: string,

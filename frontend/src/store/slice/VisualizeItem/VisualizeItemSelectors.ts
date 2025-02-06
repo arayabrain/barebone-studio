@@ -96,7 +96,8 @@ export const selectVisualizeDataNodeId =
   }
 
 export const selectVisualizeDataFilePath =
-  (itemId: number) => (state: RootState) => {
+  (itemId: number | null) => (state: RootState) => {
+    if (!itemId && itemId !== 0) return ""
     const item = selectVisualizeItemById(itemId)(state)
     if (isDisplayDataItem(item)) {
       return item.filePath
@@ -611,3 +612,13 @@ export const selectImageItemRangeUnit =
 
 export const selectClickedRoi = (itemId: number) => (state: RootState) =>
   state.visualaizeItem.clickedRois[itemId] || null
+
+export const selectImageItemShowRoiLabels =
+  (itemId: number) => (state: RootState) => {
+    const item = selectVisualizeItemById(itemId)(state)
+    if (isImageItem(item)) {
+      return item.showRoiLabels
+    } else {
+      throw new Error("invalid VisualaizeItemType")
+    }
+  }

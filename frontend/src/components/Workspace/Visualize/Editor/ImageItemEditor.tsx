@@ -35,6 +35,7 @@ import {
   selectImageItemRoiAlpha,
   selectImageItemFilePath,
   selectImageItemAlpha,
+  selectImageItemShowRoiLabels,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
 import {
   setImageItemShowGrid,
@@ -48,6 +49,7 @@ import {
   resetImageActiveIndex,
   setImageItemRoiAlpha,
   setImageItemAlpha,
+  setImageItemShowRoiLabels,
 } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import { ColorType } from "store/slice/VisualizeItem/VisualizeItemType"
 import { selectCurrentWorkspaceId } from "store/slice/Workspace/WorkspaceSelector"
@@ -71,6 +73,7 @@ export const ImageItemEditor: FC = () => {
         <ShowLine />
         <ShowGrid />
         <ShowScale />
+        <ShowRoiLabels />
         <Zsmooth />
         <Grid container component="label" alignItems="center">
           <Grid item xs={8}>
@@ -221,6 +224,24 @@ const RoiAlpha: FC = () => {
       onChange={onChange}
       error={inputError}
       helperText={inputError ? "index > 0" : undefined}
+    />
+  )
+}
+
+const ShowRoiLabels: FC = () => {
+  const itemId = useContext(SelectedItemIdContext)
+  const showRoiLabels = useSelector(selectImageItemShowRoiLabels(itemId))
+  const dispatch = useDispatch()
+  const toggleChecked = () => {
+    dispatch(
+      setImageItemShowRoiLabels({ itemId, showRoiLabels: !showRoiLabels }),
+    )
+  }
+  return (
+    <ParamSwitch
+      label={"Show ROI labels"}
+      value={showRoiLabels}
+      onChange={toggleChecked}
     />
   )
 }

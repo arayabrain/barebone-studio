@@ -133,20 +133,25 @@ async def import_workflow_config(file: UploadFile = File(...)):
 
 
 @router.get(
-    "/sample_data/{workspace_id}",
+    "/sample_data/{workspace_id}/{category}",
     dependencies=[Depends(is_workspace_available)],
 )
-async def copy_sample_data(workspace_id: str):
+async def import_sample_data(workspace_id: str, category: str):
     sample_data_dir_name = "sample_data"
     folders = ["input", "output"]
 
     for folder in folders:
-        sample_data_dir = join_filepath(
-            [DIRPATH.ROOT_DIR, sample_data_dir_name, folder]
+        import_data_dir = join_filepath(
+            [DIRPATH.ROOT_DIR, sample_data_dir_name, category, folder]
         )
+        if not os.path.exists(import_data_dir):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="import data not found"
+            )
+
         user_dir = join_filepath([DIRPATH.DATA_DIR, folder, workspace_id])
 
         create_directory(user_dir)
-        shutil.copytree(sample_data_dir, user_dir, dirs_exist_ok=True)
+        shutil.copytree(import_data_dir, user_dir, dirs_exist_ok=True)
 
     return True

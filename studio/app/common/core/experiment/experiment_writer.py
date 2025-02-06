@@ -1,14 +1,19 @@
+import glob
 import os
+import pickle
+import re
 import shutil
 from dataclasses import asdict
 from datetime import datetime
 from typing import Dict
 
+import numpy as np
 import yaml
 
 from studio.app.common.core.experiment.experiment import ExptConfig, ExptFunction
 from studio.app.common.core.experiment.experiment_builder import ExptConfigBuilder
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
+from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.config_handler import ConfigWriter
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.workflow.workflow import NodeRunStatus, WorkflowRunStatus
@@ -165,3 +170,199 @@ class ExptDataWriter:
             nwb=config.get("nwb"),
             snakemake=config.get("snakemake"),
         )
+
+    def copy_data(self, new_unique_id: str) -> bool:
+        logger = AppLogger.get_logger()
+
+        try:
+            # Define file paths
+            output_dir = join_filepath(
+                [DIRPATH.OUTPUT_DIR, self.workspace_id, self.unique_id]
+            )
+            new_output_dir = join_filepath(
+                [DIRPATH.OUTPUT_DIR, self.workspace_id, new_unique_id]
+            )
+
+            # Copy directory
+            shutil.copytree(output_dir, new_output_dir)
+
+            # Update experiment configuration and unique IDs
+            if not self.__copy_data_update_experiment_config_name(new_output_dir):
+                logger.error("Failed to update experiment.yml after copying.")
+                return False
+
+            if not self.__copy_data_replace_unique_id(
+                new_output_dir, self.unique_id, new_unique_id
+            ):
+                logger.error("Failed to update unique_id in files.")
+                return False
+
+            logger.info(f"Data successfully copied to {new_output_dir}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error copying data: {e}")
+            return False
+
+    def __copy_data_replace_unique_id(
+        self, directory: str, old_id: str, new_id: str
+    ) -> bool:
+        logger = AppLogger.get_logger()
+
+        try:
+            targeted_files = {
+                "yaml": glob.glob(
+                    os.path.join(directory, "**", "*.yaml"), recursive=True
+                ),
+                "npy": glob.glob(
+                    os.path.join(directory, "**", "*.npy"), recursive=True
+                ),
+                "pkl": glob.glob(
+                    os.path.join(directory, "**", "*.pkl"), recursive=True
+                ),
+            }
+
+            for file_type, files in targeted_files.items():
+                for file in files:
+                    if file_type == "yaml":
+                        self.__copy_data_update_yaml(file, old_id, new_id)
+                    elif file_type == "pkl":
+                        self.__copy_data_update_pickle(file, old_id, new_id)
+                    elif file_type == "npy":
+                        self.__copy_data_update_npy(file, old_id, new_id)
+
+            logger.info("All relevant files updated successfully.")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error replacing unique_id in files: {e}")
+            return False
+
+    def __copy_data_update_yaml(self, file_path: str, old_id: str, new_id: str) -> None:
+        logger = AppLogger.get_logger()
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                content = file.read()
+
+            # Use the provided regex pattern for replacement
+            pattern = re.compile(rf"(?:\b|\/){re.escape(old_id)}(?:\b|\/)(?:[^\s]*)")
+            updated_content = pattern.sub(
+                lambda match: match.group(0).replace(old_id, new_id), content
+            )
+
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(updated_content)
+
+            logger.info(f"Updated YAML: {file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to update YAML {file_path}: {e}")
+
+    def __copy_data_update_pickle(
+        self, file_path: str, old_id: str, new_id: str
+    ) -> None:
+        logger = AppLogger.get_logger()
+        try:
+            with open(file_path, "rb") as file:
+                data = pickle.load(file)
+
+            updated_data = self.__replace_ids_recursive(data, old_id, new_id)
+            with open(file_path, "wb") as file:
+                pickle.dump(updated_data, file)
+
+            logger.info(f"Updated Pickle: {file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to update Pickle {file_path}: {e}")
+
+    def __copy_data_update_npy(self, file_path: str, old_id: str, new_id: str) -> None:
+        logger = AppLogger.get_logger()
+        try:
+            with open(file_path, "rb") as file:
+                data = np.load(file, allow_pickle=True)
+
+            updated_data = self.__replace_ids_recursive(data, old_id, new_id)
+            with open(file_path, "wb") as file:
+                np.save(file, updated_data, allow_pickle=True)
+
+            logger.info(f"Updated NPY: {file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to update NPY {file_path}: {e}")
+
+    def __replace_ids_recursive(
+        self, obj: object, old_id: str, new_id: str, visited: set = None
+    ):
+        if visited is None:
+            visited = set()
+
+        obj_id = id(obj)
+        if obj_id in visited:
+            return obj
+        visited.add(obj_id)
+
+        if isinstance(obj, dict):
+            return {
+                key: self.__replace_ids_recursive(value, old_id, new_id, visited)
+                for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [
+                self.__replace_ids_recursive(item, old_id, new_id, visited)
+                for item in obj
+            ]
+        elif isinstance(obj, tuple):
+            # Convert tuple to list, process, and convert back to tuple
+            return tuple(
+                self.__replace_ids_recursive(item, old_id, new_id, visited)
+                for item in obj
+            )
+        elif isinstance(obj, np.ndarray):
+            if obj.ndim == 0:  # Handle 0D (scalar-like) arrays
+                return self.__replace_ids_recursive(obj.item(), old_id, new_id, visited)
+            else:  # Handle 1D or higher-dimensional arrays
+                return np.array(
+                    [
+                        self.__replace_ids_recursive(item, old_id, new_id, visited)
+                        for item in obj
+                    ]
+                )
+        elif isinstance(obj, str) and old_id in obj:
+            # Use the custom regex pattern for strings
+            pattern = re.compile(rf"(?:\b|\/){re.escape(old_id)}(?:\b|\/)(?:[^\s]*)")
+            return pattern.sub(
+                lambda match: match.group(0).replace(old_id, new_id), obj
+            )
+        elif hasattr(obj, "__dict__"):
+            # Process custom objects
+            for attr, value in obj.__dict__.items():
+                setattr(
+                    obj,
+                    attr,
+                    self.__replace_ids_recursive(value, old_id, new_id, visited),
+                )
+            return obj
+        elif obj is None:
+            return None
+        else:
+            return obj
+
+    def __copy_data_update_experiment_config_name(self, output_dir: str) -> bool:
+        logger = AppLogger.get_logger()
+        config_path = join_filepath([output_dir, DIRPATH.EXPERIMENT_YML])
+
+        try:
+            with open(config_path, "r") as file:
+                config = yaml.safe_load(file)
+
+            if not config:
+                logger.error(f"Invalid YAML at {config_path}")
+                return False
+
+            config["name"] = f"{config.get('name', 'experiment')}_copy"
+            with open(config_path, "w") as file:
+                yaml.dump(config, file, sort_keys=False)
+
+            logger.info(f"Updated experiment.yml: {config_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update experiment.yml: {e}")
+            return False

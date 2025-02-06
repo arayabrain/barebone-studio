@@ -1,0 +1,600 @@
+nodeDict:
+  caiman_mc_p4f6nsi9bh:
+    id: caiman_mc_p4f6nsi9bh
+    type: AlgorithmNode
+    data:
+      label: caiman_mc
+      param:
+        border_nan:
+          path: border_nan
+          type: child
+          value: copy
+        gSig_filt:
+          path: gSig_filt
+          type: child
+          value: null
+        is3D:
+          path: is3D
+          type: child
+          value: false
+        max_deviation_rigid:
+          path: max_deviation_rigid
+          type: child
+          value: 3
+        max_shifts:
+          path: max_shifts
+          type: child
+          value:
+          - 6
+          - 6
+        min_mov:
+          path: min_mov
+          type: child
+          value: null
+        niter_rig:
+          path: niter_rig
+          type: child
+          value: 1
+        nonneg_movie:
+          path: nonneg_movie
+          type: child
+          value: true
+        num_frames_split:
+          path: num_frames_split
+          type: child
+          value: 80
+        num_splits_to_process_els:
+          path: num_splits_to_process_els
+          type: child
+          value: null
+        num_splits_to_process_rig:
+          path: num_splits_to_process_rig
+          type: child
+          value: null
+        overlaps:
+          path: overlaps
+          type: child
+          value:
+          - 32
+          - 32
+        pw_rigid:
+          path: pw_rigid
+          type: child
+          value: false
+        shifts_opencv:
+          path: shifts_opencv
+          type: child
+          value: true
+        splits_els:
+          path: splits_els
+          type: child
+          value: 14
+        splits_rig:
+          path: splits_rig
+          type: child
+          value: 14
+        strides:
+          path: strides
+          type: child
+          value:
+          - 96
+          - 96
+        upsample_factor_grid:
+          path: upsample_factor_grid
+          type: child
+          value: 4
+        use_cuda:
+          path: use_cuda
+          type: child
+          value: false
+      path: caiman/caiman_mc
+      type: algorithm
+      fileType: null
+      hdf5Path: null
+      matPath: null
+    position:
+      x: 324
+      y: 147
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: 0
+      width: 250
+      borderRadius: 0
+  input_cdgkgmc5oq:
+    id: input_cdgkgmc5oq
+    type: ImageFileNode
+    data:
+      label: sample_mouse2p_image.tiff
+      param: {}
+      path:
+      - sample_mouse2p_image.tiff
+      type: input
+      fileType: image
+      hdf5Path: null
+      matPath: null
+    position:
+      x: 50
+      y: 150
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: null
+      width: 250
+      borderRadius: null
+  pca_xi0d87mbrk:
+    id: pca_xi0d87mbrk
+    type: AlgorithmNode
+    data:
+      label: pca
+      param:
+        PCA:
+          children:
+            copy:
+              path: PCA/copy
+              type: child
+              value: true
+            iterated_power:
+              path: PCA/iterated_power
+              type: child
+              value: auto
+            n_components:
+              path: PCA/n_components
+              type: child
+              value: 3
+            svd_solver:
+              path: PCA/svd_solver
+              type: child
+              value: auto
+            tol:
+              path: PCA/tol
+              type: child
+              value: 0
+            whiten:
+              path: PCA/whiten
+              type: child
+              value: false
+          type: parent
+        standard_mean:
+          path: standard_mean
+          type: child
+          value: true
+        standard_std:
+          path: standard_std
+          type: child
+          value: true
+        transpose:
+          path: transpose
+          type: child
+          value: true
+      path: optinist/dimension_reduction/pca
+      type: algorithm
+      fileType: null
+      hdf5Path: null
+      matPath: null
+    position:
+      x: 905
+      y: 146
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: 0
+      width: 250
+      borderRadius: 0
+  caiman_cnmf_qcjcwx9uq7:
+    id: caiman_cnmf_qcjcwx9uq7
+    type: AlgorithmNode
+    data:
+      label: caiman_cnmf
+      param:
+        data_params:
+          type: parent
+          children:
+            decay_time:
+              type: child
+              value: 0.4
+              path: data_params/decay_time
+        init_params:
+          type: parent
+          children:
+            do_refit:
+              type: child
+              value: false
+              path: init_params/do_refit
+            K:
+              type: child
+              value: 4
+              path: init_params/K
+            gSig:
+              type: child
+              value:
+              - 4
+              - 4
+              path: init_params/gSig
+            ssub:
+              type: child
+              value: 1
+              path: init_params/ssub
+            tsub:
+              type: child
+              value: 1
+              path: init_params/tsub
+            nb:
+              type: child
+              value: 2
+              path: init_params/nb
+            method_init:
+              type: child
+              value: greedy_roi
+              path: init_params/method_init
+            roi_thr:
+              type: child
+              value: 0.9
+              path: init_params/roi_thr
+        preprocess_params:
+          type: parent
+          children:
+            p:
+              type: child
+              value: 1
+              path: preprocess_params/p
+        patch_params:
+          type: parent
+          children:
+            rf:
+              type: child
+              value: null
+              path: patch_params/rf
+            stride:
+              type: child
+              value: 6
+              path: patch_params/stride
+        merge_params:
+          type: parent
+          children:
+            merge_thr:
+              type: child
+              value: 0.85
+              path: merge_params/merge_thr
+        advanced:
+          type: parent
+          children:
+            init_params:
+              type: parent
+              children:
+                SC_kernel:
+                  type: child
+                  value: heat
+                  path: advanced/init_params/SC_kernel
+                SC_sigma:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/SC_sigma
+                SC_thr:
+                  type: child
+                  value: 0
+                  path: advanced/init_params/SC_thr
+                SC_normalize:
+                  type: child
+                  value: true
+                  path: advanced/init_params/SC_normalize
+                SC_use_NN:
+                  type: child
+                  value: false
+                  path: advanced/init_params/SC_use_NN
+                SC_nnn:
+                  type: child
+                  value: 20
+                  path: advanced/init_params/SC_nnn
+                gSiz:
+                  type: child
+                  value: null
+                  path: advanced/init_params/gSiz
+                center_psf:
+                  type: child
+                  value: false
+                  path: advanced/init_params/center_psf
+                lambda_gnmf:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/lambda_gnmf
+                maxIter:
+                  type: child
+                  value: 5
+                  path: advanced/init_params/maxIter
+                min_corr:
+                  type: child
+                  value: 0.85
+                  path: advanced/init_params/min_corr
+                min_pnr:
+                  type: child
+                  value: 20
+                  path: advanced/init_params/min_pnr
+                seed_method:
+                  type: child
+                  value: auto
+                  path: advanced/init_params/seed_method
+                ring_size_factor:
+                  type: child
+                  value: 1.5
+                  path: advanced/init_params/ring_size_factor
+                ssub_B:
+                  type: child
+                  value: 2
+                  path: advanced/init_params/ssub_B
+                init_iter:
+                  type: child
+                  value: 2
+                  path: advanced/init_params/init_iter
+                nIter:
+                  type: child
+                  value: 5
+                  path: advanced/init_params/nIter
+                rolling_sum:
+                  type: child
+                  value: true
+                  path: advanced/init_params/rolling_sum
+                rolling_length:
+                  type: child
+                  value: 100
+                  path: advanced/init_params/rolling_length
+                kernel:
+                  type: child
+                  value: null
+                  path: advanced/init_params/kernel
+                max_iter_snmf:
+                  type: child
+                  value: 500
+                  path: advanced/init_params/max_iter_snmf
+                alpha_snmf:
+                  type: child
+                  value: 0.5
+                  path: advanced/init_params/alpha_snmf
+                sigma_smooth_snmf:
+                  type: child
+                  value:
+                  - 0.5
+                  - 0.5
+                  - 0.5
+                  path: advanced/init_params/sigma_smooth_snmf
+                perc_baseline_snmf:
+                  type: child
+                  value: 20
+                  path: advanced/init_params/perc_baseline_snmf
+                normalize_init:
+                  type: child
+                  value: true
+                  path: advanced/init_params/normalize_init
+                options_local_NMF:
+                  type: child
+                  value: null
+                  path: advanced/init_params/options_local_NMF
+            preprocess_params:
+              type: parent
+              children:
+                sn:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/sn
+                noise_range:
+                  type: child
+                  value:
+                  - 0.25
+                  - 0.5
+                  path: advanced/init_params/preprocess_params/noise_range
+                noise_method:
+                  type: child
+                  value: mean
+                  path: advanced/init_params/preprocess_params/noise_method
+                max_num_samples_fft:
+                  type: child
+                  value: 3072
+                  path: advanced/init_params/preprocess_params/max_num_samples_fft
+                n_pixels_per_process:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/n_pixels_per_process
+                compute_g:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/compute_g
+                lags:
+                  type: child
+                  value: 5
+                  path: advanced/init_params/preprocess_params/lags
+                include_noise:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/include_noise
+                pixels:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/pixels
+                check_nan:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/check_nan
+            patch_params:
+              type: parent
+              children:
+                nb_patch:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/preprocess_params/patch_params/nb_patch
+                border_pix:
+                  type: child
+                  value: 0
+                  path: advanced/init_params/preprocess_params/patch_params/border_pix
+                low_rank_background:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/patch_params/low_rank_background
+                del_duplicates:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/del_duplicates
+                only_init:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/patch_params/only_init
+                p_patch:
+                  type: child
+                  value: 0
+                  path: advanced/init_params/preprocess_params/patch_params/p_patch
+                skip_refinement:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/skip_refinement
+                remove_very_bad_comps:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/remove_very_bad_comps
+                p_ssub:
+                  type: child
+                  value: 2
+                  path: advanced/init_params/preprocess_params/patch_params/p_ssub
+                p_tsub:
+                  type: child
+                  value: 2
+                  path: advanced/init_params/preprocess_params/patch_params/p_tsub
+                memory_fact:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/preprocess_params/patch_params/memory_fact
+                n_processes:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/preprocess_params/patch_params/n_processes
+                in_memory:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/patch_params/in_memory
+            merge_params:
+              type: parent
+              children:
+                do_merge:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/do_merge
+                merge_parallel:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/merge_parallel
+                max_merge_area:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/max_merge_area
+            quality_evaluation_params:
+              type: parent
+              children:
+                SNR_lowest:
+                  type: child
+                  value: 0.5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/SNR_lowest
+                cnn_lowest:
+                  type: child
+                  value: 0.1
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/cnn_lowest
+                gSig_range:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/gSig_range
+                min_SNR:
+                  type: child
+                  value: 2.5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/min_SNR
+                min_cnn_thr:
+                  type: child
+                  value: 0.9
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/min_cnn_thr
+                rval_lowest:
+                  type: child
+                  value: -1
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/rval_lowest
+                rval_thr:
+                  type: child
+                  value: 0.8
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/rval_thr
+                use_cnn:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/use_cnn
+                use_ecc:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/use_ecc
+                max_ecc:
+                  type: child
+                  value: 3
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/max_ecc
+      path: caiman/caiman_cnmf
+      type: algorithm
+      fileType: null
+      hdf5Path: null
+      matPath: null
+    position:
+      x: 614.2857142857143
+      y: 146.23411008263156
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: 0
+      width: 250
+      borderRadius: 0
+edgeDict:
+  reactflow__edge-input_cdgkgmc5oq--image--ImageData-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--image--ImageData:
+    id: reactflow__edge-input_cdgkgmc5oqinput_cdgkgmc5oq--image--ImageData-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--image--ImageData
+    type: buttonedge
+    animated: false
+    source: input_cdgkgmc5oq
+    sourceHandle: input_cdgkgmc5oq--image--ImageData
+    target: caiman_mc_p4f6nsi9bh
+    targetHandle: caiman_mc_p4f6nsi9bh--image--ImageData
+    style:
+      border: null
+      height: null
+      padding: null
+      width: 5
+      borderRadius: null
+  ? reactflow__edge-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--mc_images--ImageData-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--images--ImageData
+  : id: reactflow__edge-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--mc_images--ImageData-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--images--ImageData
+    type: buttonedge
+    animated: false
+    source: caiman_mc_p4f6nsi9bh
+    sourceHandle: caiman_mc_p4f6nsi9bh--mc_images--ImageData
+    target: caiman_cnmf_qcjcwx9uq7
+    targetHandle: caiman_cnmf_qcjcwx9uq7--images--ImageData
+    style:
+      border: null
+      height: null
+      padding: null
+      width: 5
+      borderRadius: null
+  ? reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--fluorescence--FluoData-pca_xi0d87mbrkpca_xi0d87mbrk--neural_data--FluoData
+  : id: reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--fluorescence--FluoData-pca_xi0d87mbrkpca_xi0d87mbrk--neural_data--FluoData
+    type: buttonedge
+    animated: false
+    source: caiman_cnmf_qcjcwx9uq7
+    sourceHandle: caiman_cnmf_qcjcwx9uq7--fluorescence--FluoData
+    target: pca_xi0d87mbrk
+    targetHandle: pca_xi0d87mbrk--neural_data--FluoData
+    style:
+      border: null
+      height: null
+      padding: null
+      width: 5
+      borderRadius: null
+  ? reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--iscell--IscellData-pca_xi0d87mbrkpca_xi0d87mbrk--iscell--IscellData
+  : id: reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--iscell--IscellData-pca_xi0d87mbrkpca_xi0d87mbrk--iscell--IscellData
+    type: buttonedge
+    animated: false
+    source: caiman_cnmf_qcjcwx9uq7
+    sourceHandle: caiman_cnmf_qcjcwx9uq7--iscell--IscellData
+    target: pca_xi0d87mbrk
+    targetHandle: pca_xi0d87mbrk--iscell--IscellData
+    style:
+      border: null
+      height: null
+      padding: null
+      width: 5
+      borderRadius: null

@@ -50,7 +50,7 @@ export async function importSampleDataApi(
   workspace_id: number,
 ): Promise<boolean> {
   const response = await axios.get(
-    `${BASE_URL}/workflow/sample_data/${workspace_id}`,
+    `${BASE_URL}/workflow/sample_data/${workspace_id}/tutorial`,
   )
   return response.data
 }

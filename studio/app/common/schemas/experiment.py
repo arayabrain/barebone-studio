@@ -9,3 +9,7 @@ class DeleteItem(BaseModel):
 
 class RenameItem(BaseModel):
     new_name: str
+
+
+class CopyItem(BaseModel):
+    uidList: List

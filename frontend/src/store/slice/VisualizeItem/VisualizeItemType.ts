@@ -81,6 +81,7 @@ export interface ImageItem extends DisplayDataItemBaseType {
   roiAlpha: number
   duration: number
   clickedDataId?: string | null
+  showRoiLabels: boolean
 }
 
 export interface TimeSeriesItem extends DisplayDataItemBaseType {

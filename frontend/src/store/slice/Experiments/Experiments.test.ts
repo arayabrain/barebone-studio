@@ -1,6 +1,7 @@
 import { expect, describe, test } from "@jest/globals"
 
 import {
+  copyExperimentByList,
   deleteExperimentByList,
   deleteExperimentByUid,
   getExperiments,
@@ -214,5 +215,58 @@ describe("Experiments", () => {
     expect(
       targetState.status === "fulfilled" && targetState.experimentList,
     ).toEqual({})
+  })
+
+  test(copyExperimentByList.fulfilled.type, () => {
+    const prevState = reducer(
+      reducer(initialState, getExperimentsPendingAction),
+      getExperimentsFulfilledAction,
+    )
+    const copyExperimentByListFulfilledAction = {
+      type: copyExperimentByList.fulfilled.type,
+      payload: true,
+      meta: {
+        arg: [uid1, uid2],
+        requestId: "faNrL5ZV3SRODugFlJM20",
+        requestStatus: "fulfilled",
+      },
+    }
+    const targetState = reducer(prevState, copyExperimentByListFulfilledAction)
+    expect(targetState.loading).toBe(false)
+  })
+
+  test(copyExperimentByList.pending.type, () => {
+    const prevState = reducer(
+      reducer(initialState, getExperimentsPendingAction),
+      getExperimentsFulfilledAction,
+    )
+    const copyExperimentByListPendingAction = {
+      type: copyExperimentByList.pending.type,
+      meta: {
+        arg: [uid1, uid2],
+        requestId: "faNrL5ZV3SRODugFlJM20",
+        requestStatus: "pending",
+      },
+    }
+    const targetState = reducer(prevState, copyExperimentByListPendingAction)
+    expect(targetState.loading).toBe(true)
+  })
+
+  test(copyExperimentByList.rejected.type, () => {
+    const prevState = reducer(
+      reducer(initialState, getExperimentsPendingAction),
+      getExperimentsFulfilledAction,
+    )
+    const copyExperimentByListRejectedAction = {
+      type: copyExperimentByList.rejected.type,
+      payload: false,
+      meta: {
+        arg: [uid1, uid2],
+        requestId: "faNrL5ZV3SRODugFlJM20",
+        requestStatus: "rejected",
+      },
+    }
+    const targetState = reducer(prevState, copyExperimentByListRejectedAction)
+    expect(targetState.loading).toBe(false)
   })
 })

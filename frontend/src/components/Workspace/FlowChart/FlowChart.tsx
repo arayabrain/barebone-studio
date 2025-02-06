@@ -20,6 +20,7 @@ import {
   FileSelectDialogValue,
   DialogContext,
   FileInputUrl,
+  RoiSelectedProvider,
 } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { FileSelectDialog } from "components/Workspace/FlowChart/Dialog/FileSelectDialog"
 import { ReactFlowComponent } from "components/Workspace/FlowChart/ReactFlowComponent"
@@ -75,6 +76,7 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
   })
   const [fileViaUrl, setFileViaUrl] = useState("")
   const [errorUrl, setErrorUrl] = useState("")
+  const [dialogFilterNodeId, setFilterDialogNodeId] = useState("")
 
   const { enqueueSnackbar } = useSnackbar()
 
@@ -141,6 +143,8 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
           onOpenClearWorkflowIdDialog: setDialogClearWorkflowId,
           onOpenInputUrlDialog: setDialogViaUrl,
           onMessageError: setMessageError,
+          onOpenFilterDialog: setFilterDialogNodeId,
+          dialogFilterNodeId,
         }}
       >
         <DndProvider backend={HTML5Backend}>
@@ -166,6 +170,15 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
                 open
                 onClose={() => setDialogNodeId("")}
               />
+            )}
+            {dialogFilterNodeId && (
+              <RoiSelectedProvider>
+                <AlgorithmOutputDialog
+                  nodeId={dialogFilterNodeId}
+                  open
+                  onClose={() => setFilterDialogNodeId("")}
+                />
+              </RoiSelectedProvider>
             )}
             {dialogFile.open && (
               <FileSelectDialog
