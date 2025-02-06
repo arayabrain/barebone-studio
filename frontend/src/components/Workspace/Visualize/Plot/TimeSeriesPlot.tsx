@@ -109,11 +109,18 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
   const currentPipelineUid = useSelector(selectPipelineLatestUid)
   const frameRate = useSelector(selectFrameRate(currentPipelineUid))
   const { dialogFilterNodeId } = useContext(DialogContext)
-  const { setRoiSelected } = useRoisSelected()
+  const { setRoiSelected, setItemId } = useRoisSelected()
 
   const { filterParam, roiPath } = useBoxFilter()
 
   const roiUniqueList = useSelector(selectRoiUniqueList(roiPath), shallowEqual)
+
+  useEffect(() => {
+    const unsub = setItemId?.(itemId, path)
+    return () => {
+      unsub?.()
+    }
+  }, [itemId, path, setItemId])
 
   const xrange = useMemo(() => {
     if (dialogFilterNodeId && filterParam) {

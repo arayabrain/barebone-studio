@@ -5,6 +5,7 @@ import { grey } from "@mui/material/colors"
 import { styled } from "@mui/material/styles"
 
 import { CurrentPipelineInfo } from "components/common/CurrentPipelineInfo"
+import { RoiSelectedProvider } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { FlexItemList } from "components/Workspace/Visualize/FlexItemList"
 import { VisualizeItemEditor } from "components/Workspace/Visualize/VisualizeItemEditor"
 import { CONTENT_HEIGHT, DRAWER_WIDTH } from "const/Layout"
@@ -25,7 +26,9 @@ const Visualize: FC = () => {
       </Box>
 
       <MainContents>
-        <FlexItemList />
+        <RoiSelectedProvider isVisualize>
+          <FlexItemList />
+        </RoiSelectedProvider>
       </MainContents>
     </Box>
   )

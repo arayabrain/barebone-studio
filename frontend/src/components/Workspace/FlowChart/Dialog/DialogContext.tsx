@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react"
 import { useDispatch, useSelector } from "react-redux"
@@ -73,20 +74,18 @@ export const DialogContext = createContext<{
 export const RoiSelectedContext = createContext<{
   roisSelected: number[]
   setRoiSelected: (index: number) => void
-  itemId: number | null
   maxDim?: number
   maxRoi?: number
+  itemIds?: { [key: string]: string }
+  setItemId?: (id: number, path: string) => () => void
 }>({
   roisSelected: [],
   setRoiSelected: () => null,
-  itemId: null,
 })
 
 export const useRoisSelected = () => useContext(RoiSelectedContext)
 
-export const RoiSelectedProvider = memo(function RoiSelectedProviderMemo({
-  children,
-}: PropsWithChildren) {
+const RoiSelectedFilterProvider = ({ children }: PropsWithChildren) => {
   const [roisSelected, setRoisSelected] = useState<number[]>([])
   const { dialogFilterNodeId } = useContext(DialogContext)
   const dispatch = useDispatch<AppDispatch>()
@@ -153,7 +152,6 @@ export const RoiSelectedProvider = memo(function RoiSelectedProviderMemo({
       value={{
         roisSelected,
         setRoiSelected,
-        itemId,
         maxDim: dataXrange?.length,
         maxRoi: Object.keys(dataTimeSeries || {}).length,
       }}
@@ -161,4 +159,90 @@ export const RoiSelectedProvider = memo(function RoiSelectedProviderMemo({
       {children}
     </RoiSelectedContext.Provider>
   )
-})
+}
+
+const RoiSelectedVisualizeProvider = ({ children }: PropsWithChildren) => {
+  const [roisSelected, setRoisSelected] = useState<number[]>([])
+  const [itemIds, setItemIds] = useState<{ [key: string]: string }>({})
+  const dispatch = useDispatch<AppDispatch>()
+
+  const roisSelectedRef = useRef(roisSelected)
+
+  useEffect(() => {
+    roisSelectedRef.current = roisSelected
+  }, [roisSelected])
+
+  const setRoiSelected = useCallback(
+    (index: number) => {
+      const select = roisSelected.find((e) => e === index)
+      let rois = []
+      if (select !== undefined) {
+        rois = roisSelected.filter((e) => e !== index)
+      } else {
+        rois = [...roisSelected, index]
+      }
+      setRoisSelected(rois)
+      Object.keys(itemIds).forEach((key) => {
+        dispatch(
+          setTimeSeriesItemDrawOrderList({
+            itemId: Number(key),
+            drawOrderList: rois.map((e) => String(e)),
+          }),
+        )
+        if (!select) {
+          dispatch(
+            getTimeSeriesDataById({
+              path: itemIds[key],
+              index: String(index),
+            }),
+          )
+        }
+      })
+    },
+    [dispatch, itemIds, roisSelected],
+  )
+
+  const initData = useCallback((id: number, path: string) => {
+    if (!roisSelectedRef.current.length) return
+    console.log(id, path)
+  }, [])
+
+  const setItemId = useCallback(
+    (id: number, path: string) => {
+      setItemIds((pre) => (pre[id] ? pre : { ...pre, [id]: path }))
+      initData(id, path)
+      return () => {
+        setItemIds((pre) => {
+          delete pre[id]
+          return pre
+        })
+      }
+    },
+    [initData],
+  )
+
+  return (
+    <RoiSelectedContext.Provider
+      value={{ roisSelected, setRoiSelected, itemIds, setItemId }}
+    >
+      {children}
+    </RoiSelectedContext.Provider>
+  )
+}
+
+const RoiSelectedProviderMemo = (
+  props: PropsWithChildren<{ isVisualize?: boolean }>,
+) => {
+  if (!props.isVisualize) {
+    return (
+      <RoiSelectedFilterProvider>{props.children}</RoiSelectedFilterProvider>
+    )
+  }
+  return (
+    <RoiSelectedVisualizeProvider>
+      {props.children}
+    </RoiSelectedVisualizeProvider>
+  )
+}
+
+export const RoiSelectedProvider = memo(RoiSelectedProviderMemo)

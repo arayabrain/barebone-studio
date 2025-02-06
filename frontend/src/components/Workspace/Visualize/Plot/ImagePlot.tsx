@@ -30,6 +30,7 @@ import Slider from "@mui/material/Slider"
 import { styled } from "@mui/material/styles"
 import Switch from "@mui/material/Switch"
 
+import { useRoisSelected } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { DisplayDataContext } from "components/Workspace/Visualize/DataContext"
 import {
   addRoi,
@@ -79,7 +80,6 @@ import {
   selectImageItemAlpha,
   selectRoiItemOutputKeys,
   selectVisualizeItems,
-  selectClickedRoi,
   selectImageItemShowRoiLabels,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
 import {
@@ -231,12 +231,17 @@ const ImagePlotChart = memo(function ImagePlotChart({
   const [startDragAddRoi, setStartDragAddRoi] = useState(false)
   const [action, setAction] = useState("")
   const [positionDrag, setChangeSize] = useState<PositionDrag | undefined>()
-  const clickedDataId = useSelector(selectClickedRoi(itemId))
   const showRoiLabels = useSelector(selectImageItemShowRoiLabels(itemId))
 
   const outputKey: string | null = useSelector(selectRoiItemOutputKeys(itemId))
 
   const selectedStatus = useSelector(selectStatusRoi)
+  const { roisSelected, setRoiSelected } = useRoisSelected()
+
+  const isAllowEdit = useMemo(
+    () => roiFilePath?.includes(CELL_ROI),
+    [roiFilePath],
+  )
 
   const statusRoi = useMemo(() => {
     return (
@@ -252,9 +257,11 @@ const ImagePlotChart = memo(function ImagePlotChart({
   const refPageXSize = useRef(0)
   const refPageYSize = useRef(0)
 
+  const nshades =
+    timeDataMaxIndex < 100 ? Math.max(timeDataMaxIndex || 0, 6) : 100
   const colorscaleRoi = createColormap({
     colormap: "jet",
-    nshades: 100, //timeDataMaxIndex >= 6 ? timeDataMaxIndex : 6,
+    nshades: nshades,
     format: "rgba",
     alpha: 1.0,
   })
@@ -341,7 +348,7 @@ const ImagePlotChart = memo(function ImagePlotChart({
         hovertemplate: action === ADD_ROI ? "none" : "ROI: %{z}",
         // hoverinfo: isAddRoi || pointClick.length ? "none" : undefined,
         colorscale: [...Array(timeDataMaxIndex + 1)].map((_, i) => {
-          const new_i = Math.floor(((i % 10) * 10 + i / 10) % 100)
+          const new_i = Math.floor(((i % 10) * 10 + i / 10) % nshades)
           const offset: number = i / timeDataMaxIndex
           const rgba = colorscaleRoi[new_i]
           const hex = rgba2hex(rgba, roiAlpha)
@@ -352,7 +359,10 @@ const ImagePlotChart = memo(function ImagePlotChart({
           const isMerged = statusRoi?.temp_merge_roi?.includes(i) || false
           const isAdded = statusRoi?.temp_add_roi?.includes(i) || false
 
-          if (isClickPoint || isSelected || isDeleted || isMerged || isAdded) {
+          if (
+            isAllowEdit &&
+            (isClickPoint || isSelected || isDeleted || isMerged || isAdded)
+          ) {
             switch (action) {
               case DELETE_ROI:
                 if (isClickPoint || isSelected || isDeleted)
@@ -369,11 +379,8 @@ const ImagePlotChart = memo(function ImagePlotChart({
                 if (isClickPoint || isSelected) return [offset, "#ffffff"] // white
             }
           }
-          if (clickedDataId !== null && i.toString() === clickedDataId) {
-            return [offset, "#FF4500"] // Bright orange-red for clicked ROI
-          }
-
-          return [offset, hex]
+          if (roisSelected?.includes(i)) return [offset, hex]
+          return [offset, rgba2hex(rgba, 0.32)]
         }),
         zmin: 0,
         zmax: timeDataMaxIndex,
@@ -384,18 +391,23 @@ const ImagePlotChart = memo(function ImagePlotChart({
     ],
     [
       imageData,
-      roiDataState,
-      zsmooth,
-      showscale,
       colorscale,
-      colorscaleRoi,
-      timeDataMaxIndex,
-      roiAlpha,
-      alpha,
-      pointClick,
+      showscale,
+      zsmooth,
+      roiDataState,
       action,
-      statusRoi,
-      clickedDataId,
+      timeDataMaxIndex,
+      alpha,
+      nshades,
+      colorscaleRoi,
+      roiAlpha,
+      pointClick,
+      statusRoi?.temp_selected_roi,
+      statusRoi?.temp_delete_roi,
+      statusRoi?.temp_merge_roi,
+      statusRoi?.temp_add_roi,
+      isAllowEdit,
+      roisSelected,
     ],
   )
 
@@ -562,6 +574,7 @@ const ImagePlotChart = memo(function ImagePlotChart({
           }),
         )
       }
+      setRoiSelected(point.z)
     }
   }
 
@@ -571,11 +584,7 @@ const ImagePlotChart = memo(function ImagePlotChart({
     const roiIndex = Number(point.z)
 
     if (action) {
-      dispatch(
-        clickRoi({
-          roiIndex,
-        }),
-      )
+      dispatch(clickRoi({ roiIndex }))
     }
 
     dispatch(
