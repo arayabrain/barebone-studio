@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react"
 import { useDispatch, useSelector } from "react-redux"
@@ -74,6 +73,7 @@ export const DialogContext = createContext<{
 export const RoiSelectedContext = createContext<{
   roisSelected: number[]
   setRoiSelected: (index: number) => void
+  resetRoiSelected?: () => void
   maxDim?: number
   maxRoi?: number
   itemIds?: { [key: string]: string }
@@ -166,14 +166,8 @@ const RoiSelectedVisualizeProvider = ({ children }: PropsWithChildren) => {
   const [itemIds, setItemIds] = useState<{ [key: string]: string }>({})
   const dispatch = useDispatch<AppDispatch>()
 
-  const roisSelectedRef = useRef(roisSelected)
-
-  useEffect(() => {
-    roisSelectedRef.current = roisSelected
-  }, [roisSelected])
-
   const setRoiSelected = useCallback(
-    (index: number) => {
+    async (index: number) => {
       const select = roisSelected.find((e) => e === index)
       let rois = []
       if (select !== undefined) {
@@ -181,7 +175,6 @@ const RoiSelectedVisualizeProvider = ({ children }: PropsWithChildren) => {
       } else {
         rois = [...roisSelected, index]
       }
-      setRoisSelected(rois)
       Object.keys(itemIds).forEach((key) => {
         dispatch(
           setTimeSeriesItemDrawOrderList({
@@ -191,39 +184,39 @@ const RoiSelectedVisualizeProvider = ({ children }: PropsWithChildren) => {
         )
         if (!select) {
           dispatch(
-            getTimeSeriesDataById({
-              path: itemIds[key],
-              index: String(index),
-            }),
+            getTimeSeriesDataById({ path: itemIds[key], index: String(index) }),
           )
         }
       })
+      setRoisSelected(rois)
     },
     [dispatch, itemIds, roisSelected],
   )
 
-  const initData = useCallback((id: number, path: string) => {
-    if (!roisSelectedRef.current.length) return
-    console.log(id, path)
+  const setItemId = useCallback((id: number, path: string) => {
+    setRoisSelected([])
+    setItemIds((pre) => (pre[id] ? pre : { ...pre, [id]: path }))
+    return () => {
+      setItemIds((pre) => {
+        delete pre[id]
+        return pre
+      })
+    }
   }, [])
 
-  const setItemId = useCallback(
-    (id: number, path: string) => {
-      setItemIds((pre) => (pre[id] ? pre : { ...pre, [id]: path }))
-      initData(id, path)
-      return () => {
-        setItemIds((pre) => {
-          delete pre[id]
-          return pre
-        })
-      }
-    },
-    [initData],
-  )
+  const resetRoiSelected = useCallback(() => {
+    setRoisSelected([])
+  }, [])
 
   return (
     <RoiSelectedContext.Provider
-      value={{ roisSelected, setRoiSelected, itemIds, setItemId }}
+      value={{
+        roisSelected,
+        setRoiSelected,
+        itemIds,
+        setItemId,
+        resetRoiSelected,
+      }}
     >
       {children}
     </RoiSelectedContext.Provider>

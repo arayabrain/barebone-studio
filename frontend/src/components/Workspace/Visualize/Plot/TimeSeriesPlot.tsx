@@ -15,11 +15,7 @@ import {
 } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { useBoxFilter } from "components/Workspace/FlowChart/Dialog/FilterContext"
 import { DisplayDataContext } from "components/Workspace/Visualize/DataContext"
-import {
-  clickRoi,
-  getTimeSeriesDataById,
-  getTimeSeriesInitData,
-} from "store/slice/DisplayData/DisplayDataActions"
+import { getTimeSeriesInitData } from "store/slice/DisplayData/DisplayDataActions"
 import {
   selectRoiUniqueList,
   selectTimeSeriesData,
@@ -49,7 +45,6 @@ import {
   selectVisualizeSaveFormat,
   selectImageItemRangeUnit,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
-import { setTimeSeriesItemDrawOrderList } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import { AppDispatch } from "store/store"
 
 export const TimeSeriesPlot = memo(function TimeSeriesPlot() {
@@ -82,7 +77,6 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
   const { filePath: path, itemId } = useContext(DisplayDataContext)
 
   // 0番のデータとkeysだけをとってくる
-  const dispatch = useDispatch<AppDispatch>()
   const timeSeriesData = useSelector(
     selectTimeSeriesData(path),
     timeSeriesDataEqualityFn,
@@ -353,33 +347,7 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
 
   const onLegendClick = (event: LegendClickEvent) => {
     const clickedSeriesId = dataKeys[event.curveNumber]
-
-    const newDrawOrderList = drawOrderList.includes(clickedSeriesId)
-      ? drawOrderList.filter((value) => value !== clickedSeriesId)
-      : [...drawOrderList, clickedSeriesId]
-
-    if (dialogFilterNodeId) {
-      setRoiSelected(Number(clickedSeriesId))
-      return false
-    }
-
-    dispatch(
-      setTimeSeriesItemDrawOrderList({
-        itemId,
-        drawOrderList: newDrawOrderList,
-      }),
-    )
-    dispatch(
-      clickRoi({
-        roiIndex: Number(clickedSeriesId),
-      }),
-    )
-
-    // set DisplayNumbers
-    if (!drawOrderList.includes(clickedSeriesId)) {
-      dispatch(getTimeSeriesDataById({ path, index: clickedSeriesId }))
-    }
-
+    setRoiSelected(Number(clickedSeriesId))
     return false
   }
 

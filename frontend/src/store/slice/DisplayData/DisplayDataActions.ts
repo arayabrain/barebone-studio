@@ -1,4 +1,4 @@
-import { createAsyncThunk, createAction } from "@reduxjs/toolkit"
+import { createAsyncThunk } from "@reduxjs/toolkit"
 
 import {
   TimeSeriesData,
@@ -285,10 +285,6 @@ export const getStatus = createAsyncThunk<
     }
   },
 )
-
-export const clickRoi = createAction<{
-  roiIndex: number
-}>(`${DISPLAY_DATA_SLICE_NAME}/clickRoi`)
 
 export const getScatterData = createAsyncThunk<
   { data: ScatterData; meta?: PlotMetaData },
