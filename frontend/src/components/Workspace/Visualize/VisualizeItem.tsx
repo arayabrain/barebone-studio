@@ -36,7 +36,7 @@ import {
   selectVisualizeDataFilePath,
   selectVisualizeDataNodeId,
   selectVisualizeDataType,
-  selectVisualizeImageItemIdList,
+  selectVisualizeImageAndRoiItemIdList,
   selectVisualizeItemHeight,
   selectVisualizeItemWidth,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
@@ -262,7 +262,7 @@ const RefImageItemIdSelect = memo(function RefImageItemIdSelect({
 }: ItemIdProps) {
   const dispatch = useDispatch()
   const itemIdList = useSelector(
-    selectVisualizeImageItemIdList,
+    selectVisualizeImageAndRoiItemIdList,
     arrayEqualityFn,
   )
   const onChangeRefImageItemId = (event: SelectChangeEvent) => {

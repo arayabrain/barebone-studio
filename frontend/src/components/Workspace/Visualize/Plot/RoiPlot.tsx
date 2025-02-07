@@ -66,13 +66,17 @@ const RoiPlotImple = memo(function RoiPlotImple() {
   const height = useSelector(selectVisualizeItemHeight(itemId))
   const { dialogFilterNodeId } = useContext(DialogContext)
   const timeDataMaxIndex = useSelector(selectRoiItemIndex(itemId, path))
-  const { setRoiSelected, roisSelected } = useRoisSelected()
+  const { setRoiSelected, roisSelected, setMaxRoi } = useRoisSelected()
 
   const { filterParam, setRoiPath } = useBoxFilter()
 
   useEffect(() => {
     setRoiPath(path)
   }, [path, setRoiPath])
+
+  useEffect(() => {
+    setMaxRoi?.(Math.max(...imageDataSelector.flat()) + 1)
+  }, [imageDataSelector, setMaxRoi])
 
   const maxRoi = useMemo(() => {
     const dims = filterParam?.roi

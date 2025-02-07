@@ -12,17 +12,10 @@ import { useDispatch, useSelector } from "react-redux"
 import { FILE_TREE_TYPE } from "api/files/Files"
 import { getTimeSeriesDataById } from "store/slice/DisplayData/DisplayDataActions"
 import {
-  selectTimeSeriesData,
-  selectTimeSeriesXrange,
-} from "store/slice/DisplayData/DisplayDataSelectors"
-import {
   selectPipelineNodeResultOutputFileDataType,
   selectPipelineNodeResultOutputFilePath,
 } from "store/slice/Pipeline/PipelineSelectors"
-import {
-  selectVisualizeDataFilePath,
-  selectVisualizeItemIdForWorkflowDialog,
-} from "store/slice/VisualizeItem/VisualizeItemSelectors"
+import { selectVisualizeItemIdForWorkflowDialog } from "store/slice/VisualizeItem/VisualizeItemSelectors"
 import { setTimeSeriesItemDrawOrderList } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import { AppDispatch } from "store/store"
 
@@ -76,8 +69,9 @@ export const RoiSelectedContext = createContext<{
   resetRoiSelected?: () => void
   maxDim?: number
   maxRoi?: number
-  itemIds?: { [key: string]: string }
   setItemId?: (id: number, path: string) => () => void
+  setMaxDim?: (maxDim?: number) => void
+  setMaxRoi?: (maxDim?: number) => void
 }>({
   roisSelected: [],
   setRoiSelected: () => null,
@@ -87,6 +81,9 @@ export const useRoisSelected = () => useContext(RoiSelectedContext)
 
 const RoiSelectedFilterProvider = ({ children }: PropsWithChildren) => {
   const [roisSelected, setRoisSelected] = useState<number[]>([])
+  const [maxDim, setMaxDim] = useState<number>()
+  const [maxRoi, setMaxRoi] = useState<number>()
+
   const { dialogFilterNodeId } = useContext(DialogContext)
   const dispatch = useDispatch<AppDispatch>()
   const filePath = useSelector(
@@ -105,9 +102,6 @@ const RoiSelectedFilterProvider = ({ children }: PropsWithChildren) => {
       dataType,
     ),
   )
-  const filePathVisualz = useSelector(selectVisualizeDataFilePath(itemId))
-  const dataXrange = useSelector(selectTimeSeriesXrange(filePathVisualz))
-  const dataTimeSeries = useSelector(selectTimeSeriesData(filePathVisualz))
 
   const setRoiSelected = useCallback(
     (index: number) => {
@@ -152,8 +146,10 @@ const RoiSelectedFilterProvider = ({ children }: PropsWithChildren) => {
       value={{
         roisSelected,
         setRoiSelected,
-        maxDim: dataXrange?.length,
-        maxRoi: Object.keys(dataTimeSeries || {}).length,
+        maxDim,
+        maxRoi,
+        setMaxDim,
+        setMaxRoi,
       }}
     >
       {children}
@@ -213,7 +209,6 @@ const RoiSelectedVisualizeProvider = ({ children }: PropsWithChildren) => {
       value={{
         roisSelected,
         setRoiSelected,
-        itemIds,
         setItemId,
         resetRoiSelected,
       }}

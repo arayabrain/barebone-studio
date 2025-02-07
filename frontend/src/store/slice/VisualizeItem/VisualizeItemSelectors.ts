@@ -16,6 +16,7 @@ import {
   isHistogramItem,
   isLineItem,
   isPolarItem,
+  isRoiItem,
 } from "store/slice/VisualizeItem/VisualizeItemUtils"
 import { RootState } from "store/store"
 
@@ -28,6 +29,14 @@ export const selectVisualizeImageItemIdList = (state: RootState) =>
     .filter((itemId) => {
       const item = selectVisualizeItemById(itemId)(state)
       return isImageItem(item) && !item.isWorkflowDialog
+    })
+
+export const selectVisualizeImageAndRoiItemIdList = (state: RootState) =>
+  Object.keys(state.visualaizeItem.items)
+    .map(Number)
+    .filter((itemId) => {
+      const item = selectVisualizeItemById(itemId)(state)
+      return !item.isWorkflowDialog && (isImageItem(item) || isRoiItem(item))
     })
 
 export const selectVisualizeItems = (state: RootState) =>
