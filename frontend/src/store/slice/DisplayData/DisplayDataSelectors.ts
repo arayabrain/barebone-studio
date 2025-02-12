@@ -1,3 +1,6 @@
+import { createSelector } from "@reduxjs/toolkit"
+
+import { StatusROI } from "components/Workspace/Visualize/Plot/ImagePlot"
 import { RootState } from "store/store"
 
 const selectDisplayData = (state: RootState) => state.displayData
@@ -7,15 +10,20 @@ export const selectLoading = (state: RootState) => state.displayData.loading
 export const selectIsEditRoiCommitting = (state: RootState) =>
   state.displayData.isEditRoiCommitting
 
-export const selectTimeSeriesData = (filePath: string) => (state: RootState) =>
-  selectDisplayData(state).timeSeries[filePath].data
+export const selectTimeSeriesData =
+  (filePath: string | null) => (state: RootState) => {
+    if (!filePath) return {}
+    return selectDisplayData(state).timeSeries[filePath]?.data || {}
+  }
 
 export const selectTimesSeriesMeta = (filePath: string) => (state: RootState) =>
   selectDisplayData(state).timeSeries[filePath].meta
 
 export const selectTimeSeriesXrange =
-  (filePath: string) => (state: RootState) =>
-    selectDisplayData(state).timeSeries[filePath].xrange
+  (filePath: string | null) => (state: RootState) => {
+    if (!filePath) return []
+    return selectDisplayData(state).timeSeries[filePath]?.xrange || []
+  }
 
 export const selectTimeSeriesStd = (filePath: string) => (state: RootState) =>
   selectDisplayData(state).timeSeries[filePath].std
@@ -362,4 +370,16 @@ export const selectPolarDataError = (filePath: string) => (state: RootState) =>
     ? selectDisplayData(state).polar[filePath].error
     : null
 
-export const selectStatusRoi = (state: RootState) => state.displayData.statusRoi
+export const selectStatusRoi = createSelector(
+  [(state: RootState) => state.displayData.statusRoi],
+  (statusRoi): StatusROI => ({
+    temp_add_roi: statusRoi?.temp_add_roi || [],
+    temp_delete_roi: statusRoi?.temp_delete_roi || [],
+    temp_merge_roi: statusRoi?.temp_merge_roi || [],
+  }),
+)
+
+export const selectStatusRoiTempAdd = createSelector(
+  [(state: RootState) => state.displayData.statusRoi],
+  (statusRoi): number[] => statusRoi?.temp_add_roi,
+)

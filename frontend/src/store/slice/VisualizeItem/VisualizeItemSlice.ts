@@ -9,7 +9,7 @@ import { run, runByCurrentUid } from "store/slice/Pipeline/PipelineActions"
 import {
   deleteDisplayItem,
   selectingImageArea,
-  setImageItemClikedDataId,
+  setImageItemClickedDataId,
   setNewDisplayDataPath,
 } from "store/slice/VisualizeItem/VisualizeItemActions"
 import {
@@ -50,6 +50,7 @@ export const initialState: VisualaizeItem = {
   items: {},
   selectedItemId: null,
   layout: [],
+  clickedRois: {},
 }
 const displayDataCommonInitialValue = {
   itemType: VISUALIZE_ITEM_TYPE_SET.DISPLAY_DATA,
@@ -688,6 +689,23 @@ export const visualaizeItemSlice = createSlice({
         targetItem.drawOrderList = drawOrderList
       }
     },
+    setTimeSeriesItemDrawOrder: (
+      state,
+      action: PayloadAction<{
+        itemId: number
+        drawOrder: string
+      }>,
+    ) => {
+      const { itemId, drawOrder } = action.payload
+      const targetItem = state.items[itemId]
+      if (isTimeSeriesItem(targetItem)) {
+        if (targetItem.drawOrderList.some((e) => e === drawOrder)) {
+          targetItem.drawOrderList = targetItem.drawOrderList.filter(
+            (e) => e !== drawOrder,
+          )
+        } else targetItem.drawOrderList.push(drawOrder)
+      }
+    },
     resetAllOrderList: (state) => {
       Object.keys(state.items).forEach((id: string | number) => {
         const targetItem = state.items[id]
@@ -720,7 +738,6 @@ export const visualaizeItemSlice = createSlice({
       const targetItem = state.items[itemId]
       if (isTimeSeriesItem(targetItem)) {
         targetItem.refImageItemId = refImageItemId ?? null
-        targetItem.drawOrderList = []
       }
     },
     setHeatMapItemShowScale: (
@@ -858,6 +875,17 @@ export const visualaizeItemSlice = createSlice({
         targetItem.selectedIndex = action.payload.selectedIndex
       }
     },
+
+    setClickedData: (
+      state,
+      action: PayloadAction<{
+        itemId: number
+        clickedDataId: string | null
+      }>,
+    ) => {
+      const { itemId, clickedDataId } = action.payload
+      state.clickedRois[itemId] = clickedDataId
+    },
     setImageItemShowRoiLabels: (
       state,
       action: PayloadAction<{
@@ -919,23 +947,15 @@ export const visualaizeItemSlice = createSlice({
         }
         resetImageActiveIndexFn(state, { itemId })
       })
-      .addCase(setImageItemClikedDataId.fulfilled, (state, action) => {
+      .addCase(setImageItemClickedDataId.fulfilled, (state, action) => {
         const { itemId: imageItemId, clickedDataId } = action.meta.arg
-        const targetItem = state.items[imageItemId]
-        if (isImageItem(targetItem)) {
-          targetItem.clickedDataId = clickedDataId
+        // Update clickedRois
+        if (clickedDataId === state.clickedRois[imageItemId]) {
+          state.clickedRois[imageItemId] = null
+        } else {
+          state.clickedRois[imageItemId] = clickedDataId
         }
-        Object.values(state.items).forEach((item) => {
-          if (isTimeSeriesItem(item)) {
-            if (
-              item.refImageItemId != null &&
-              imageItemId === item.refImageItemId &&
-              !item.drawOrderList.includes(clickedDataId)
-            ) {
-              item.drawOrderList.push(clickedDataId)
-            }
-          }
-        })
+        // Update drawOrderList for related time series items
       })
       .addCase(selectingImageArea.fulfilled, (state, action) => {
         const { itemId: imageItemId } = action.meta.arg
@@ -1025,6 +1045,7 @@ export const {
   setTimeSeriesItemXrangeLeft,
   setTimeSeriesItemXrangeRight,
   setTimeSeriesItemDrawOrderList,
+  setTimeSeriesItemDrawOrder,
   setTimeSeriesItemMaxIndex,
   setTimeSeriesRefImageItemId,
   setHeatMapItemShowScale,
@@ -1038,6 +1059,7 @@ export const {
   setHistogramItemBins,
   setLineItemSelectedIndex,
   setPolartemItemSelectedIndex,
+  setClickedData,
   setImageItemShowRoiLabels,
   resetAllOrderList,
   reset,

@@ -1,6 +1,7 @@
 import type { Edge, Node } from "reactflow"
 
 import { BASE_URL } from "const/API"
+import { TDataFilterParam } from "store/slice/AlgorithmNode/AlgorithmNodeType"
 import type {
   AlgorithmNodeData,
   InputNodeData,
@@ -34,6 +35,8 @@ export interface InputNodePostData extends InputNodeData {
   param?: {
     [key: string]: unknown
   }
+  dataFilterParam?: TDataFilterParam
+  draftDataFilterParam?: TDataFilterParam
   hdf5Path?: string
   matPath?: string
 }
@@ -41,6 +44,21 @@ export interface InputNodePostData extends InputNodeData {
 export interface AlgorithmNodePostData extends AlgorithmNodeData {
   path: string
   param: ParamMap
+  dataFilterParam?: TDataFilterParam
+  draftDataFilterParam?: TDataFilterParam
+}
+
+export async function runFilterApi(
+  workspaceId: number,
+  uid: number | string,
+  node_id: string,
+  data?: TDataFilterParam,
+): Promise<string> {
+  const response = await axios.post(
+    `${BASE_URL}/run/filter/${workspaceId}/${uid}/${node_id}`,
+    data,
+  )
+  return response.data
 }
 
 export async function runApi(
@@ -76,6 +94,8 @@ export type OutputPathsDTO = {
   [outputKey: string]: {
     path: string
     type: string
+    data_shape: number[]
+    max_index: number
   }
 }
 

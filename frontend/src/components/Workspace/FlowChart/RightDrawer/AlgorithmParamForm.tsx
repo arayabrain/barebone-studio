@@ -31,6 +31,7 @@ export const AlgorithmParamForm = memo(function AlgorithmParamForm() {
       dispatch(getAlgoParams({ nodeId, algoName }))
     }
   }, [dispatch, nodeId, algoName, algoParamIsLoaded])
+
   return (
     <div style={{ padding: 24 }}>
       <SectionTitle>{algoName}</SectionTitle>

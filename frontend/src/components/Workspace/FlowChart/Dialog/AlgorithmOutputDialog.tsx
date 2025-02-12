@@ -1,4 +1,4 @@
-import { memo, SyntheticEvent, useEffect, useState } from "react"
+import { memo, SyntheticEvent, useContext, useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 
 import CloseIcon from "@mui/icons-material/Close"
@@ -10,6 +10,9 @@ import IconButton from "@mui/material/IconButton"
 import Tab from "@mui/material/Tab"
 import Tabs, { tabsClasses } from "@mui/material/Tabs"
 
+import BoxFilter from "components/Workspace/FlowChart/Dialog/BoxFilter"
+import { DialogContext } from "components/Workspace/FlowChart/Dialog/DialogContext"
+import { BoxFilterProvider } from "components/Workspace/FlowChart/Dialog/FilterContext"
 import { DisplayDataItem } from "components/Workspace/Visualize/DisplayDataItem"
 import { selectAlgorithmName } from "store/slice/AlgorithmNode/AlgorithmNodeSelectors"
 import { NodeIdProps } from "store/slice/FlowElement/FlowElementType"
@@ -36,22 +39,30 @@ export const AlgorithmOutputDialog = memo(function AlgorithmOutputDialog({
   onClose,
   nodeId,
 }: AlgorithmOutputDialogProps) {
+  const { dialogFilterNodeId } = useContext(DialogContext)
+
   const dispatch = useDispatch()
   const closeFn = () => {
     onClose()
     dispatch(deleteAllItemForWorkflowDialog())
   }
   return (
-    <Dialog open={open} onClose={closeFn} fullWidth>
-      <TitleWithCloseButton onClose={closeFn} nodeId={nodeId} />
-      <DialogContent
-        dividers
-        sx={{
-          pt: 1,
-          px: 2,
-        }}
-      >
-        {open && <OutputViewer nodeId={nodeId} />}
+    <Dialog
+      open={open}
+      onClose={closeFn}
+      fullWidth
+      PaperProps={{ style: { maxWidth: "max-content" } }}
+    >
+      <TitleWithCloseButton
+        title={dialogFilterNodeId ? "Filter Data" : undefined}
+        onClose={closeFn}
+        nodeId={nodeId}
+      />
+      <DialogContent dividers sx={{ pt: 1, px: 2 }}>
+        <BoxFilterProvider>
+          {open && <OutputViewer nodeId={nodeId} />}
+          {open && dialogFilterNodeId ? <BoxFilter nodeId={nodeId} /> : null}
+        </BoxFilterProvider>
       </DialogContent>
     </Dialog>
   )
@@ -59,23 +70,21 @@ export const AlgorithmOutputDialog = memo(function AlgorithmOutputDialog({
 
 interface TitleWithCloseButtonProps extends NodeIdProps {
   onClose: () => void
+  title?: string
 }
 
 const TitleWithCloseButton = memo(function TitleWithCloseButtonProps({
   nodeId,
   onClose,
+  title,
 }: TitleWithCloseButtonProps) {
   const nodeName = useSelector(selectAlgorithmName(nodeId))
   return (
     <DialogTitle sx={{ m: 0, p: 2 }}>
-      Output of {nodeName}
+      {title ?? `Output of ${nodeName}`}
       <IconButton
         onClick={onClose}
-        sx={{
-          position: "absolute",
-          right: 8,
-          top: 10,
-        }}
+        sx={{ position: "absolute", right: 8, top: 10 }}
       >
         <CloseIcon />
       </IconButton>
@@ -88,15 +97,27 @@ const OutputViewer = memo(function OutputViewer({ nodeId }: NodeIdProps) {
     selectPipelineNodeResultOutputKeyList(nodeId),
     arrayEqualityFn,
   )
+  const { dialogFilterNodeId } = useContext(DialogContext)
+
   const [selectedOutoutKey, setSelectedOutputKey] = useState(outputKeyList[0])
   return (
     <>
-      <OutputSelectTabs
-        outputKeyList={outputKeyList}
-        selectedOutoutKey={selectedOutoutKey}
-        onSelectOutput={setSelectedOutputKey}
-      />
-      <DisplayDataView nodeId={nodeId} outputKey={selectedOutoutKey} />
+      {dialogFilterNodeId ? null : (
+        <OutputSelectTabs
+          outputKeyList={outputKeyList}
+          selectedOutoutKey={selectedOutoutKey}
+          onSelectOutput={setSelectedOutputKey}
+        />
+      )}
+      <Box display={"flex"}>
+        <DisplayDataView
+          nodeId={nodeId}
+          outputKey={dialogFilterNodeId ? "cell_roi" : selectedOutoutKey}
+        />
+        {dialogFilterNodeId && (
+          <DisplayDataView nodeId={nodeId} outputKey={"fluorescence"} />
+        )}
+      </Box>
     </>
   )
 })
@@ -132,9 +153,7 @@ const OutputSelectTabs = memo(function OutputSelectTabs({
           key={outputKey}
           value={outputKey}
           label={outputKey}
-          sx={{
-            textTransform: "none",
-          }}
+          sx={{ textTransform: "none" }}
         />
       ))}
     </Tabs>
@@ -165,12 +184,7 @@ const DisplayDataView = memo(function DisplayDataView({
     }
   }, [dispatch, nodeId, filePath, dataType, itemId])
   return (
-    <Box
-      sx={{
-        mx: 1,
-        my: 2,
-      }}
-    >
+    <Box sx={{ mx: 1, my: 2 }}>
       {itemId != null && <DisplayDataItem itemId={itemId} />}
     </Box>
   )

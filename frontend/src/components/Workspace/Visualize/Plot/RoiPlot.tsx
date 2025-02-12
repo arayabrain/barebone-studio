@@ -3,26 +3,31 @@ import PlotlyChart from "react-plotlyjs-ts"
 import { useSelector, useDispatch } from "react-redux"
 
 import createColormap from "colormap"
+import { PlotMouseEvent } from "plotly.js"
 
 import { LinearProgress, Typography } from "@mui/material"
 
+import {
+  DialogContext,
+  useRoisSelected,
+} from "components/Workspace/FlowChart/Dialog/DialogContext"
+import { useBoxFilter } from "components/Workspace/FlowChart/Dialog/FilterContext"
 import { DisplayDataContext } from "components/Workspace/Visualize/DataContext"
 import { getRoiData } from "store/slice/DisplayData/DisplayDataActions"
 import {
   selectRoiData,
   selectRoiDataError,
   selectRoiDataIsFulfilled,
-  selectRoiDataIsInitialized,
   selectRoiDataIsPending,
   selectRoiMeta,
 } from "store/slice/DisplayData/DisplayDataSelectors"
 import {
+  selectRoiItemIndex,
   selectVisualizeItemHeight,
   selectVisualizeItemWidth,
   selectVisualizeSaveFilename,
   selectVisualizeSaveFormat,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
-import { ColorType } from "store/slice/VisualizeItem/VisualizeItemType"
 import { selectCurrentWorkspaceId } from "store/slice/Workspace/WorkspaceSelector"
 import { AppDispatch } from "store/store"
 import { twoDimarrayEqualityFn } from "utils/EqualityUtils"
@@ -30,17 +35,18 @@ import { twoDimarrayEqualityFn } from "utils/EqualityUtils"
 export const RoiPlot = memo(function RoiPlot() {
   const { filePath: path } = useContext(DisplayDataContext)
   const isPending = useSelector(selectRoiDataIsPending(path))
-  const isInitialized = useSelector(selectRoiDataIsInitialized(path))
   const isFulfilled = useSelector(selectRoiDataIsFulfilled(path))
   const error = useSelector(selectRoiDataError(path))
   const workspaceId = useSelector(selectCurrentWorkspaceId)
+  const { dialogFilterNodeId } = useContext(DialogContext)
 
   const dispatch = useDispatch<AppDispatch>()
   useEffect(() => {
-    if (workspaceId && !isInitialized) {
-      dispatch(getRoiData({ path, workspaceId }))
+    if (workspaceId) {
+      dispatch(getRoiData({ path, workspaceId, isFull: !!dialogFilterNodeId }))
     }
-  }, [dispatch, isInitialized, path, workspaceId])
+  }, [dialogFilterNodeId, dispatch, path, workspaceId])
+
   if (isPending) {
     return <LinearProgress />
   } else if (error != null) {
@@ -54,19 +60,84 @@ export const RoiPlot = memo(function RoiPlot() {
 
 const RoiPlotImple = memo(function RoiPlotImple() {
   const { itemId, filePath: path } = useContext(DisplayDataContext)
-  const imageData = useSelector(selectRoiData(path), imageDataEqualtyFn)
+  const imageDataSelector = useSelector(selectRoiData(path), imageDataEqualtyFn)
   const meta = useSelector(selectRoiMeta(path))
   const width = useSelector(selectVisualizeItemWidth(itemId))
   const height = useSelector(selectVisualizeItemHeight(itemId))
+  const { dialogFilterNodeId } = useContext(DialogContext)
+  const timeDataMaxIndex = useSelector(selectRoiItemIndex(itemId, path))
+  const { setRoiSelected, roisSelected, setMaxRoi } = useRoisSelected()
 
-  const colorscale: ColorType[] = createColormap({
-    colormap: "jet",
-    nshades: 10,
-    format: "hex",
-    alpha: 1,
-  }).map((v, idx) => {
-    return { rgb: v, offset: String(idx / 9) }
-  })
+  const { filterParam, setRoiPath } = useBoxFilter()
+
+  useEffect(() => {
+    setRoiPath(path)
+  }, [path, setRoiPath])
+
+  useEffect(() => {
+    setMaxRoi?.(Math.max(...imageDataSelector.flat()) + 1)
+  }, [imageDataSelector, setMaxRoi])
+
+  const imageData = useMemo(() => {
+    if (!dialogFilterNodeId) return imageDataSelector
+    return imageDataSelector.map((img) =>
+      img.map((e) => {
+        if (!e && e !== 0) return null
+        if (!filterParam?.roi?.length) return e
+        const check = filterParam?.roi.some(
+          (roi) => e >= (roi.start || 0) && (!roi.end || e < roi.end),
+        )
+        if (check) return e
+        return null
+      }),
+    )
+  }, [dialogFilterNodeId, filterParam?.roi, imageDataSelector])
+
+  const nshades =
+    timeDataMaxIndex < 100 ? Math.max(timeDataMaxIndex || 0, 6) : 100
+
+  const colorscaleRoi = useMemo(() => {
+    return createColormap({
+      colormap: "jet",
+      nshades,
+      format: "hex",
+      alpha: 1,
+    })
+  }, [nshades])
+
+  const onChartClick = (event: PlotMouseEvent) => {
+    const point = event.points[0] as unknown as { z: number }
+    setRoiSelected(point.z)
+  }
+
+  const colorscale = useMemo(() => {
+    if (!dialogFilterNodeId || timeDataMaxIndex < 1) {
+      return colorscaleRoi.map((value, idx) => {
+        if (timeDataMaxIndex < 1 && !roisSelected.includes(0)) {
+          return [
+            String(idx / (nshades - 1)),
+            `${value}${(77).toString(16).toUpperCase()}`,
+          ]
+        }
+        return [String(idx / (nshades - 1)), value]
+      })
+    }
+    return [...Array(timeDataMaxIndex + 1)].map((_, i) => {
+      const new_i = Math.floor(((i % 10) * 10 + i / 10) % nshades)
+      const offset: number = i / timeDataMaxIndex
+      const rgba = colorscaleRoi[new_i]
+      if (!dialogFilterNodeId || roisSelected.includes(i)) {
+        return [offset, rgba]
+      }
+      return [offset, `${rgba}${(77).toString(16).toUpperCase()}`]
+    })
+  }, [
+    colorscaleRoi,
+    dialogFilterNodeId,
+    nshades,
+    roisSelected,
+    timeDataMaxIndex,
+  ])
 
   const data = useMemo(
     () => [
@@ -74,28 +145,18 @@ const RoiPlotImple = memo(function RoiPlotImple() {
         z: imageData,
         type: "heatmap",
         name: "roi",
-        colorscale: colorscale.map((value) => {
-          let offset: number = parseFloat(value.offset)
-          const offsets: number[] = colorscale.map((v) => {
-            return parseFloat(v.offset)
-          })
-          // plotlyは端[0.0, 1.0]がないとダメなので、その設定
-          if (offset === Math.max(...offsets)) {
-            offset = 1.0
-          }
-          if (offset === Math.min(...offsets)) {
-            offset = 0.0
-          }
-          return [offset, value.rgb]
-        }),
+        colorscale,
         hoverongaps: false,
         // zsmooth: zsmooth, // ['best', 'fast', false]
         zsmooth: false,
+        showscale: !dialogFilterNodeId,
+        zmin: 0,
+        zmax: timeDataMaxIndex,
         showlegend: true,
         hovertemplate: "ROI: %{z}",
       },
     ],
-    [imageData, colorscale],
+    [imageData, dialogFilterNodeId, colorscale, timeDataMaxIndex],
   )
 
   const layout = useMemo(
@@ -142,7 +203,14 @@ const RoiPlotImple = memo(function RoiPlotImple() {
       filename: saveFileName,
     },
   }
-  return <PlotlyChart data={data} layout={layout} config={config} />
+  return (
+    <PlotlyChart
+      onClick={onChartClick}
+      data={data}
+      layout={layout}
+      config={config}
+    />
+  )
 })
 
 function imageDataEqualtyFn(

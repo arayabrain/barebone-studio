@@ -92,7 +92,21 @@ export function useRunPipeline() {
 
   const handleRunPipeline = useCallback(
     (name: string) => {
-      dispatch(run({ runPostData: { name, ...runPostData, forceRunList: [] } }))
+      const newNodeDict = runPostData.nodeDict
+      Object.keys(newNodeDict).forEach((key) => {
+        delete newNodeDict[key].data.dataFilterParam
+        delete newNodeDict[key].data.draftDataFilterParam
+      })
+      dispatch(
+        run({
+          runPostData: {
+            name,
+            ...runPostData,
+            nodeDict: newNodeDict,
+            forceRunList: [],
+          },
+        }),
+      )
         .unwrap()
         .catch(() => {
           enqueueSnackbar("Failed to Run workflow", { variant: "error" })

@@ -49,12 +49,12 @@ export const getTimeSeriesInitData = createAsyncThunk<
     std: TimeSeriesData
     meta?: PlotMetaData
   },
-  { path: string; itemId: number }
+  { path: string; itemId: number; isFull?: boolean }
 >(
   `${DISPLAY_DATA_SLICE_NAME}/getTimeSeriesInitData`,
-  async ({ path }, thunkAPI) => {
+  async ({ path, isFull }, thunkAPI) => {
     try {
-      const response = await getTimeSeriesInitDataApi(path)
+      const response = await getTimeSeriesInitDataApi(path, isFull)
       return response
     } catch (e) {
       return thunkAPI.rejectWithValue(e)
@@ -69,12 +69,12 @@ export const getTimeSeriesDataById = createAsyncThunk<
     std: TimeSeriesData
     meta?: PlotMetaData
   },
-  { path: string; index: string }
+  { path: string; index: string; isFull?: boolean }
 >(
   `${DISPLAY_DATA_SLICE_NAME}/getTimeSeriesDataById`,
-  async ({ path, index }, thunkAPI) => {
+  async ({ path, index, isFull }, thunkAPI) => {
     try {
-      const response = await getTimeSeriesDataByIdApi(path, index)
+      const response = await getTimeSeriesDataByIdApi(path, index, isFull)
       return response
     } catch (e) {
       return thunkAPI.rejectWithValue(e)
@@ -170,12 +170,12 @@ export const getMatlabData = createAsyncThunk<
 
 export const getRoiData = createAsyncThunk<
   { data: RoiData; meta?: PlotMetaData },
-  { path: string; workspaceId: number }
+  { path: string; workspaceId: number; isFull?: boolean }
 >(
   `${DISPLAY_DATA_SLICE_NAME}/getRoiData`,
-  async ({ path, workspaceId }, thunkAPI) => {
+  async ({ path, workspaceId, isFull }, thunkAPI) => {
     try {
-      const response = await getRoiDataApi(path, { workspaceId })
+      const response = await getRoiDataApi(path, { workspaceId }, isFull)
       return response
     } catch (e) {
       return thunkAPI.rejectWithValue(e)

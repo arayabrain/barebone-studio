@@ -10,6 +10,7 @@ import {
   RunPostData,
 } from "api/run/Run"
 import {
+  selectAlgorithmFilterParams,
   selectAlgorithmFunctionPath,
   selectAlgorithmIsUpdated,
   selectAlgorithmName,
@@ -58,6 +59,7 @@ const selectNodeDictForRun = (state: RootState): NodeDict => {
   nodes.forEach((node) => {
     if (isAlgorithmNodeData(node)) {
       const param = selectAlgorithmParams(node.id)(state) ?? {}
+      const dataFilterParam = selectAlgorithmFilterParams(node.id)(state)
       const functionPath = selectAlgorithmFunctionPath(node.id)(state)
       const algorithmNodePostData: Node<AlgorithmNodePostData> = {
         ...node,
@@ -67,6 +69,8 @@ const selectNodeDictForRun = (state: RootState): NodeDict => {
           type: NODE_TYPE_SET.ALGORITHM,
           path: functionPath,
           param,
+          dataFilterParam,
+          draftDataFilterParam: dataFilterParam,
         },
       }
       nodeDict[node.id] = algorithmNodePostData
