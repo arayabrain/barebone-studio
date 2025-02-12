@@ -76,7 +76,7 @@ const HeatMapImple = memo(function HeatMapImple() {
                 const offsets: number[] = colorscale.map((v) => {
                   return parseFloat(v.offset)
                 })
-                // plotlyは端[0.0, 1.0]がないとダメなので、その設定
+                // plotly requires the end [0.0, 1.0] to be set
                 if (offset === Math.max(...offsets)) {
                   offset = 1.0
                 }
@@ -88,6 +88,12 @@ const HeatMapImple = memo(function HeatMapImple() {
               hoverongaps: false,
               showlegend: true,
               showscale: showscale,
+              colorbar: {
+                len: 0.95,
+                y: 0.45,
+                yanchor: "middle",
+                thickness: 20,
+              },
             },
           ]
         : [],
