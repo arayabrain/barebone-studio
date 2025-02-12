@@ -22,13 +22,23 @@ Please follow instructions below.
 ### Make Docker Image
 
 Pull the latest docker image from docker hub.
+
 ```bash
 docker pull oistncu/optinist
 ```
+
 Start docker container.
+
 ```bash
+# Notes:
+# - Set your saving directory to `/your/saving/dir`.
+# - The "command line continuation character" should be replaced by your platform.
+#   - Unix Shells ... \
+#   - Windows Command Prompt ... ^
+#   - Windows PowerShell ... `
+
 docker run -it --shm-size=2G \
-  -v /your/saving/dir:/app/studio_data \  # Set your saving directory to `/your/saving/dir`
+  -v /your/saving/dir:/app/studio_data \
   --env OPTINIST_DIR="/app/studio_data" \
   --name optinist_container -d -p 8000:8000 --restart=unless-stopped \
   oistncu/optinist:latest \
@@ -37,9 +47,11 @@ docker run -it --shm-size=2G \
 
 ```{eval-rst}
 .. note::
-    Please set ``/your/saving/dir`` to your local directory.
-    Without this, OptiNiSt's data will lost when you stop docker container or reboot your PC.
-    By the command above (``-v`` option), you can mount your local directory to docker container.
+    * Please set ``/your/saving/dir`` to your local directory.
+      Without this, OptiNiSt's data will lost when you stop docker container or reboot your PC.
+      By the command above (``-v`` option), you can mount your local directory to docker container.
+    * If you want to keep the snakemake directory (which contains the conda environment etc.) on the host machine, add the following option:
+      ``-v /your/snakemake/dir:/app/.snakemake``
 ```
 
 ## 2. Access to Backend

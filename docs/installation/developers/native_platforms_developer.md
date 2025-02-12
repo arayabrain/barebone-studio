@@ -16,26 +16,36 @@ Please follow instructions below.
 
 ### Install Tools
 
+Follow the steps in the `Install Tools` section for each platform below.
+
 - Unix-like platforms
   - Linux
     - [Install Tools](../users/linux.md#install-tools)
-  - Windows WSL
-    - [Install Tools](../users/windows.md#install-tools-1)
   - Mac
     - [Install Tools](../users/mac.md#install-tools)
-- Windows
-    - [Install Tools](../users/windows.md#install-tools)
+  - Windows WSL
+    - [Install Tools](../users/windows_native.md#install-tools)
+- Other platforms
+  - Windows Native
+    - [Install Tools](../users/windows_native.md#install-tools)
 
 #### Install Node.js
 
-Get node with version 20
 - [Node.js Official](https://nodejs.org)
-
-You can also install node via [nvm](https://github.com/nvm-sh/nvm)
+  - Get node with v20
+- You can also install node via [nvm](https://github.com/nvm-sh/nvm). 
+  - *Recommended for unix-like platforms.*
 
 After install node, install yarn.
 ```bash
 npm install -g yarn
+```
+
+### Create Conda Environment
+
+```bash
+conda create -n optinist_dev python=3.8 poetry
+conda activate optinist_dev
 ```
 
 ### Clone Repository
@@ -51,29 +61,11 @@ cd ./optinist
   cp frontend/.env.example frontend/.env
   ```
 
-### Create Conda Environment
-
-```bash
-conda create -n optinist_dev python=3.8 poetry
-conda activate optinist_dev
-```
-
-- for *Miniconda*
-  ```bash
-  conda config --set channel_priority strict
-  ```
-- for *Miniforge*
-  ```bash
-  conda config --set channel_priority flexible
-  ```
-
 ### Install Requirements
 
 ```bash
 poetry install --no-root --with dev
 ```
-
-If you will make PRs, please see the [](for_developers) section.
 
 ### Set Saving Directory
 
@@ -91,10 +83,10 @@ python main.py
 - `python main.py` log is as blow:
 ```bash
 $ run_optinist
-INFO:     Will watch for changes in these directories: ['/home/oist/optinist/backend']
+INFO:     Will watch for changes in these directories: ['/home/oist/optinist']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [6520] using statreload
-INFO:     Started server process [6557]
+INFO:     Started reloader process [xxxx] using statreload
+INFO:     Started server process [xxxx]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 ```
@@ -122,6 +114,7 @@ Done!
 
 ```{eval-rst}
 .. note::
-    * frontend in development environment uses port 3000, while production optinist uses 8000.
+    * By default, frontend in development environment uses port ``3000``, while production optinist uses ``8000``.
     * See: :ref:`_optinist_startup_options`
+    * If you will make PRs, please see the :ref:`for_developers` section.
 ```
