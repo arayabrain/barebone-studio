@@ -1,47 +1,10 @@
 rules:
-  caiman_mc_p4f6nsi9bh:
-    input:
-    - 1/tutorial2/input_cdgkgmc5oq/sample_mouse2p_image.pkl
-    return_arg:
-      input_cdgkgmc5oq: image
-    params:
-      border_nan: copy
-      gSig_filt: null
-      is3D: false
-      max_deviation_rigid: 3
-      max_shifts:
-      - 6
-      - 6
-      min_mov: null
-      niter_rig: 1
-      nonneg_movie: true
-      num_frames_split: 80
-      num_splits_to_process_els: null
-      num_splits_to_process_rig: null
-      overlaps:
-      - 32
-      - 32
-      pw_rigid: false
-      shifts_opencv: true
-      splits_els: 14
-      splits_rig: 14
-      strides:
-      - 96
-      - 96
-      upsample_factor_grid: 4
-      use_cuda: false
-    output: 1/tutorial2/caiman_mc_p4f6nsi9bh/caiman_mc.pkl
-    type: caiman_mc
-    nwbfile: null
-    hdf5Path: null
-    matPath: null
-    path: caiman/caiman_mc
   input_cdgkgmc5oq:
     input:
     - 1/sample_mouse2p_image.tiff
     return_arg: input_cdgkgmc5oq
     params: {}
-    output: 1/tutorial2/input_cdgkgmc5oq/sample_mouse2p_image.pkl
+    output: 1/eb073299/input_cdgkgmc5oq/sample_mouse2p_image.pkl
     type: image
     nwbfile:
       session_description: optinist
@@ -74,51 +37,66 @@ rules:
     hdf5Path: null
     matPath: null
     path: null
-  pca_xi0d87mbrk:
+  caiman_mc_o5k0ez4d9p:
     input:
-    - 1/tutorial2/caiman_cnmf_qcjcwx9uq7/caiman_cnmf.pkl
-    - 1/tutorial2/caiman_cnmf_qcjcwx9uq7/caiman_cnmf.pkl
+    - 1/eb073299/input_cdgkgmc5oq/sample_mouse2p_image.pkl
     return_arg:
-      fluorescence: neural_data
-      iscell: iscell
+      input_cdgkgmc5oq: image
     params:
-      PCA:
-        copy: true
-        iterated_power: auto
-        n_components: 3
-        svd_solver: auto
-        tol: 0
-        whiten: false
-      standard_mean: true
-      standard_std: true
-      transpose: true
-    output: 1/tutorial2/pca_xi0d87mbrk/pca.pkl
-    type: pca
+      border_nan: copy
+      gSig_filt: null
+      is3D: false
+      max_deviation_rigid: 3
+      max_shifts:
+      - 6
+      - 6
+      min_mov: null
+      niter_rig: 1
+      nonneg_movie: true
+      num_frames_split: 80
+      overlaps:
+      - 32
+      - 32
+      pw_rigid: false
+      shifts_opencv: true
+      splits_els: 14
+      splits_rig: 14
+      strides:
+      - 96
+      - 96
+      upsample_factor_grid: 4
+      advanced:
+        num_splits_to_process_els: null
+        num_splits_to_process_rig: null
+        use_cuda: false
+    output: 1/eb073299/caiman_mc_o5k0ez4d9p/caiman_mc.pkl
+    type: caiman_mc
     nwbfile: null
     hdf5Path: null
     matPath: null
-    path: optinist/dimension_reduction/pca
-  caiman_cnmf_qcjcwx9uq7:
+    path: caiman/caiman_mc
+  caiman_cnmf_t28ssmgpcz:
     input:
-    - 1/tutorial2/caiman_mc_p4f6nsi9bh/caiman_mc.pkl
+    - 1/eb073299/caiman_mc_o5k0ez4d9p/caiman_mc.pkl
     return_arg:
       mc_images: images
     params:
       data_params:
         decay_time: 0.4
       init_params:
+        use_online: false
         do_refit: false
-        K: 4
+        K: 10
         gSig:
         - 4
         - 4
-        ssub: 1
+        ssub: 2
         tsub: 1
         nb: 2
         method_init: greedy_roi
         roi_thr: 0.9
       preprocess_params:
-        p: 1
+        p: 2
       patch_params:
         rf: null
         stride: 6
@@ -197,11 +175,76 @@ rules:
           use_cnn: true
           use_ecc: false
           max_ecc: 3
-    output: 1/tutorial2/caiman_cnmf_qcjcwx9uq7/caiman_cnmf.pkl
+        online_params:
+          N_samples_exceptionality: null
+          batch_update_suff_stat: false
+          dist_shape_update: false
+          ds_factor: 1
+          epochs: 1
+          expected_comps: 500
+          full_XXt: false
+          init_batch: 200
+          init_method: bare
+          iters_shape: 5
+          max_comp_update_shape: null
+          max_num_added: 5
+          max_shifts_online: 10
+          min_num_trial: 5
+          minibatch_shape: 100
+          minibatch_suff_stat: 5
+          motion_correct: false
+          movie_name_online: online_movie.mp4
+          normalize: false
+          n_refit: 0
+          num_times_comp_updated: null
+          opencv_codec: H264
+          ring_CNN: false
+          save_online_movie: false
+          show_movie: false
+          simultaneously: false
+          sniper_mode: false
+          stop_detection: false
+          test_both: false
+          thresh_CNN_noisy: 0.5
+          thresh_fitness_delta: -50
+          thresh_fitness_raw: null
+          thresh_overlap: 0.5
+          update_freq: 200
+          update_num_comps: false
+          use_corr_img: false
+          use_dense: true
+          use_peak_max: true
+          W_update_factor: 1
+    output: 1/eb073299/caiman_cnmf_t28ssmgpcz/caiman_cnmf.pkl
     type: caiman_cnmf
     nwbfile: null
     hdf5Path: null
     matPath: null
     path: caiman/caiman_cnmf
+  pca_cr3lvekylp:
+    input:
+    - 1/eb073299/caiman_cnmf_t28ssmgpcz/caiman_cnmf.pkl
+    - 1/eb073299/caiman_cnmf_t28ssmgpcz/caiman_cnmf.pkl
+    return_arg:
+      fluorescence: neural_data
+      iscell: iscell
+    params:
+      I/O:
+        transpose: true
+        standard_mean: true
+        standard_std: true
+      PCA:
+        n_components: 2
+        copy: true
+        whiten: false
+        svd_solver: auto
+        tol: 0
+        iterated_power: auto
+    output: 1/eb073299/pca_cr3lvekylp/pca.pkl
+    type: pca
+    nwbfile: null
+    hdf5Path: null
+    matPath: null
+    path: optinist/dimension_reduction/pca
 last_output:
-- 1/tutorial2/pca_xi0d87mbrk/pca.pkl
+- 1/eb073299/pca_cr3lvekylp/pca.pkl

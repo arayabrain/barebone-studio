@@ -24,14 +24,15 @@ def CCA(
 
     neural_data = neural_data.data
     behaviors_data = behaviors_data.data
+    IOparams = params["I/O"]
 
     # data should be time x component matrix
-    if params["transpose_x"]:
+    if IOparams["transpose_x"]:
         X = neural_data.transpose()
     else:
         X = neural_data
 
-    if params["transpose_y"]:
+    if IOparams["transpose_y"]:
         Y = behaviors_data.transpose()
     else:
         Y = behaviors_data
@@ -47,11 +48,27 @@ def CCA(
         ind = np.where(iscell > 0)[0]
         X = X[:, ind]
 
-    Y = Y[:, params["target_index"]].reshape(-1, 1)
+    # Handle target_index as either a list, slice notation, or single index
+    target_idx = params["target_index"]
+    if isinstance(target_idx, str):
+        target_idx = target_idx.strip("[] ")
+        if ":" in target_idx:
+            parts = [p.strip() for p in target_idx.split(":")]
+            start = int(parts[0]) if parts[0] else None
+            end = int(parts[1]) if parts[1] else None
+            Y = Y[:, start:end]
+        else:
+            indices = list(map(int, target_idx.split(",")))
+            Y = Y[:, indices]
+    elif isinstance(target_idx, (list, np.ndarray)):
+        indices = [int(i) for i in target_idx]
+        Y = Y[:, indices]
+    else:
+        Y = Y[:, int(target_idx)]
 
     # preprocessing
-    tX = standard_norm(X, params["standard_x_mean"], params["standard_x_std"])
-    tY = standard_norm(Y, params["standard_y_mean"], params["standard_y_std"])
+    tX = standard_norm(X, IOparams["standard_x_mean"], IOparams["standard_x_std"])
+    tY = standard_norm(Y, IOparams["standard_y_mean"], IOparams["standard_y_std"])
 
     # calculate CCA
     cca = CCA(**params["CCA"])
@@ -70,7 +87,6 @@ def CCA(
             "y_loadings_": cca.x_rotations_,
             "coef": cca.coef_,
             "n_iter_": cca.n_iter_,
-            # 'n_features_in_': [cca.n_features_in_],
         }
     }
 

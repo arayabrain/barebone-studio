@@ -14,17 +14,17 @@ init_params:
 
   do_refit: False
 
-  K: 4
-  gSig: [3, 3]
+  K: 10
+  gSig: [4, 4]
   ssub: 1
   tsub: 2
-  nb: 0
+  nb: 2
   # method_init: "greedy_roi"  # Fixed for cnmf-e
 
   roi_thr: 0.9  # Note: Extended param for ROI
 
 preprocess_params:
-  p: 1
+  p: 2
 
 patch_params:
   rf: null

@@ -1,0 +1,136 @@
+workspace_id: '1'
+unique_id: '68347566'
+name: Tutorial3
+started_at: '2025-02-13 15:33:37'
+finished_at: '2025-02-13 15:34:57'
+success: success
+hasNWB: true
+function:
+  input_0:
+    unique_id: input_0
+    name: sample_mouse2p_image.tiff
+    success: success
+    hasNWB: false
+    message: null
+    outputPaths: null
+    started_at: '2025-02-13 15:33:37'
+    finished_at: '2025-02-13 15:33:37'
+  suite2p_file_convert_uwyrgu1xyc:
+    unique_id: suite2p_file_convert_uwyrgu1xyc
+    name: suite2p_file_convert
+    success: success
+    hasNWB: false
+    message: suite2p_file_convert success
+    outputPaths:
+      meanImg:
+        path: /tmp/studio/output/1/68347566/suite2p_file_convert_uwyrgu1xyc/meanImg.json
+        type: images
+        max_index: 1
+    started_at: '2025-02-13 15:33:48'
+    finished_at: '2025-02-13 15:33:57'
+  suite2p_registration_q9rk525j0v:
+    unique_id: suite2p_registration_q9rk525j0v
+    name: suite2p_registration
+    success: success
+    hasNWB: false
+    message: suite2p_registration success
+    outputPaths:
+      refImg:
+        path: /tmp/studio/output/1/68347566/suite2p_registration_q9rk525j0v/refImg.json
+        type: images
+        max_index: 1
+      meanImgE:
+        path: /tmp/studio/output/1/68347566/suite2p_registration_q9rk525j0v/meanImgE.json
+        type: images
+        max_index: 1
+      mc_images:
+        path: /tmp/studio/output/1/68347566/suite2p_registration_q9rk525j0v/tiff/mc_images/mc_images.tif
+        type: images
+        max_index: 2000
+    started_at: '2025-02-13 15:34:05'
+    finished_at: '2025-02-13 15:34:18'
+  lccd_cell_detection_q9g9if8oeg:
+    unique_id: lccd_cell_detection_q9g9if8oeg
+    name: lccd_cell_detection
+    success: success
+    hasNWB: true
+    message: lccd_cell_detection success
+    outputPaths:
+      dff:
+        path: /tmp/studio/output/1/68347566/lccd_cell_detection_q9g9if8oeg/dff
+        type: timeseries
+        max_index: 42
+      fluorescence:
+        path: /tmp/studio/output/1/68347566/lccd_cell_detection_q9g9if8oeg/fluorescence
+        type: timeseries
+        max_index: 42
+      all_roi:
+        path: /tmp/studio/output/1/68347566/lccd_cell_detection_q9g9if8oeg/all_roi.json
+        type: roi
+        max_index: null
+      cell_roi:
+        path: /tmp/studio/output/1/68347566/lccd_cell_detection_q9g9if8oeg/cell_roi.json
+        type: roi
+        max_index: null
+      non_cell_roi:
+        path: /tmp/studio/output/1/68347566/lccd_cell_detection_q9g9if8oeg/non_cell_roi.json
+        type: roi
+        max_index: null
+    started_at: '2025-02-13 15:34:25'
+    finished_at: '2025-02-13 15:34:48'
+  input_9ig87jnsul:
+    unique_id: input_9ig87jnsul
+    name: sample_mouse2p_behavior.csv
+    success: success
+    hasNWB: false
+    message: null
+    outputPaths: null
+    started_at: '2025-02-13 15:33:37'
+    finished_at: '2025-02-13 15:33:37'
+  lda_hasufj1cnb:
+    unique_id: lda_hasufj1cnb
+    name: lda
+    success: success
+    hasNWB: true
+    message: lda success
+    outputPaths:
+      score:
+        path: /tmp/studio/output/1/68347566/lda_hasufj1cnb/score.json
+        type: bar
+        max_index: null
+    started_at: '2025-02-13 15:34:53'
+    finished_at: '2025-02-13 15:34:57'
+nwb:
+  session_description: optinist
+  identifier: optinist
+  experiment_description: None
+  device:
+    name: Microscope device
+    description: Microscope Information
+    manufacturer: Microscope Manufacture
+  optical_channel:
+    name: OpticalChannel
+    description: optical channel
+    emission_lambda: 500.0
+  imaging_plane:
+    name: ImagingPlane
+    description: standard
+    imaging_rate: 30.0
+    excitation_lambda: 900.0
+    indicator: GCaMP
+    location: V1
+  image_series:
+    starting_time: 0
+    starting_frame:
+    - 0
+    save_raw_image_to_nwb: false
+  ophys:
+    plane_segmentation:
+      name: PlaneSegmentation
+      description: ''
+snakemake:
+  use_conda: true
+  cores: 2
+  forceall: false
+  forcetargets: true
+  lock: false

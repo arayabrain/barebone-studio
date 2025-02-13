@@ -1,106 +1,4 @@
 nodeDict:
-  caiman_mc_p4f6nsi9bh:
-    id: caiman_mc_p4f6nsi9bh
-    type: AlgorithmNode
-    data:
-      label: caiman_mc
-      param:
-        border_nan:
-          path: border_nan
-          type: child
-          value: copy
-        gSig_filt:
-          path: gSig_filt
-          type: child
-          value: null
-        is3D:
-          path: is3D
-          type: child
-          value: false
-        max_deviation_rigid:
-          path: max_deviation_rigid
-          type: child
-          value: 3
-        max_shifts:
-          path: max_shifts
-          type: child
-          value:
-          - 6
-          - 6
-        min_mov:
-          path: min_mov
-          type: child
-          value: null
-        niter_rig:
-          path: niter_rig
-          type: child
-          value: 1
-        nonneg_movie:
-          path: nonneg_movie
-          type: child
-          value: true
-        num_frames_split:
-          path: num_frames_split
-          type: child
-          value: 80
-        num_splits_to_process_els:
-          path: num_splits_to_process_els
-          type: child
-          value: null
-        num_splits_to_process_rig:
-          path: num_splits_to_process_rig
-          type: child
-          value: null
-        overlaps:
-          path: overlaps
-          type: child
-          value:
-          - 32
-          - 32
-        pw_rigid:
-          path: pw_rigid
-          type: child
-          value: false
-        shifts_opencv:
-          path: shifts_opencv
-          type: child
-          value: true
-        splits_els:
-          path: splits_els
-          type: child
-          value: 14
-        splits_rig:
-          path: splits_rig
-          type: child
-          value: 14
-        strides:
-          path: strides
-          type: child
-          value:
-          - 96
-          - 96
-        upsample_factor_grid:
-          path: upsample_factor_grid
-          type: child
-          value: 4
-        use_cuda:
-          path: use_cuda
-          type: child
-          value: false
-      path: caiman/caiman_mc
-      type: algorithm
-      fileType: null
-      hdf5Path: null
-      matPath: null
-    position:
-      x: 324
-      y: 147
-    style:
-      border: '1px solid #777'
-      height: 140
-      padding: 0
-      width: 250
-      borderRadius: 0
   input_cdgkgmc5oq:
     id: input_cdgkgmc5oq
     type: ImageFileNode
@@ -122,67 +20,113 @@ nodeDict:
       padding: null
       width: 250
       borderRadius: null
-  pca_xi0d87mbrk:
-    id: pca_xi0d87mbrk
+  caiman_mc_o5k0ez4d9p:
+    id: caiman_mc_o5k0ez4d9p
     type: AlgorithmNode
     data:
-      label: pca
+      label: caiman_mc
       param:
-        PCA:
+        border_nan:
+          type: child
+          value: copy
+          path: border_nan
+        gSig_filt:
+          type: child
+          value: null
+          path: gSig_filt
+        is3D:
+          type: child
+          value: false
+          path: is3D
+        max_deviation_rigid:
+          type: child
+          value: 3
+          path: max_deviation_rigid
+        max_shifts:
+          type: child
+          value:
+          - 6
+          - 6
+          path: max_shifts
+        min_mov:
+          type: child
+          value: null
+          path: min_mov
+        niter_rig:
+          type: child
+          value: 1
+          path: niter_rig
+        nonneg_movie:
+          type: child
+          value: true
+          path: nonneg_movie
+        num_frames_split:
+          type: child
+          value: 80
+          path: num_frames_split
+        overlaps:
+          type: child
+          value:
+          - 32
+          - 32
+          path: overlaps
+        pw_rigid:
+          type: child
+          value: false
+          path: pw_rigid
+        shifts_opencv:
+          type: child
+          value: true
+          path: shifts_opencv
+        splits_els:
+          type: child
+          value: 14
+          path: splits_els
+        splits_rig:
+          type: child
+          value: 14
+          path: splits_rig
+        strides:
+          type: child
+          value:
+          - 96
+          - 96
+          path: strides
+        upsample_factor_grid:
+          type: child
+          value: 4
+          path: upsample_factor_grid
+        advanced:
+          type: parent
           children:
-            copy:
-              path: PCA/copy
+            num_splits_to_process_els:
               type: child
-              value: true
-            iterated_power:
-              path: PCA/iterated_power
+              value: null
+              path: advanced/num_splits_to_process_els
+            num_splits_to_process_rig:
               type: child
-              value: auto
-            n_components:
-              path: PCA/n_components
-              type: child
-              value: 3
-            svd_solver:
-              path: PCA/svd_solver
-              type: child
-              value: auto
-            tol:
-              path: PCA/tol
-              type: child
-              value: 0
-            whiten:
-              path: PCA/whiten
+              value: null
+              path: advanced/num_splits_to_process_rig
+            use_cuda:
               type: child
               value: false
-          type: parent
-        standard_mean:
-          path: standard_mean
-          type: child
-          value: true
-        standard_std:
-          path: standard_std
-          type: child
-          value: true
-        transpose:
-          path: transpose
-          type: child
-          value: true
-      path: optinist/dimension_reduction/pca
+              path: advanced/use_cuda
+      path: caiman/caiman_mc
       type: algorithm
       fileType: null
       hdf5Path: null
       matPath: null
     position:
-      x: 905
-      y: 146
+      x: 328.57142857142856
+      y: 150.11502661225435
     style:
       border: '1px solid #777'
       height: 140
       padding: 0
       width: 250
       borderRadius: 0
-  caiman_cnmf_qcjcwx9uq7:
-    id: caiman_cnmf_qcjcwx9uq7
+  caiman_cnmf_t28ssmgpcz:
+    id: caiman_cnmf_t28ssmgpcz
     type: AlgorithmNode
     data:
       label: caiman_cnmf
@@ -197,13 +141,17 @@ nodeDict:
         init_params:
           type: parent
           children:
+            use_online:
+              type: child
+              value: false
+              path: init_params/use_online
             do_refit:
               type: child
               value: false
               path: init_params/do_refit
             K:
               type: child
-              value: 4
+              value: 10
               path: init_params/K
             gSig:
               type: child
@@ -213,7 +161,7 @@ nodeDict:
               path: init_params/gSig
             ssub:
               type: child
-              value: 1
+              value: 2
               path: init_params/ssub
             tsub:
               type: child
@@ -236,7 +184,7 @@ nodeDict:
           children:
             p:
               type: child
-              value: 1
+              value: 2
               path: preprocess_params/p
         patch_params:
           type: parent
@@ -527,14 +475,235 @@ nodeDict:
                   type: child
                   value: 3
                   path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/max_ecc
+            online_params:
+              type: parent
+              children:
+                N_samples_exceptionality:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/N_samples_exceptionality
+                batch_update_suff_stat:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/batch_update_suff_stat
+                dist_shape_update:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/dist_shape_update
+                ds_factor:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/ds_factor
+                epochs:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/epochs
+                expected_comps:
+                  type: child
+                  value: 500
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/expected_comps
+                full_XXt:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/full_XXt
+                init_batch:
+                  type: child
+                  value: 200
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/init_batch
+                init_method:
+                  type: child
+                  value: bare
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/init_method
+                iters_shape:
+                  type: child
+                  value: 5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/iters_shape
+                max_comp_update_shape:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/max_comp_update_shape
+                max_num_added:
+                  type: child
+                  value: 5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/max_num_added
+                max_shifts_online:
+                  type: child
+                  value: 10
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/max_shifts_online
+                min_num_trial:
+                  type: child
+                  value: 5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/min_num_trial
+                minibatch_shape:
+                  type: child
+                  value: 100
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/minibatch_shape
+                minibatch_suff_stat:
+                  type: child
+                  value: 5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/minibatch_suff_stat
+                motion_correct:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/motion_correct
+                movie_name_online:
+                  type: child
+                  value: online_movie.mp4
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/movie_name_online
+                normalize:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/normalize
+                n_refit:
+                  type: child
+                  value: 0
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/n_refit
+                num_times_comp_updated:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/num_times_comp_updated
+                opencv_codec:
+                  type: child
+                  value: H264
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/opencv_codec
+                ring_CNN:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/ring_CNN
+                save_online_movie:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/save_online_movie
+                show_movie:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/show_movie
+                simultaneously:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/simultaneously
+                sniper_mode:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/sniper_mode
+                stop_detection:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/stop_detection
+                test_both:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/test_both
+                thresh_CNN_noisy:
+                  type: child
+                  value: 0.5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/thresh_CNN_noisy
+                thresh_fitness_delta:
+                  type: child
+                  value: -50
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/thresh_fitness_delta
+                thresh_fitness_raw:
+                  type: child
+                  value: null
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/thresh_fitness_raw
+                thresh_overlap:
+                  type: child
+                  value: 0.5
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/thresh_overlap
+                update_freq:
+                  type: child
+                  value: 200
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/update_freq
+                update_num_comps:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/update_num_comps
+                use_corr_img:
+                  type: child
+                  value: false
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/use_corr_img
+                use_dense:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/use_dense
+                use_peak_max:
+                  type: child
+                  value: true
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/use_peak_max
+                W_update_factor:
+                  type: child
+                  value: 1
+                  path: advanced/init_params/preprocess_params/patch_params/merge_params/quality_evaluation_params/online_params/W_update_factor
       path: caiman/caiman_cnmf
       type: algorithm
       fileType: null
       hdf5Path: null
       matPath: null
     position:
-      x: 614.2857142857143
-      y: 146.23411008263156
+      x: 601.4285714285713
+      y: 151.41041742588106
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: 0
+      width: 250
+      borderRadius: 0
+  pca_cr3lvekylp:
+    id: pca_cr3lvekylp
+    type: AlgorithmNode
+    data:
+      label: pca
+      param:
+        I/O:
+          type: parent
+          children:
+            transpose:
+              type: child
+              value: true
+              path: I/O/transpose
+            standard_mean:
+              type: child
+              value: true
+              path: I/O/standard_mean
+            standard_std:
+              type: child
+              value: true
+              path: I/O/standard_std
+        PCA:
+          type: parent
+          children:
+            n_components:
+              type: child
+              value: 2
+              path: PCA/n_components
+            copy:
+              type: child
+              value: true
+              path: PCA/copy
+            whiten:
+              type: child
+              value: false
+              path: PCA/whiten
+            svd_solver:
+              type: child
+              value: auto
+              path: PCA/svd_solver
+            tol:
+              type: child
+              value: 0
+              path: PCA/tol
+            iterated_power:
+              type: child
+              value: auto
+              path: PCA/iterated_power
+      path: optinist/dimension_reduction/pca
+      type: algorithm
+      fileType: null
+      hdf5Path: null
+      matPath: null
+    position:
+      x: 887.1428571428571
+      y: 151.5759530953018
     style:
       border: '1px solid #777'
       height: 140
@@ -542,56 +711,56 @@ nodeDict:
       width: 250
       borderRadius: 0
 edgeDict:
-  reactflow__edge-input_cdgkgmc5oq--image--ImageData-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--image--ImageData:
-    id: reactflow__edge-input_cdgkgmc5oqinput_cdgkgmc5oq--image--ImageData-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--image--ImageData
+  ? reactflow__edge-input_cdgkgmc5oqinput_cdgkgmc5oq--image--ImageData-caiman_mc_o5k0ez4d9pcaiman_mc_o5k0ez4d9p--image--ImageData
+  : id: reactflow__edge-input_cdgkgmc5oqinput_cdgkgmc5oq--image--ImageData-caiman_mc_o5k0ez4d9pcaiman_mc_o5k0ez4d9p--image--ImageData
     type: buttonedge
     animated: false
     source: input_cdgkgmc5oq
     sourceHandle: input_cdgkgmc5oq--image--ImageData
-    target: caiman_mc_p4f6nsi9bh
-    targetHandle: caiman_mc_p4f6nsi9bh--image--ImageData
+    target: caiman_mc_o5k0ez4d9p
+    targetHandle: caiman_mc_o5k0ez4d9p--image--ImageData
     style:
       border: null
       height: null
       padding: null
       width: 5
       borderRadius: null
-  ? reactflow__edge-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--mc_images--ImageData-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--images--ImageData
-  : id: reactflow__edge-caiman_mc_p4f6nsi9bhcaiman_mc_p4f6nsi9bh--mc_images--ImageData-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--images--ImageData
+  ? reactflow__edge-caiman_mc_o5k0ez4d9pcaiman_mc_o5k0ez4d9p--mc_images--ImageData-caiman_cnmf_t28ssmgpczcaiman_cnmf_t28ssmgpcz--images--ImageData
+  : id: reactflow__edge-caiman_mc_o5k0ez4d9pcaiman_mc_o5k0ez4d9p--mc_images--ImageData-caiman_cnmf_t28ssmgpczcaiman_cnmf_t28ssmgpcz--images--ImageData
     type: buttonedge
     animated: false
-    source: caiman_mc_p4f6nsi9bh
-    sourceHandle: caiman_mc_p4f6nsi9bh--mc_images--ImageData
-    target: caiman_cnmf_qcjcwx9uq7
-    targetHandle: caiman_cnmf_qcjcwx9uq7--images--ImageData
+    source: caiman_mc_o5k0ez4d9p
+    sourceHandle: caiman_mc_o5k0ez4d9p--mc_images--ImageData
+    target: caiman_cnmf_t28ssmgpcz
+    targetHandle: caiman_cnmf_t28ssmgpcz--images--ImageData
     style:
       border: null
       height: null
       padding: null
       width: 5
       borderRadius: null
-  ? reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--fluorescence--FluoData-pca_xi0d87mbrkpca_xi0d87mbrk--neural_data--FluoData
-  : id: reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--fluorescence--FluoData-pca_xi0d87mbrkpca_xi0d87mbrk--neural_data--FluoData
+  ? reactflow__edge-caiman_cnmf_t28ssmgpczcaiman_cnmf_t28ssmgpcz--fluorescence--FluoData-pca_cr3lvekylppca_cr3lvekylp--neural_data--FluoData
+  : id: reactflow__edge-caiman_cnmf_t28ssmgpczcaiman_cnmf_t28ssmgpcz--fluorescence--FluoData-pca_cr3lvekylppca_cr3lvekylp--neural_data--FluoData
     type: buttonedge
     animated: false
-    source: caiman_cnmf_qcjcwx9uq7
-    sourceHandle: caiman_cnmf_qcjcwx9uq7--fluorescence--FluoData
-    target: pca_xi0d87mbrk
-    targetHandle: pca_xi0d87mbrk--neural_data--FluoData
+    source: caiman_cnmf_t28ssmgpcz
+    sourceHandle: caiman_cnmf_t28ssmgpcz--fluorescence--FluoData
+    target: pca_cr3lvekylp
+    targetHandle: pca_cr3lvekylp--neural_data--FluoData
     style:
       border: null
       height: null
       padding: null
       width: 5
       borderRadius: null
-  ? reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--iscell--IscellData-pca_xi0d87mbrkpca_xi0d87mbrk--iscell--IscellData
-  : id: reactflow__edge-caiman_cnmf_qcjcwx9uq7caiman_cnmf_qcjcwx9uq7--iscell--IscellData-pca_xi0d87mbrkpca_xi0d87mbrk--iscell--IscellData
+  ? reactflow__edge-caiman_cnmf_t28ssmgpczcaiman_cnmf_t28ssmgpcz--iscell--IscellData-pca_cr3lvekylppca_cr3lvekylp--iscell--IscellData
+  : id: reactflow__edge-caiman_cnmf_t28ssmgpczcaiman_cnmf_t28ssmgpcz--iscell--IscellData-pca_cr3lvekylppca_cr3lvekylp--iscell--IscellData
     type: buttonedge
     animated: false
-    source: caiman_cnmf_qcjcwx9uq7
-    sourceHandle: caiman_cnmf_qcjcwx9uq7--iscell--IscellData
-    target: pca_xi0d87mbrk
-    targetHandle: pca_xi0d87mbrk--iscell--IscellData
+    source: caiman_cnmf_t28ssmgpcz
+    sourceHandle: caiman_cnmf_t28ssmgpcz--iscell--IscellData
+    target: pca_cr3lvekylp
+    targetHandle: pca_cr3lvekylp--iscell--IscellData
     style:
       border: null
       height: null

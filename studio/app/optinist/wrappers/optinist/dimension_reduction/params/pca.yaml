@@ -1,8 +1,8 @@
 # whether standardize the data or not
-standard_mean: True
-standard_std: True
-
-transpose: True
+I/O:
+  transpose: True
+  standard_mean: True
+  standard_std: True
 
 PCA:
   n_components: 2

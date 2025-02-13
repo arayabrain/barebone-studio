@@ -73,9 +73,10 @@ rules:
     return_arg:
       fluorescence: neural_data
     params:
-      standard_mean: true
-      standard_std: true
-      transpose: true
+      I/O:
+        standard_mean: true
+        standard_std: true
+        transpose: true
       PCA:
         n_components: 2
         copy: true

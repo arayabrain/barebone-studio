@@ -6,7 +6,10 @@ from studio.app.common.core.logger import AppLogger
 from studio.app.common.dataclass import HeatMapData  # , TimeSeriesData
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass import BehaviorData, FluoData, IscellData
-from studio.app.optinist.wrappers.optinist.utils import standard_norm
+from studio.app.optinist.wrappers.optinist.utils import (
+    recursive_flatten_params,
+    standard_norm,
+)
 
 logger = AppLogger.get_logger()
 
@@ -149,6 +152,10 @@ def dpca_fit(
 
     function_id = ExptOutputPathIds(output_dir).function_id
     logger.info("start dpca: %s", function_id)
+
+    flattened_params = {}
+    recursive_flatten_params(params, flattened_params)
+    params = flattened_params
 
     neural_data = neural_data.data
     behaviors_data = behaviors_data.data

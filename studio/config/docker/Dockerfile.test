@@ -1,12 +1,12 @@
-FROM --platform=linux/amd64 python:3.8.20-slim
+FROM --platform=linux/amd64 python:3.9-slim
 
 WORKDIR /app
 
-# install default packages
+# Install default packages
 RUN apt-get --allow-releaseinfo-change update && \
     apt-get install --no-install-recommends -y git curl
 
-# install conda & packages
+# Install conda & packages
 RUN apt-get install --no-install-recommends -y gcc g++ libgl1 libgl1-mesa-dev libopencv-dev && \
     apt-get autoremove -y && apt-get clean
 RUN mkdir -p /opt/miniforge && \
@@ -19,12 +19,12 @@ RUN mkdir -p /opt/miniforge && \
     conda clean -y --all
 ENV PATH $PATH:/opt/miniforge/bin
 
-# setup optinist
+# Setup optinist
 COPY pyproject.toml poetry.lock ./
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install poetry && \
+    pip3 install --upgrade poetry poetry-plugin-export && \
     poetry config virtualenvs.create false
 
-# export requirements.txt from poetry and install
+# Export requirements.txt from poetry and install
 RUN poetry export -f requirements.txt -o requirements.studio.txt --with test
 RUN pip3 install -r requirements.studio.txt
