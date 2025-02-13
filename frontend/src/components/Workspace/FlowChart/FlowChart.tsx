@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux"
 
 import { useSnackbar, VariantType } from "notistack"
 
+import CachedIcon from "@mui/icons-material/Cached"
 import { Box, FormHelperText, Popover } from "@mui/material"
 import { grey } from "@mui/material/colors"
 import { styled } from "@mui/material/styles"
@@ -27,6 +28,7 @@ import RightDrawer from "components/Workspace/FlowChart/RightDrawer"
 import { AlgorithmTreeView } from "components/Workspace/FlowChart/TreeView"
 import PopupInputUrl from "components/Workspace/PopupInputUrl"
 import { CONTENT_HEIGHT, DRAWER_WIDTH, RIGHT_DRAWER_WIDTH } from "const/Layout"
+import { getAlgoList } from "store/slice/AlgorithmList/AlgorithmListActions"
 import {
   getStatusLoadViaUrl,
   uploadViaUrl,
@@ -80,6 +82,10 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
 
   const handleClickVariant = (variant: VariantType, mess: string) => {
     enqueueSnackbar(mess, { variant })
+  }
+
+  const handleRefreshAlgoList = () => {
+    dispatch(getAlgoList())
   }
 
   const onLoadFileViaUrl = async () => {
@@ -154,7 +160,15 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
               </Box>
             )}
             <Box overflow="auto">
-              <SectionTitle>Nodes</SectionTitle>
+              <SectionTitle
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                Nodes
+                <CachedIcon
+                  onClick={handleRefreshAlgoList}
+                  style={{ cursor: "pointer", color: "#1976d2" }}
+                />
+              </SectionTitle>
               <AlgorithmTreeView />
             </Box>
           </Box>
