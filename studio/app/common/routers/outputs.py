@@ -12,7 +12,7 @@ from studio.app.common.core.utils.filepath_creater import (
 )
 from studio.app.common.core.utils.json_writer import JsonWriter, save_tiff2json
 from studio.app.common.schemas.outputs import JsonTimeSeriesData, OutputData
-from studio.app.const import ACCEPT_FILE_EXT
+from studio.app.const import ACCEPT_FILE_EXT, ORIGINAL_DATA_EXT
 from studio.app.dir_path import DIRPATH
 
 router = APIRouter(prefix="/outputs", tags=["outputs"])
@@ -31,7 +31,14 @@ def get_initial_timeseries_data(dirpath) -> JsonTimeSeriesData:
 
 
 @router.get("/inittimedata/{dirpath:path}", response_model=JsonTimeSeriesData)
-async def get_inittimedata(dirpath: str):
+async def get_inittimedata(
+    dirpath: str,
+    isFull: Optional[bool] = None,
+):
+    full_json_dirpath = dirpath + ORIGINAL_DATA_EXT
+    if isFull and os.path.exists(full_json_dirpath):
+        dirpath = full_json_dirpath
+
     file_numbers = sorted(
         [
             os.path.splitext(os.path.basename(x))[0]
@@ -71,7 +78,15 @@ async def get_inittimedata(dirpath: str):
 
 
 @router.get("/timedata/{dirpath:path}", response_model=JsonTimeSeriesData)
-async def get_timedata(dirpath: str, index: int):
+async def get_timedata(
+    dirpath: str,
+    index: int,
+    isFull: Optional[bool] = None,
+):
+    full_json_dirpath = dirpath + ORIGINAL_DATA_EXT
+    if isFull and os.path.exists(full_json_dirpath):
+        dirpath = full_json_dirpath
+
     json_data = JsonReader.read_as_timeseries(
         join_filepath([dirpath, f"{str(index)}.json"])
     )
@@ -119,8 +134,15 @@ async def get_image(
     workspace_id: str,
     start_index: Optional[int] = 0,
     end_index: Optional[int] = 10,
+    isFull: Optional[bool] = None,
 ):
     filename, ext = os.path.splitext(os.path.basename(filepath))
+
+    if filename == "cell_roi" and isFull:
+        full_cell_roi_filepath = filepath + ORIGINAL_DATA_EXT
+        if os.path.exists(full_cell_roi_filepath):
+            filepath = full_cell_roi_filepath
+
     if ext in ACCEPT_FILE_EXT.TIFF_EXT.value:
         if not filepath.startswith(join_filepath([DIRPATH.OUTPUT_DIR, workspace_id])):
             filepath = join_filepath([DIRPATH.INPUT_DIR, workspace_id, filepath])

@@ -49,6 +49,7 @@ class ExptConfigReader:
                     path=value["path"],
                     type=value["type"],
                     max_index=value["max_index"],
+                    data_shape=value.get("data_shape"),
                 )
                 for key, value in config.items()
             }

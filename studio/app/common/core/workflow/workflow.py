@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -129,6 +129,7 @@ class OutputPath:
     path: str
     type: str
     max_index: int = None
+    data_shape: Optional[list] = field(default_factory=list)
 
 
 @dataclass
@@ -136,6 +137,42 @@ class Message:
     status: str
     message: str
     outputPaths: Dict[str, OutputPath] = None
+
+
+@dataclass
+class DataFilterRangeParam:
+    start: int
+    end: int
+
+
+@dataclass
+class DataFilterParam:
+    dim1: List[DataFilterRangeParam] = field(default_factory=list)
+    # dim2: List[DataFilterRangeParam] = field(default_factory=list)
+    # dim3: List[DataFilterRangeParam] = field(default_factory=list)
+    roi: List[DataFilterRangeParam] = field(default_factory=list)
+
+    @property
+    def is_empty(self):
+        return len(self.dim1 + self.roi) == 0
+
+    @staticmethod
+    def _get_mask(dim_range: List[DataFilterRangeParam], max_size: int):
+        import numpy as np
+
+        mask = np.zeros(max_size, dtype=bool)
+        for range in dim_range:
+            if isinstance(range, dict):
+                mask[range["start"] : range["end"]] = True
+            else:
+                mask[range.start : range.end] = True
+        return mask
+
+    def dim1_mask(self, max_size):
+        return self._get_mask(self.dim1, max_size=max_size)
+
+    def roi_mask(self, max_size):
+        return self._get_mask(self.roi, max_size=max_size)
 
 
 @dataclass
@@ -147,6 +184,12 @@ class NodeData:
     fileType: str = None
     hdf5Path: str = None
     matPath: str = None
+    dataFilterParam: Union[DataFilterParam, dict, None] = field(
+        default_factory=lambda: DataFilterParam(dim1=[], roi=[])
+    )
+    draftDataFilterParam: Union[DataFilterParam, dict, None] = field(
+        default_factory=lambda: DataFilterParam(dim1=[], roi=[])
+    )
 
 
 @dataclass
@@ -187,8 +230,8 @@ class Edge:
 
 class RunItem(BaseModel):
     name: str = None
-    nodeDict: dict = {}
-    edgeDict: dict = {}
+    nodeDict: Dict[str, Node] = {}
+    edgeDict: Dict[str, Edge] = {}
     snakemakeParam: dict = {}
     nwbParam: dict = {}
     forceRunList: List[ForceRun]
