@@ -13,9 +13,9 @@ classifiers = [
   "Intended Audience :: Education",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
   "Operating System :: POSIX :: Linux",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: MacOS :: MacOS X",
@@ -44,10 +44,11 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8.1"
+python = "^3.9"
 fastapi = "0.104.*"
 uvicorn = "0.24.*"
-numpy = { version = ">=1.23, <1.27" }
+numpy = "1.24.3"
+pandas = "1.5.3"
 aiofiles = "*"
 tqdm = "*"
 pyyaml = "*"
@@ -55,12 +56,13 @@ imageio = "*"
 tifffile = "*"
 python-multipart = "*"
 future = "*"
-pynwb = "2.2.0"
+pynwb = "2.8.3"
 psutil = "*"
 nbstripout = "*"
 snakemake = { version = ">=7.24, <7.31" }
 jinja2 = "3.1.*"
-httpx = "*"
+httpx = "0.21.0"
+starlette = "0.27.0"
 firebase_admin = "*"
 pyrebase4 = "4.7.1"
 pydantic = { version = "1.10.13", extras = ["email", "dotenv"] }
