@@ -7,15 +7,20 @@ export const selectLoading = (state: RootState) => state.displayData.loading
 export const selectIsEditRoiCommitting = (state: RootState) =>
   state.displayData.isEditRoiCommitting
 
-export const selectTimeSeriesData = (filePath: string) => (state: RootState) =>
-  selectDisplayData(state).timeSeries[filePath].data
+export const selectTimeSeriesData =
+  (filePath: string | null) => (state: RootState) => {
+    if (!filePath) return {}
+    return selectDisplayData(state).timeSeries[filePath]?.data || {}
+  }
 
 export const selectTimesSeriesMeta = (filePath: string) => (state: RootState) =>
   selectDisplayData(state).timeSeries[filePath].meta
 
 export const selectTimeSeriesXrange =
-  (filePath: string) => (state: RootState) =>
-    selectDisplayData(state).timeSeries[filePath].xrange
+  (filePath: string | null) => (state: RootState) => {
+    if (!filePath) return []
+    return selectDisplayData(state).timeSeries[filePath]?.xrange || []
+  }
 
 export const selectTimeSeriesStd = (filePath: string) => (state: RootState) =>
   selectDisplayData(state).timeSeries[filePath].std

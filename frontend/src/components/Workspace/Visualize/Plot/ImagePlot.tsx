@@ -1046,7 +1046,7 @@ interface PlotDatum {
   z: number
 }
 
-function rgba2hex(rgba: number[], alpha: number) {
+export function rgba2hex(rgba: number[], alpha: number) {
   const r = rgba[0]
   const g = rgba[1]
   const b = rgba[2]

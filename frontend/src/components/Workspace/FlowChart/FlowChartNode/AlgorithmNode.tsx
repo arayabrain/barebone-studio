@@ -1,5 +1,5 @@
-import { memo, useContext, useRef, useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import { memo, useContext, useMemo, useRef, useState } from "react"
+import { shallowEqual, useDispatch, useSelector } from "react-redux"
 import { Handle, Position, NodeProps } from "reactflow"
 
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded"
@@ -29,10 +29,15 @@ import {
   selectAlgoReturns,
 } from "store/slice/AlgorithmList/AlgorithmListSelectors"
 import {
+  selectAlgorithmDataFilterParam,
+  selectAlgorithmFilterParamLoadingApi,
   selectAlgorithmIsUpdated,
   selectAlgorithmNodeDefined,
 } from "store/slice/AlgorithmNode/AlgorithmNodeSelectors"
-import { selectAncestorNodesOriginalValueById } from "store/slice/FlowElement/FlowElementSelectors"
+import {
+  isParentNodeUpdatedParams,
+  selectAncestorNodesOriginalValueById,
+} from "store/slice/FlowElement/FlowElementSelectors"
 import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { NodeData, NodeIdProps } from "store/slice/FlowElement/FlowElementType"
 import {
@@ -65,7 +70,18 @@ const AlgorithmNodeImple = memo(function AlgorithmNodeImple({
   isConnectable,
   data,
 }: NodeProps<NodeData>) {
-  const { onOpenOutputDialog } = useContext(DialogContext)
+  const { onOpenOutputDialog, onOpenFilterDialog } = useContext(DialogContext)
+
+  const filterSelector = useSelector(
+    selectAlgorithmDataFilterParam(nodeId),
+    shallowEqual,
+  )
+  const isUpdateFilterParams = useMemo(() => {
+    return (
+      filterSelector?.dim1?.filter(Boolean).length ||
+      filterSelector?.roi?.filter(Boolean).length
+    )
+  }, [filterSelector?.dim1, filterSelector?.roi])
   const dispatch = useDispatch()
 
   const onClickParamButton = () => {
@@ -80,14 +96,29 @@ const AlgorithmNodeImple = memo(function AlgorithmNodeImple({
     onOpenOutputDialog(nodeId)
   }
 
+  const onClickFilterButton = () => {
+    onOpenFilterDialog(nodeId)
+  }
+
   const status = useStatus(nodeId)
   const workflowId = useSelector(selectPipelineLatestUid)
   const ancestorIsUpdated = useSelector(
     selectAncestorNodesOriginalValueById(nodeId),
   )
   const isUpdated = useSelector(selectAlgorithmIsUpdated(nodeId))
+  const isParentParamsUpdated = useSelector(isParentNodeUpdatedParams(nodeId))
+
   const updated =
-    typeof workflowId !== "undefined" && (isUpdated || ancestorIsUpdated)
+    typeof workflowId !== "undefined" &&
+    (isUpdated || ancestorIsUpdated || isParentParamsUpdated)
+
+  const allowFilter = useMemo(
+    () =>
+      ["suite2p_roi", "caiman_cnmf", "lccd_cell_detection"].includes(
+        data.label,
+      ),
+    [data.label],
+  )
 
   return (
     <NodeContainer
@@ -122,17 +153,22 @@ const AlgorithmNodeImple = memo(function AlgorithmNodeImple({
         <Button
           size="small"
           onClick={onClickOutputButton}
-          disabled={
-            !status ||
-            [
-              NODE_RESULT_STATUS.PENDING,
-              NODE_RESULT_STATUS.ERROR,
-              "uninitialized",
-            ].includes(status)
-          }
+          disabled={status !== NODE_RESULT_STATUS.SUCCESS}
         >
           Output
         </Button>
+        {allowFilter && (
+          <Button
+            size="small"
+            onClick={onClickFilterButton}
+            disabled={
+              status !== NODE_RESULT_STATUS.SUCCESS || isParentParamsUpdated
+            }
+            style={{ backgroundColor: isUpdateFilterParams ? "#ff98004d" : "" }}
+          >
+            Filter
+          </Button>
+        )}
       </ButtonGroup>
       <AlgoArgs nodeId={nodeId} />
       <AlgoReturns nodeId={nodeId} isConnectable={isConnectable} />
@@ -143,9 +179,13 @@ const AlgorithmNodeImple = memo(function AlgorithmNodeImple({
 const AlgoProgress = memo(function AlgoProgress({ nodeId }: NodeIdProps) {
   const status = useStatus(nodeId)
   const pipelineStatus = useSelector(selectPipelineStatus)
+  const loadingFilterParams = useSelector(
+    selectAlgorithmFilterParamLoadingApi(nodeId),
+  )
   if (
-    pipelineStatus === RUN_STATUS.START_SUCCESS &&
-    status === NODE_RESULT_STATUS.PENDING
+    (pipelineStatus === RUN_STATUS.START_SUCCESS &&
+      status === NODE_RESULT_STATUS.PENDING) ||
+    loadingFilterParams
   ) {
     return (
       <div style={{ paddingLeft: 8, paddingRight: 8 }}>
@@ -350,7 +390,7 @@ const Message = memo(function Message({ nodeId }: NodeIdProps) {
   const latestUid = useSelector(selectPipelineLatestUid)
   const errorMsg = useSelector((state: RootState) =>
     latestUid != null
-      ? selectPipelineNodeResultMessage(nodeId)(state) ?? null
+      ? (selectPipelineNodeResultMessage(nodeId)(state) ?? null)
       : null,
   )
 

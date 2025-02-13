@@ -7,7 +7,9 @@ import {
   RunResultDTO,
   RunPostData,
   cancelResultApi,
+  runFilterApi,
 } from "api/run/Run"
+import { TDataFilterParam } from "store/slice/AlgorithmNode/AlgorithmNodeType"
 import {
   selectPipelineLatestUid,
   selectRunResultPendingNodeIdList,
@@ -33,6 +35,41 @@ export const run = createAsyncThunk<
     return thunkAPI.rejectWithValue("workspace id does not exist.")
   }
 })
+
+export const runApplyFilter = createAsyncThunk<
+  string,
+  {
+    dataFilterParam?: TDataFilterParam
+    nodeId: string
+  },
+  ThunkApiConfig
+>(
+  `${PIPELINE_SLICE_NAME}/run/filter`,
+  async ({ dataFilterParam, nodeId }, thunkAPI) => {
+    const workspaceId = selectCurrentWorkspaceId(thunkAPI.getState())
+    const currentUid = selectPipelineLatestUid(thunkAPI.getState())
+
+    if (!currentUid) {
+      return thunkAPI.rejectWithValue("uid does not exist.")
+    }
+
+    if (workspaceId) {
+      try {
+        const response = await runFilterApi(
+          workspaceId,
+          currentUid,
+          nodeId,
+          dataFilterParam,
+        )
+        return response
+      } catch (e) {
+        return thunkAPI.rejectWithValue(e)
+      }
+    } else {
+      return thunkAPI.rejectWithValue("workspace id does not exist.")
+    }
+  },
+)
 
 export const runByCurrentUid = createAsyncThunk<
   string,

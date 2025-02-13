@@ -19,7 +19,7 @@ import {
 export function isDisplayDataItem(
   item: VisualaizeItemType,
 ): item is DisplayDataItem {
-  return item.itemType === VISUALIZE_ITEM_TYPE_SET.DISPLAY_DATA
+  return item?.itemType === VISUALIZE_ITEM_TYPE_SET.DISPLAY_DATA
 }
 
 export function isImageItem(item: VisualaizeItemType): item is ImageItem {
@@ -33,8 +33,8 @@ export function isTimeSeriesItem(
   item: VisualaizeItemType,
 ): item is TimeSeriesItem {
   return (
-    item.itemType === VISUALIZE_ITEM_TYPE_SET.DISPLAY_DATA &&
-    item.dataType === DATA_TYPE_SET.TIME_SERIES
+    item?.itemType === VISUALIZE_ITEM_TYPE_SET.DISPLAY_DATA &&
+    item?.dataType === DATA_TYPE_SET.TIME_SERIES
   )
 }
 

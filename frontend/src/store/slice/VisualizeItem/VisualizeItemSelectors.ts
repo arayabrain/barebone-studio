@@ -105,7 +105,8 @@ export const selectVisualizeDataNodeId =
   }
 
 export const selectVisualizeDataFilePath =
-  (itemId: number) => (state: RootState) => {
+  (itemId: number | null) => (state: RootState) => {
+    if (!itemId && itemId !== 0) return ""
     const item = selectVisualizeItemById(itemId)(state)
     if (isDisplayDataItem(item)) {
       return item.filePath

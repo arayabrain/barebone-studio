@@ -3,6 +3,7 @@ import {
   NodeResultPending,
   NodeResultSuccess,
   RUN_STATUS,
+  StartedPipeline,
 } from "store/slice/Pipeline/PipelineType"
 import {
   isNodeResultPending,
@@ -31,6 +32,11 @@ export const selectCurrentPipelineName = (state: RootState) => {
 
 export const selectStartedPipeline = (state: RootState) => {
   return state.pipeline.run
+}
+
+export const selectRunOutputPaths = (nodeId: string) => (state: RootState) => {
+  const run = selectStartedPipeline(state) as StartedPipeline
+  return (run.runResult[nodeId] as NodeResultSuccess)?.outputPaths
 }
 
 export const selectPipelineRunBtn = (state: RootState) => {

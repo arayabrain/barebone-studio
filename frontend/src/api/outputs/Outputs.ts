@@ -9,19 +9,25 @@ export type TimeSeriesData = {
   }
 }
 
-export async function getTimeSeriesInitDataApi(path: string): Promise<{
+export async function getTimeSeriesInitDataApi(
+  path: string,
+  isFull?: boolean,
+): Promise<{
   data: TimeSeriesData
   xrange: string[]
   std: TimeSeriesData
   meta?: PlotMetaData
 }> {
-  const response = await axios.get(`${BASE_URL}/outputs/inittimedata/${path}`)
+  const response = await axios.get(`${BASE_URL}/outputs/inittimedata/${path}`, {
+    params: isFull ? { isFull } : undefined,
+  })
   return response.data
 }
 
 export async function getTimeSeriesDataByIdApi(
   path: string,
   index: string,
+  isFull?: boolean,
 ): Promise<{
   data: TimeSeriesData
   xrange: string[]
@@ -29,9 +35,7 @@ export async function getTimeSeriesDataByIdApi(
   meta?: PlotMetaData
 }> {
   const response = await axios.get(`${BASE_URL}/outputs/timedata/${path}`, {
-    params: {
-      index: index,
-    },
+    params: isFull ? { index, isFull } : { index },
   })
   return response.data
 }
@@ -109,9 +113,12 @@ export type RoiData = number[][][]
 export async function getRoiDataApi(
   path: string,
   params: { workspaceId: number },
+  isFull?: boolean,
 ): Promise<{ data: RoiData; meta?: PlotMetaData }> {
+  const p = { workspace_id: params.workspaceId, isFull }
+  if (!isFull) delete p.isFull
   const response = await axios.get(`${BASE_URL}/outputs/image/${path}`, {
-    params: { workspace_id: params.workspaceId },
+    params: p,
   })
   return response.data
 }
