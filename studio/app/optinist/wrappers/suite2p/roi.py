@@ -28,43 +28,72 @@ def suite2p_roi(
     ops = ops.data
     ops = {**default_ops(), **ops, **params, "fs": fs}
 
-    # ROI detection
-    ops_classfile = ops.get("classifier_path")
-    builtin_classfile = classification.builtin_classfile
-    user_classfile = classification.user_classfile
-    if ops_classfile:
-        logger.info(f"NOTE: applying classifier {str(ops_classfile)}")
-        classfile = ops_classfile
-    elif ops["use_builtin_classifier"] or not user_classfile.is_file():
-        logger.info(f"NOTE: Applying builtin classifier at {str(builtin_classfile)}")
-        classfile = builtin_classfile
-    else:
-        logger.info(f"NOTE: applying default {str(user_classfile)}")
-        classfile = user_classfile
+    # Initialize default empty outputs
+    empty_roi = np.full((ops["Ly"], ops["Lx"]), np.nan)
+    im = np.zeros((0, ops["Ly"], ops["Lx"]))
+    F = np.zeros((0, ops["nframes"]))
+    Fneu = np.zeros((0, ops["nframes"]))
+    iscell = np.array([], dtype=int)
+    stat = []
 
-    ops, stat = detection.detect(ops=ops, classfile=classfile)
+    try:
+        # ROI detection
+        ops_classfile = ops.get("classifier_path")
+        builtin_classfile = classification.builtin_classfile
+        user_classfile = classification.user_classfile
 
-    # ROI EXTRACTION
-    ops, stat, F, Fneu, _, _ = extraction.create_masks_and_extract(ops, stat)
-    stat = stat.tolist()
+        if ops_classfile:
+            logger.info(f"NOTE: applying classifier {str(ops_classfile)}")
+            classfile = ops_classfile
+        elif ops["use_builtin_classifier"] or not user_classfile.is_file():
+            logger.info(
+                f"NOTE: Applying builtin classifier at {str(builtin_classfile)}"
+            )
+            classfile = builtin_classfile
+        else:
+            logger.info(f"NOTE: applying default {str(user_classfile)}")
+            classfile = user_classfile
 
-    # ROI CLASSIFICATION
-    iscell = classification.classify(stat=stat, classfile=classfile)
-    iscell = iscell[:, 0].astype(int)
+        # Check if input data exists
+        if not ops.get("filelist") or len(ops["filelist"]) == 0:
+            logger.warning("No input files found. Returning empty results.")
+        else:
+            ops, stat = detection.detect(ops=ops, classfile=classfile)
 
-    arrays = []
-    for i, s in enumerate(stat):
-        array = ROI(
-            ypix=s["ypix"], xpix=s["xpix"], lam=s["lam"], med=s["med"], do_crop=False
-        ).to_array(Ly=ops["Ly"], Lx=ops["Lx"])
-        array *= i + 1
-        arrays.append(array)
+            if len(stat) > 0:
+                # ROI EXTRACTION
+                ops, stat, F, Fneu, _, _ = extraction.create_masks_and_extract(
+                    ops, stat
+                )
+                stat = stat.tolist()
 
-    im = np.stack(arrays)
-    im[im == 0] = np.nan
-    im -= 1
+                # ROI CLASSIFICATION
+                iscell = classification.classify(stat=stat, classfile=classfile)
+                iscell = iscell[:, 0].astype(int)
 
-    # roiを追加
+                arrays = []
+                for i, s in enumerate(stat):
+                    array = ROI(
+                        ypix=s["ypix"],
+                        xpix=s["xpix"],
+                        lam=s["lam"],
+                        med=s["med"],
+                        do_crop=False,
+                    ).to_array(Ly=ops["Ly"], Lx=ops["Lx"])
+                    array *= i + 1
+                    arrays.append(array)
+
+                im = np.stack(arrays)
+                im[im == 0] = np.nan
+                im -= 1
+            else:
+                logger.info("No ROIs detected in the data.")
+
+    except Exception as e:
+        logger.error(f"Error during ROI detection: {str(e)}")
+        # Continue with empty results
+
+    # Create ROI list
     roi_list = []
     for i in range(len(stat)):
         kargs = {}
@@ -73,13 +102,10 @@ def suite2p_roi(
         ).T
         roi_list.append(kargs)
 
-    # NWBを追加
+    # Prepare NWB output
     nwbfile = {}
-
     nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
     nwbfile[NWBDATASET.POSTPROCESS] = {function_id: {"all_roi_img": im}}
-
-    # iscellを追加
     nwbfile[NWBDATASET.COLUMN] = {
         function_id: {
             "name": "iscell",
@@ -87,8 +113,6 @@ def suite2p_roi(
             "data": iscell,
         }
     }
-
-    # Fluorenceを追加
     nwbfile[NWBDATASET.FLUORESCENCE] = {
         function_id: {
             "Fluorescence": {
@@ -123,15 +147,17 @@ def suite2p_roi(
         "fluorescence": FluoData(F, file_name="fluorescence"),
         "iscell": IscellData(iscell, file_name="iscell"),
         "all_roi": RoiData(
-            np.nanmax(im, axis=0), output_dir=output_dir, file_name="all_roi"
+            np.nanmax(im, axis=0) if len(im) > 0 else empty_roi,
+            output_dir=output_dir,
+            file_name="all_roi",
         ),
         "non_cell_roi": RoiData(
-            np.nanmax(im[iscell == 0], axis=0),
+            np.nanmax(im[iscell == 0], axis=0) if len(im) > 0 else empty_roi,
             output_dir=output_dir,
             file_name="noncell_roi",
         ),
         "cell_roi": RoiData(
-            np.nanmax(im[iscell != 0], axis=0),
+            np.nanmax(im[iscell != 0], axis=0) if len(im) > 0 else empty_roi,
             output_dir=output_dir,
             file_name="cell_roi",
         ),

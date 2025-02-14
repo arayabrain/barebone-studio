@@ -21,40 +21,57 @@ def lccd_detect(
     lccd = LCCD(params)
     D = LoadData(mc_images)
     assert len(D.shape) == 3, "input array should have dimensions (width, height, time)"
-    roi = lccd.apply(D)
+    try:
+        roi = lccd.apply(D)
+        num_cell = roi.shape[1]
+    except ValueError as e:
+        if "No roi region found" in str(e):
+            logger.info("No ROIs found in LCCD detection")
+            num_cell = 0
+            roi = np.zeros((D.shape[0] * D.shape[1], 0))  # Empty ROIs
+        else:
+            raise e
 
-    dff_f0_frames = params["dff"]["f0_frames"]
-    dff_f0_percentile = params["dff"]["f0_percentile"]
-    num_cell = roi.shape[1]
     num_frames = D.shape[2]
-    iscell = np.ones(num_cell, dtype=int)
 
-    reshapedD = D.reshape([D.shape[0] * D.shape[1], D.shape[2]])
-    timeseries = np.zeros([num_cell, num_frames])
-    roi_list = []
+    # Handle zero ROIs case
+    if num_cell == 0:
+        empty_roi = np.full(D.shape[:2], np.nan)
+        im = np.zeros((0, *D.shape[:2]))  # Empty stack of ROIs
+        iscell = np.array([], dtype=int)
+        timeseries = np.zeros((0, num_frames))
+        timeseries_dff = np.zeros((0, num_frames))
+    else:
+        dff_f0_frames = params["dff"]["f0_frames"]
+        dff_f0_percentile = params["dff"]["f0_percentile"]
+        iscell = np.ones(num_cell, dtype=int)
 
-    for i in range(num_cell):
-        roi_list.append((roi[:, i].reshape([D.shape[0], D.shape[1]])) * (i + 1))
-        timeseries[i, :] = np.mean(reshapedD[roi[:, i] > 0, :], axis=0)
+        reshapedD = D.reshape([D.shape[0] * D.shape[1], D.shape[2]])
+        timeseries = np.zeros([num_cell, num_frames])
+        roi_list = []
 
-    im = np.stack(roi_list)
-    im = im.astype(np.float64)
-    im[im == 0] = np.nan
-    im -= 1
+        for i in range(num_cell):
+            roi_list.append((roi[:, i].reshape([D.shape[0], D.shape[1]])) * (i + 1))
+            timeseries[i, :] = np.mean(reshapedD[roi[:, i] > 0, :], axis=0)
 
-    empty_roi = np.full_like(im[0], np.nan)
-    roi_image = np.nanmax(im[iscell != 0], axis=0).astype(float)
+        im = np.stack(roi_list)
+        im = im.astype(np.float64)
+        im[im == 0] = np.nan
+        im -= 1
 
-    timeseries_dff = np.ones([num_cell, num_frames]) * np.nan
-    for i in range(num_cell):
-        for k in range(num_frames):
-            if (k - dff_f0_frames >= 0) and (k + dff_f0_frames < num_frames):
-                f0 = np.percentile(
-                    timeseries[i, k - dff_f0_frames : k + dff_f0_frames],
-                    dff_f0_percentile,
-                )
-                timeseries_dff[i, k] = (timeseries[i, k] - f0) / f0
+        empty_roi = np.full_like(im[0], np.nan)
 
+        timeseries_dff = np.ones([num_cell, num_frames]) * np.nan
+        for i in range(num_cell):
+            for k in range(num_frames):
+                if (k - dff_f0_frames >= 0) and (k + dff_f0_frames < num_frames):
+                    f0 = np.percentile(
+                        timeseries[i, k - dff_f0_frames : k + dff_f0_frames],
+                        dff_f0_percentile,
+                    )
+                    timeseries_dff[i, k] = (timeseries[i, k] - f0) / f0
+
+    # Create ROI list for NWB
     roi_list = [{"image_mask": roi[:, i].reshape(D.shape[:2])} for i in range(num_cell)]
 
     nwbfile = {}
@@ -85,9 +102,13 @@ def lccd_detect(
         "dff": FluoData(timeseries_dff, file_name="dff"),
         "fluorescence": FluoData(timeseries, file_name="fluorescence"),
         "iscell": IscellData(iscell),
-        "all_roi": RoiData(roi_image, output_dir=output_dir, file_name="all_roi"),
+        "all_roi": RoiData(
+            np.nanmax(im, axis=0) if len(im) > 0 else empty_roi,
+            output_dir=output_dir,
+            file_name="all_roi",
+        ),
         "cell_roi": RoiData(
-            roi_image,
+            np.nanmax(im[iscell != 0], axis=0) if len(im) > 0 else empty_roi,
             output_dir=output_dir,
             file_name="cell_roi",
         ),

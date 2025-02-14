@@ -92,14 +92,27 @@ export const displayDataSlice = createSlice({
       })
       .addCase(getTimeSeriesDataById.rejected, (state, action) => {
         const { path } = action.meta.arg
-        state.timeSeries[path] = {
-          type: "timeSeries",
-          xrange: [],
-          data: {},
-          std: {},
-          pending: false,
-          fulfilled: false,
-          error: action.error.message ?? "rejected",
+        if (action.error.message === "0 ROIs found") {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: true,
+            error: "0 ROIs found",
+            meta: { title: "0 ROIs found" },
+          }
+        } else {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: false,
+            error: action.error.message ?? "rejected",
+          }
         }
       })
       .addCase(getTimeSeriesDataById.fulfilled, (state, action) => {
@@ -134,14 +147,27 @@ export const displayDataSlice = createSlice({
       })
       .addCase(getTimeSeriesAllData.rejected, (state, action) => {
         const { path } = action.meta.arg
-        state.timeSeries[path] = {
-          type: "timeSeries",
-          xrange: [],
-          data: {},
-          std: {},
-          pending: false,
-          fulfilled: false,
-          error: action.error.message ?? "rejected",
+        if (action.error.message === "0 ROIs found") {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: true,
+            error: "0 ROIs found",
+            meta: { title: "0 ROIs found" },
+          }
+        } else {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: false,
+            error: action.error.message ?? "rejected",
+          }
         }
       })
       .addCase(getTimeSeriesAllData.fulfilled, (state, action) => {
@@ -176,14 +202,27 @@ export const displayDataSlice = createSlice({
       })
       .addCase(getTimeSeriesInitData.rejected, (state, action) => {
         const { path } = action.meta.arg
-        state.timeSeries[path] = {
-          type: "timeSeries",
-          xrange: [],
-          data: {},
-          std: {},
-          pending: false,
-          fulfilled: false,
-          error: action.error.message ?? "rejected",
+        if (action.error.message === "0 ROIs found") {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: true,
+            error: "0 ROIs found",
+            meta: { title: "0 ROIs found" },
+          }
+        } else {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: false,
+            error: action.error.message ?? "rejected",
+          }
         }
       })
       .addCase(getTimeSeriesInitData.fulfilled, (state, action) => {

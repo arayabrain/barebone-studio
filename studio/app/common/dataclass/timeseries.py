@@ -36,19 +36,25 @@ class TimeSeriesData(BaseData):
         else:
             self.data = data
 
-        if len(self.data.shape) == 1:
+        # Handle empty data case
+        if self.data.size == 0:
+            # For K=0 case, create empty 2D array with correct time dimension
+            self.data = np.zeros((0, index.size if index is not None else 0))
+        elif len(self.data.shape) == 1:
             self.data = self.data[np.newaxis, :]
 
         self.std = std
         self.sem = sem
 
-        # indexを指定
+        # Handle index for empty data case
         if index is not None:
             self.index = index
-        else:
+        elif self.data.size > 0:
             self.index = np.arange(len(self.data[0]))
+        else:
+            self.index = np.array([])  # Empty index for empty data
 
-        # cell番号を表示
+        # Handle cell numbers for empty data case
         if cell_numbers is not None:
             self.cell_numbers = cell_numbers
         else:

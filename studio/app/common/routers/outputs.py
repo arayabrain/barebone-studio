@@ -39,6 +39,13 @@ async def get_inittimedata(dirpath: str):
         ]
     )
 
+    # Handle empty case
+    if not file_numbers:
+        return_data = get_initial_timeseries_data(dirpath)
+        return_data.meta = {"title": "0 ROIs found"}  # Set informative message
+        return return_data
+
+    # Rest of the function remains the same
     index = file_numbers[0]
     str_index = str(index)
 
