@@ -12,7 +12,9 @@
               "args": [
                 { "name": "image", "type": "ImageData", "isNone": false }
               ],
-              "returns": [{ "name": "mc_images", "type": "ImageData" }]
+              "returns": [{ "name": "mc_images", "type": "ImageData" }],
+              "condaName": "caiman",
+              "condaEnvExists": true
             },
             "caiman_cnmf": {
               "type": "child",
@@ -23,7 +25,9 @@
               "returns": [
                 { "name": "fluorescence", "type": "FluoData" },
                 { "name": "iscell", "type": "IscellData" }
-              ]
+              ],
+              "condaName": "caiman",
+              "condaEnvExists": true
             }
           }
         },
@@ -36,7 +40,9 @@
               "args": [
                 { "name": "image", "type": "ImageData", "isNone": false }
               ],
-              "returns": [{ "name": "ops", "type": "Suite2pData" }]
+              "returns": [{ "name": "ops", "type": "Suite2pData" }],
+              "condaName": "suite2p",
+              "condaEnvExists": true
             },
             "suite2p_registration": {
               "type": "child",
@@ -44,7 +50,9 @@
               "args": [
                 { "name": "ops", "type": "Suite2pData", "isNone": false }
               ],
-              "returns": [{ "name": "ops", "type": "Suite2pData" }]
+              "returns": [{ "name": "ops", "type": "Suite2pData" }],
+              "condaName": "suite2p",
+              "condaEnvExists": true
             }
           }
         },
@@ -57,7 +65,9 @@
               "args": [
                 { "name": "image", "type": "ImageData", "isNone": false }
               ],
-              "returns": [{ "name": "lccd", "type": "LccdData" }]
+              "returns": [{ "name": "lccd", "type": "LccdData" }],
+              "condaName": "lccd",
+              "condaEnvExists": true
             }
           }
         },
@@ -70,7 +80,9 @@
               "args": [
                 { "name": "image", "type": "ImageData", "isNone": false }
               ],
-              "returns": [{ "name": "optinist", "type": "OptinistData" }]
+              "returns": [{ "name": "optinist", "type": "OptinistData" }],
+              "condaName": "lccd",
+              "condaEnvExists": true
             }
           }
         }

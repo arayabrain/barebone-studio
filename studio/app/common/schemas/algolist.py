@@ -23,6 +23,8 @@ class Algo:
     returns: List[Return]
     parameter: str = None
     path: str = None
+    conda_name: str = None
+    conda_env_exists: bool = False
 
 
 class AlgoModel(BaseModel):
@@ -38,6 +40,8 @@ class AlgoList(BaseModel):
                     "returns": [{"name": "mc_images", "type": "ImageData"}],
                     "parameter": None,
                     "path": "caiman/caiman_mc",
+                    "conda_name": "caiman",
+                    "conda_env_exists": False,
                 }
             }
         }

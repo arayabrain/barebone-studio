@@ -57,12 +57,16 @@ export function convertToAlgoListType(dto: AlgoListDTO) {
         args: AlgorithmInfo[]
         returns: AlgorithmInfo[]
         path: string
+        conda_name: string
+        conda_env_exists: boolean
       }
       algoList[name] = {
         type: "child",
         functionPath: dto.path,
         args: dto.args,
         returns: dto.returns,
+        condaName: dto.conda_name,
+        condaEnvExists: dto.conda_env_exists,
       }
     }
   })

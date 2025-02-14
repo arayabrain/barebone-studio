@@ -17,6 +17,8 @@ export type AlgorithmChild = {
   args: AlgorithmInfo[]
   returns: AlgorithmInfo[]
   functionPath: string
+  condaName: string
+  condaEnvExists: boolean
 }
 export type AlgorithmParent = {
   type: "parent"

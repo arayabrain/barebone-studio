@@ -48,9 +48,10 @@ export async function importWorkflowConfigApi(
 
 export async function importSampleDataApi(
   workspace_id: number,
+  category: string,
 ): Promise<boolean> {
   const response = await axios.get(
-    `${BASE_URL}/workflow/sample_data/${workspace_id}/tutorial`,
+    `${BASE_URL}/workflow/sample_data/${workspace_id}/${category}`,
   )
   return response.data
 }

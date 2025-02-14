@@ -39,9 +39,11 @@ const Tooltips: FC = () => {
   const dispatch: AppDispatch = useDispatch()
   const { enqueueSnackbar } = useSnackbar()
   const workspaceId = useSelector(selectCurrentWorkspaceId)
+  const category = "tutorial"
+
   const handleImportSampleDataClick = () => {
     if (typeof workspaceId === "number") {
-      dispatch(importSampleData({ workspaceId }))
+      dispatch(importSampleData({ workspaceId, category }))
         .unwrap()
         .then(() => {
           enqueueSnackbar("Sample data import success", { variant: "success" })

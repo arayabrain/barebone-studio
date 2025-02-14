@@ -1,0 +1,57 @@
+nodeDict:
+  input_bmkjfbfk1d:
+    id: input_bmkjfbfk1d
+    type: ImageFileNode
+    data:
+      label: setup_conda_mouse2p_image.tiff
+      param: {}
+      path:
+      - setup_conda_mouse2p_image.tiff
+      type: input
+      fileType: image
+      hdf5Path: null
+      matPath: null
+    position:
+      x: 320
+      y: 173
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: null
+      width: 250
+      borderRadius: null
+  setup_conda_caiman_kgppkpi2pt:
+    id: setup_conda_caiman_kgppkpi2pt
+    type: AlgorithmNode
+    data:
+      label: setup_conda_caiman
+      param: {}
+      path: maintenance/setup_conda/setup_conda_caiman
+      type: algorithm
+      fileType: null
+      hdf5Path: null
+      matPath: null
+    position:
+      x: 651
+      y: 172
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: 0
+      width: 250
+      borderRadius: 0
+edgeDict:
+  ? reactflow__edge-input_bmkjfbfk1dinput_bmkjfbfk1d--image--ImageData-setup_conda_caiman_kgppkpi2ptsetup_conda_caiman_kgppkpi2pt--image--ImageData
+  : id: reactflow__edge-input_bmkjfbfk1dinput_bmkjfbfk1d--image--ImageData-setup_conda_caiman_kgppkpi2ptsetup_conda_caiman_kgppkpi2pt--image--ImageData
+    type: buttonedge
+    animated: false
+    source: input_bmkjfbfk1d
+    sourceHandle: input_bmkjfbfk1d--image--ImageData
+    target: setup_conda_caiman_kgppkpi2pt
+    targetHandle: setup_conda_caiman_kgppkpi2pt--image--ImageData
+    style:
+      border: null
+      height: null
+      padding: null
+      width: 5
+      borderRadius: null

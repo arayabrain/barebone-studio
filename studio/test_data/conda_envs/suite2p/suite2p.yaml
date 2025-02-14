@@ -1,0 +1,11 @@
+dependencies:
+  - python=3.8
+  - pip
+  - pyqt=5.15.*
+  - pyqt5-sip=12.11.*
+  - pip:
+    - numpy==1.23.*
+    - pyqtgraph==0.12.*
+    - pandas==1.5.*
+    - suite2p==0.10.3
+    - tifffile==2022.3.*

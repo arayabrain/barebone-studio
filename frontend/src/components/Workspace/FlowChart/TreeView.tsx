@@ -11,6 +11,7 @@ import { treeItemClasses } from "@mui/x-tree-view"
 import { TreeItem } from "@mui/x-tree-view/TreeItem"
 import { TreeView } from "@mui/x-tree-view/TreeView"
 
+import { CondaNoticeButton } from "components/Workspace/FlowChart/Buttons/CondaNoticeButton"
 import {
   DND_ITEM_TYPE_SET,
   TreeItemCollectedProps,
@@ -260,8 +261,8 @@ const AlgoNodeComponentRecursive = memo(function AlgoNodeComponentRecursive({
           <AlgoNodeComponentRecursive
             name={name}
             node={node}
-            key={i.toFixed()}
             onAddAlgoNode={onAddAlgoNode}
+            key={i.toFixed()}
           />
         ))}
       </TreeItem>
@@ -295,10 +296,22 @@ const AlgoNodeComponent = memo(function AlgoNodeComponent({
       onFocusCapture={(e) => e.stopPropagation()}
       nodeId={name}
       label={
-        <AddButton
-          name={name}
-          onClick={() => onAddAlgoNode(name, node.functionPath)}
-        />
+        <>
+          <div
+            style={{
+              display: "flex", // Place Items on single line.
+            }}
+          >
+            {node.condaEnvExists ? (
+              <AddButton
+                name={name}
+                onClick={() => onAddAlgoNode(name, node.functionPath)}
+              />
+            ) : (
+              <CondaNoticeButton name={name} condaName={node.condaName} />
+            )}
+          </div>
+        </>
       }
     />
   )

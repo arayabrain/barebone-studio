@@ -54,12 +54,12 @@ export const importWorkflowConfig = createAsyncThunk<
 
 export const importSampleData = createAsyncThunk<
   boolean,
-  { workspaceId: number }
+  { workspaceId: number; category: string }
 >(
   `${WORKFLOW_SLICE_NAME}/importSampleData`,
-  async ({ workspaceId }, thunkAPI) => {
+  async ({ workspaceId, category }, thunkAPI) => {
     try {
-      const response = await importSampleDataApi(workspaceId)
+      const response = await importSampleDataApi(workspaceId, category)
       return response
     } catch (e) {
       return thunkAPI.rejectWithValue(e)

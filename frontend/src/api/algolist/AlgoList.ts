@@ -7,6 +7,8 @@ export type AlgoListDTO = {
         args: AlgorithmInfo[]
         returns: AlgorithmInfo[]
         path: string
+        conda_name: string
+        conda_env_exists: boolean
       }
     | { children: AlgoListDTO }
 }
