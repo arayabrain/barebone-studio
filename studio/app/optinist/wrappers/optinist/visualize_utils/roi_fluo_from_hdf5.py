@@ -36,7 +36,11 @@ def roi_fluo_from_hdf5(
     all_roi = RoiData(
         np.nanmax(cell_img.data, axis=0), output_dir=output_dir, file_name="all_roi"
     )
-    fluorescence = FluoData(np.transpose(fluo.data), file_name="fluorescence")
+
+    if params["transpose"]:
+        fluorescence = FluoData(np.transpose(fluo.data), file_name="fluorescence")
+    else:
+        fluorescence = FluoData(fluo.data, file_name="fluorescence")
 
     if iscell is None:
         return {"all_roi": all_roi, "fluorescence": fluorescence}
