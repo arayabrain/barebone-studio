@@ -6,6 +6,7 @@ Installation (Users)
   :maxdepth: 2
 
   docker
-  windows
+  windows_native
+  windows_wsl
   mac
   linux
