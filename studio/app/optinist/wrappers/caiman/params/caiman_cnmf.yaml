@@ -16,7 +16,7 @@ init_params:
 
   K: 4
   gSig: [4, 4]
-  ssub: 1
+  ssub: 2
   tsub: 1
   nb: 2
   method_init: "greedy_roi"

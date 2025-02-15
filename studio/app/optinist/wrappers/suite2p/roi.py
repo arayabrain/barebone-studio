@@ -42,16 +42,18 @@ def suite2p_roi(
         logger.info(f"NOTE: applying default {str(user_classfile)}")
         classfile = user_classfile
 
+    # Detect ROIs
     ops, stat = detection.detect(ops=ops, classfile=classfile)
 
-    # ROI EXTRACTION
+    # Extract fluorescence traces
     ops, stat, F, Fneu, _, _ = extraction.create_masks_and_extract(ops, stat)
     stat = stat.tolist()
 
-    # ROI CLASSIFICATION
+    # Classify ROIs
     iscell = classification.classify(stat=stat, classfile=classfile)
     iscell = iscell[:, 0].astype(int)
 
+    # Convert ROIs to arrays
     arrays = []
     for i, s in enumerate(stat):
         array = ROI(
@@ -64,7 +66,7 @@ def suite2p_roi(
     im[im == 0] = np.nan
     im -= 1
 
-    # roiを追加
+    # Prepare ROI list for NWB
     roi_list = []
     for i in range(len(stat)):
         kargs = {}
@@ -73,13 +75,10 @@ def suite2p_roi(
         ).T
         roi_list.append(kargs)
 
-    # NWBを追加
+    # Prepare NWB file
     nwbfile = {}
-
     nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
     nwbfile[NWBDATASET.POSTPROCESS] = {function_id: {"all_roi_img": im}}
-
-    # iscellを追加
     nwbfile[NWBDATASET.COLUMN] = {
         function_id: {
             "name": "iscell",
@@ -87,8 +86,6 @@ def suite2p_roi(
             "data": iscell,
         }
     }
-
-    # Fluorenceを追加
     nwbfile[NWBDATASET.FLUORESCENCE] = {
         function_id: {
             "Fluorescence": {
@@ -110,10 +107,12 @@ def suite2p_roi(
         }
     }
 
+    # Update ops with extracted data
     ops["stat"] = stat
     ops["F"] = F
     ops["Fneu"] = Fneu
 
+    # Prepare output info
     info = {
         "ops": Suite2pData(ops),
         "max_proj": ImageData(

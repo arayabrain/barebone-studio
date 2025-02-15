@@ -38,7 +38,7 @@ def lccd_detect(
         timeseries[i, :] = np.mean(reshapedD[roi[:, i] > 0, :], axis=0)
 
     im = np.stack(roi_list)
-    im = im.astype(np.float64)
+    im = im.astype(np.float32)
     im[im == 0] = np.nan
     im -= 1
 
