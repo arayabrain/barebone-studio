@@ -1,32 +1,11 @@
 workspace_id: '1'
-unique_id: tutorial2
+unique_id: eb073299
 name: Tutorial2
-started_at: '2024-04-11 16:47:34'
-finished_at: '2024-04-11 16:49:14'
+started_at: '2025-02-13 14:58:19'
+finished_at: '2025-02-13 15:14:30'
 success: success
 hasNWB: true
 function:
-  caiman_mc_p4f6nsi9bh:
-    unique_id: caiman_mc_p4f6nsi9bh
-    name: caiman_mc
-    success: success
-    hasNWB: true
-    message: caiman_mc success
-    outputPaths:
-      mc_images:
-        path: /tmp/studio/output/1/tutorial2/caiman_mc_p4f6nsi9bh/tiff/mc_images/mc_images.tif
-        type: images
-        max_index: 2000
-      meanImg:
-        path: /tmp/studio/output/1/tutorial2/caiman_mc_p4f6nsi9bh/meanImg.json
-        type: images
-        max_index: 1
-      rois:
-        path: /tmp/studio/output/1/tutorial2/caiman_mc_p4f6nsi9bh/rois.json
-        type: roi
-        max_index: null
-    started_at: '2024-04-11 16:47:49'
-    finished_at: '2024-04-11 16:48:34'
   input_cdgkgmc5oq:
     unique_id: input_cdgkgmc5oq
     name: sample_mouse2p_image.tiff
@@ -34,92 +13,114 @@ function:
     hasNWB: false
     message: null
     outputPaths: null
-    started_at: '2024-04-11 16:47:34'
-    finished_at: '2024-04-11 16:47:34'
-  pca_xi0d87mbrk:
-    unique_id: pca_xi0d87mbrk
-    name: pca
+    started_at: '2025-02-13 14:58:19'
+    finished_at: '2025-02-13 14:58:19'
+  caiman_mc_o5k0ez4d9p:
+    unique_id: caiman_mc_o5k0ez4d9p
+    name: caiman_mc
     success: success
     hasNWB: true
-    message: pca success
+    message: caiman_mc success
     outputPaths:
-      explained_variance:
-        path: /tmp/studio/output/1/tutorial2/pca_xi0d87mbrk/evr.json
-        type: bar
+      mc_images:
+        path: /tmp/studio/output/1/eb073299/caiman_mc_o5k0ez4d9p/tiff/mc_images/mc_images.tif
+        type: images
+        max_index: 2000
+      meanImg:
+        path: /tmp/studio/output/1/eb073299/caiman_mc_o5k0ez4d9p/meanImg.json
+        type: images
+        max_index: 1
+      rois:
+        path: /tmp/studio/output/1/eb073299/caiman_mc_o5k0ez4d9p/rois.json
+        type: roi
         max_index: null
-      projectedNd:
-        path: /tmp/studio/output/1/tutorial2/pca_xi0d87mbrk/projectedNd.json
-        type: scatter
-        max_index: null
-      contribution:
-        path: /tmp/studio/output/1/tutorial2/pca_xi0d87mbrk/contribution.json
-        type: bar
-        max_index: null
-      cumsum_contribution:
-        path: /tmp/studio/output/1/tutorial2/pca_xi0d87mbrk/cumsum_contribution.json
-        type: bar
-        max_index: null
-    started_at: '2024-04-11 16:49:09'
-    finished_at: '2024-04-11 16:49:14'
-  caiman_cnmf_qcjcwx9uq7:
-    unique_id: caiman_cnmf_qcjcwx9uq7
+    started_at: '2025-02-13 15:05:28'
+    finished_at: '2025-02-13 15:10:31'
+  caiman_cnmf_t28ssmgpcz:
+    unique_id: caiman_cnmf_t28ssmgpcz
     name: caiman_cnmf
     success: success
     hasNWB: true
     message: caiman_cnmf success
     outputPaths:
       images:
-        path: /tmp/studio/output/1/tutorial2/caiman_cnmf_qcjcwx9uq7/images.json
+        path: /tmp/studio/output/1/eb073299/caiman_cnmf_t28ssmgpcz/images.json
         type: images
         max_index: 1
       fluorescence:
-        path: /tmp/studio/output/1/tutorial2/caiman_cnmf_qcjcwx9uq7/fluorescence
+        path: /tmp/studio/output/1/eb073299/caiman_cnmf_t28ssmgpcz/fluorescence
         type: timeseries
-        max_index: 4
+        max_index: 10
       all_roi:
-        path: /tmp/studio/output/1/tutorial2/caiman_cnmf_qcjcwx9uq7/all_roi.json
+        path: /tmp/studio/output/1/eb073299/caiman_cnmf_t28ssmgpcz/all_roi.json
         type: roi
         max_index: null
       cell_roi:
-        path: /tmp/studio/output/1/tutorial2/caiman_cnmf_qcjcwx9uq7/cell_roi.json
+        path: /tmp/studio/output/1/eb073299/caiman_cnmf_t28ssmgpcz/cell_roi.json
         type: roi
         max_index: null
       non_cell_roi:
-        path: /tmp/studio/output/1/tutorial2/caiman_cnmf_qcjcwx9uq7/non_cell_roi.json
+        path: /tmp/studio/output/1/eb073299/caiman_cnmf_t28ssmgpcz/non_cell_roi.json
         type: roi
         max_index: null
-    started_at: '2024-04-11 16:48:36'
-    finished_at: '2024-04-11 16:48:59'
+    started_at: '2025-02-13 15:10:32'
+    finished_at: '2025-02-13 15:11:31'
+  pca_cr3lvekylp:
+    unique_id: pca_cr3lvekylp
+    name: pca
+    success: success
+    hasNWB: true
+    message: pca success
+    outputPaths:
+      explained_variance:
+        path: /tmp/studio/output/1/eb073299/pca_cr3lvekylp/evr.json
+        type: bar
+        max_index: null
+      projectedNd:
+        path: /tmp/studio/output/1/eb073299/pca_cr3lvekylp/projectedNd.json
+        type: scatter
+        max_index: null
+      contribution:
+        path: /tmp/studio/output/1/eb073299/pca_cr3lvekylp/contribution.json
+        type: bar
+        max_index: null
+      cumsum_contribution:
+        path: /tmp/studio/output/1/eb073299/pca_cr3lvekylp/cumsum_contribution.json
+        type: bar
+        max_index: null
+    started_at: '2025-02-13 15:13:18'
+    finished_at: '2025-02-13 15:14:30'
 nwb:
+  session_description: optinist
+  identifier: optinist
+  experiment_description: None
   device:
+    name: Microscope device
     description: Microscope Information
     manufacturer: Microscope Manufacture
-    name: Microscope device
-  experiment_description: None
-  identifier: optinist
-  image_series:
-    starting_frame:
-    - 0
-    starting_time: 0
-  imaging_plane:
-    description: standard
-    excitation_lambda: 900.0
-    imaging_rate: 30.0
-    indicator: GCaMP
-    location: V1
-    name: ImagingPlane
-  ophys:
-    plane_segmentation:
-      description: ''
-      name: PlaneSegmentation
   optical_channel:
+    name: OpticalChannel
     description: optical channel
     emission_lambda: 500.0
-    name: OpticalChannel
-  session_description: optinist
+  imaging_plane:
+    name: ImagingPlane
+    description: standard
+    imaging_rate: 30.0
+    excitation_lambda: 900.0
+    indicator: GCaMP
+    location: V1
+  image_series:
+    starting_time: 0
+    starting_frame:
+    - 0
+    save_raw_image_to_nwb: false
+  ophys:
+    plane_segmentation:
+      name: PlaneSegmentation
+      description: ''
 snakemake:
+  use_conda: true
   cores: 2
   forceall: false
   forcetargets: true
   lock: false
-  use_conda: true

@@ -1,3 +1,4 @@
+# Packages in conda env for [microscope]
 channels:
   - conda-forge
 dependencies:

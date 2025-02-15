@@ -1,139 +1,144 @@
-finished_at: '2023-11-22 16:09:08'
+workspace_id: '1'
+unique_id: aea701e7
+name: Tutorial1
+started_at: '2025-02-13 14:42:12'
+finished_at: '2025-02-13 14:50:10'
+success: success
+hasNWB: true
 function:
-  eta_jntqpbkvwv:
-    finished_at: '2023-11-22 16:09:08'
-    hasNWB: true
-    message: eta success
-    name: eta
-    outputPaths:
-      mean:
-        max_index: 45
-        path: /tmp/studio/output/1/tutorial1/eta_jntqpbkvwv/mean
-        type: timeseries
-      mean_heatmap:
-        max_index: null
-        path: /tmp/studio/output/1/tutorial1/eta_jntqpbkvwv/mean_heatmap.json
-        type: heatmap
-    started_at: '2023-11-22 16:09:06'
-    success: success
-    unique_id: eta_jntqpbkvwv
   input_ab1mmvt2ky:
-    finished_at: '2023-11-22 16:07:03'
-    hasNWB: false
-    message: null
-    name: sample_mouse2p_image.tiff
-    outputPaths: null
-    started_at: '2023-11-22 16:07:03'
-    success: success
     unique_id: input_ab1mmvt2ky
-  input_zdax4o54o0:
-    finished_at: '2023-11-22 16:07:03'
+    name: sample_mouse2p_image.tiff
+    success: success
     hasNWB: false
     message: null
-    name: sample_mouse2p_behavior.csv
     outputPaths: null
-    started_at: '2023-11-22 16:07:03'
-    success: success
+    started_at: '2025-02-13 14:42:12'
+    finished_at: '2025-02-13 14:42:12'
+  input_zdax4o54o0:
     unique_id: input_zdax4o54o0
-  suite2p_file_convert_axgpevzu10:
-    finished_at: '2023-11-22 16:07:43'
+    name: sample_mouse2p_behaviour.csv
+    success: success
+    hasNWB: false
+    message: null
+    outputPaths: null
+    started_at: '2025-02-13 14:42:12'
+    finished_at: '2025-02-13 14:42:12'
+  suite2p_file_convert_tlri58d268:
+    unique_id: suite2p_file_convert_tlri58d268
+    name: suite2p_file_convert
+    success: success
     hasNWB: false
     message: suite2p_file_convert success
-    name: suite2p_file_convert
     outputPaths:
       meanImg:
-        max_index: 1
-        path: /tmp/studio/output/1/tutorial1/suite2p_file_convert_axgpevzu10/meanImg.json
+        path: /tmp/studio/output/1/aea701e7/suite2p_file_convert_tlri58d268/meanImg.json
         type: images
-    started_at: '2023-11-22 16:07:25'
+        max_index: 1
+    started_at: '2025-02-13 14:47:37'
+    finished_at: '2025-02-13 14:49:31'
+  suite2p_registration_xq4pexs8o7:
+    unique_id: suite2p_registration_xq4pexs8o7
+    name: suite2p_registration
     success: success
-    unique_id: suite2p_file_convert_axgpevzu10
-  suite2p_registration_ktrkq5sa71:
-    finished_at: '2023-11-22 16:08:13'
     hasNWB: false
     message: suite2p_registration success
-    name: suite2p_registration
     outputPaths:
-      meanImgE:
-        max_index: 1
-        path: /tmp/studio/output/1/tutorial1/suite2p_registration_ktrkq5sa71/meanImgE.json
-        type: images
       refImg:
-        max_index: 1
-        path: /tmp/studio/output/1/tutorial1/suite2p_registration_ktrkq5sa71/refImg.json
+        path: /tmp/studio/output/1/aea701e7/suite2p_registration_xq4pexs8o7/refImg.json
         type: images
-    started_at: '2023-11-22 16:07:54'
+        max_index: 1
+      meanImgE:
+        path: /tmp/studio/output/1/aea701e7/suite2p_registration_xq4pexs8o7/meanImgE.json
+        type: images
+        max_index: 1
+      mc_images:
+        path: /tmp/studio/output/1/aea701e7/suite2p_registration_xq4pexs8o7/tiff/mc_images/mc_images.tif
+        type: images
+        max_index: 2000
+    started_at: '2025-02-13 14:49:22'
+    finished_at: '2025-02-13 14:50:07'
+  suite2p_roi_yvqcdmsg0r:
+    unique_id: suite2p_roi_yvqcdmsg0r
+    name: suite2p_roi
     success: success
-    unique_id: suite2p_registration_ktrkq5sa71
-  suite2p_roi_rfau106shp:
-    finished_at: '2023-11-22 16:08:59'
     hasNWB: true
     message: suite2p_roi success
-    name: suite2p_roi
     outputPaths:
-      Vcorr:
-        max_index: 1
-        path: /tmp/studio/output/1/tutorial1/suite2p_roi_rfau106shp/Vcorr.json
-        type: images
-      all_roi:
-        max_index: null
-        path: /tmp/studio/output/1/tutorial1/suite2p_roi_rfau106shp/all_roi.json
-        type: roi
-      cell_roi:
-        max_index: null
-        path: /tmp/studio/output/1/tutorial1/suite2p_roi_rfau106shp/cell_roi.json
-        type: roi
-      fluorescence:
-        max_index: 295
-        path: /tmp/studio/output/1/tutorial1/suite2p_roi_rfau106shp/fluorescence
-        type: timeseries
       max_proj:
-        max_index: 1
-        path: /tmp/studio/output/1/tutorial1/suite2p_roi_rfau106shp/max_proj.json
+        path: /tmp/studio/output/1/aea701e7/suite2p_roi_yvqcdmsg0r/max_proj.json
         type: images
-      non_cell_roi:
-        max_index: null
-        path: /tmp/studio/output/1/tutorial1/suite2p_roi_rfau106shp/noncell_roi.json
+        max_index: 1
+      Vcorr:
+        path: /tmp/studio/output/1/aea701e7/suite2p_roi_yvqcdmsg0r/Vcorr.json
+        type: images
+        max_index: 1
+      fluorescence:
+        path: /tmp/studio/output/1/aea701e7/suite2p_roi_yvqcdmsg0r/fluorescence
+        type: timeseries
+        max_index: 295
+      all_roi:
+        path: /tmp/studio/output/1/aea701e7/suite2p_roi_yvqcdmsg0r/all_roi.json
         type: roi
-    started_at: '2023-11-22 16:08:24'
+        max_index: null
+      non_cell_roi:
+        path: /tmp/studio/output/1/aea701e7/suite2p_roi_yvqcdmsg0r/noncell_roi.json
+        type: roi
+        max_index: null
+      cell_roi:
+        path: /tmp/studio/output/1/aea701e7/suite2p_roi_yvqcdmsg0r/cell_roi.json
+        type: roi
+        max_index: null
+    started_at: '2025-02-13 14:49:41'
+    finished_at: '2025-02-13 14:50:08'
+  eta_elysjdrr7j:
+    unique_id: eta_elysjdrr7j
+    name: eta
     success: success
-    unique_id: suite2p_roi_rfau106shp
-hasNWB: true
-name: Tutorial1
+    hasNWB: true
+    message: eta success
+    outputPaths:
+      mean:
+        path: /tmp/studio/output/1/aea701e7/eta_elysjdrr7j/mean
+        type: timeseries
+        max_index: 45
+      mean_heatmap:
+        path: /tmp/studio/output/1/aea701e7/eta_elysjdrr7j/mean_heatmap.json
+        type: heatmap
+        max_index: null
+    started_at: '2025-02-13 14:50:06'
+    finished_at: '2025-02-13 14:50:10'
 nwb:
+  session_description: optinist
+  identifier: optinist
+  experiment_description: None
   device:
+    name: Microscope device
     description: Microscope Information
     manufacturer: Microscope Manufacture
-    name: Microscope device
-  experiment_description: None
-  identifier: optinist
-  image_series:
-    starting_frame:
-    - 0
-    starting_time: 0
-  imaging_plane:
-    description: standard
-    excitation_lambda: 900.0
-    imaging_rate: 30.0
-    indicator: GCaMP
-    location: V1
-    name: ImagingPlane
-  ophys:
-    plane_segmentation:
-      description: ''
-      name: PlaneSegmentation
   optical_channel:
+    name: OpticalChannel
     description: optical channel
     emission_lambda: 500.0
-    name: OpticalChannel
-  session_description: optinist
+  imaging_plane:
+    name: ImagingPlane
+    description: standard
+    imaging_rate: 30.0
+    excitation_lambda: 900.0
+    indicator: GCaMP
+    location: V1
+  image_series:
+    starting_time: 0
+    starting_frame:
+    - 0
+    save_raw_image_to_nwb: false
+  ophys:
+    plane_segmentation:
+      name: PlaneSegmentation
+      description: ''
 snakemake:
+  use_conda: true
   cores: 2
   forceall: false
   forcetargets: true
   lock: false
-  use_conda: true
-started_at: '2023-11-22 16:07:03'
-success: success
-unique_id: tutorial1
-workspace_id: '1'

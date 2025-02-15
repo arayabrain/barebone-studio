@@ -1,0 +1,194 @@
+rules:
+  input_0:
+    input:
+    - 1/sample_mouse2p_image.tiff
+    return_arg: input_0
+    params: {}
+    output: 1/68347566/input_0/sample_mouse2p_image.pkl
+    type: image
+    nwbfile:
+      session_description: optinist
+      identifier: optinist
+      experiment_description: None
+      device:
+        name: Microscope device
+        description: Microscope Information
+        manufacturer: Microscope Manufacture
+      optical_channel:
+        name: OpticalChannel
+        description: optical channel
+        emission_lambda: 500.0
+      imaging_plane:
+        name: ImagingPlane
+        description: standard
+        imaging_rate: 30.0
+        excitation_lambda: 900.0
+        indicator: GCaMP
+        location: V1
+      image_series:
+        starting_time: 0
+        starting_frame:
+        - 0
+        save_raw_image_to_nwb: false
+      ophys:
+        plane_segmentation:
+          name: PlaneSegmentation
+          description: ''
+    hdf5Path: null
+    matPath: null
+    path: null
+  suite2p_file_convert_uwyrgu1xyc:
+    input:
+    - 1/68347566/input_0/sample_mouse2p_image.pkl
+    return_arg:
+      input_0: image
+    params:
+      force_sktiff: false
+      batch_size: 500
+    output: 1/68347566/suite2p_file_convert_uwyrgu1xyc/suite2p_file_convert.pkl
+    type: suite2p_file_convert
+    nwbfile: null
+    hdf5Path: null
+    matPath: null
+    path: suite2p/suite2p_file_convert
+  suite2p_registration_q9rk525j0v:
+    input:
+    - 1/68347566/suite2p_file_convert_uwyrgu1xyc/suite2p_file_convert.pkl
+    return_arg:
+      ops: ops
+    params:
+      I/O:
+        nplanes: 1
+        nchannels: 1
+        functional_chan: 1
+        frames_include: -1
+      Registration:
+        smooth_sigma: 1.15
+        smooth_sigma_time: 0
+        maxregshift: 0.1
+        align_by_chan: 1
+        reg_tif: false
+        th_badframes: 1
+      1P setting:
+        1Preg: false
+        spatial_hp_reg: 42
+        pre_smooth: 0
+        spatial_taper: 40
+      Non-Rigid:
+        nonrigid: true
+        block_size:
+        - 128
+        - 128
+        snr_thresh: 1.2
+        maxregshiftNR: 5
+    output: 1/68347566/suite2p_registration_q9rk525j0v/suite2p_registration.pkl
+    type: suite2p_registration
+    nwbfile: null
+    hdf5Path: null
+    matPath: null
+    path: suite2p/suite2p_registration
+  lccd_cell_detection_q9g9if8oeg:
+    input:
+    - 1/68347566/suite2p_registration_q9rk525j0v/suite2p_registration.pkl
+    return_arg:
+      mc_images: mc_images
+    params:
+      blob_detector:
+        filtersize1: 100
+        filtersize2: 4
+        sigma: 1.25
+        fsize: 9
+        min_area: 16
+        max_area: 100
+        sparse: false
+      roi_integration:
+        overlap_threshold: 0.25
+        min_area: 16
+        max_area: 100
+        sparse: false
+      lccd:
+        frame_divider: 100
+      dff:
+        f0_frames: 100
+        f0_percentile: 8
+    output: 1/68347566/lccd_cell_detection_q9g9if8oeg/lccd_cell_detection.pkl
+    type: lccd_cell_detection
+    nwbfile: null
+    hdf5Path: null
+    matPath: null
+    path: lccd/lccd_cell_detection
+  input_9ig87jnsul:
+    input: 1/sample_mouse2p_behavior.csv
+    return_arg: input_9ig87jnsul
+    params:
+      setHeader: null
+      setIndex: false
+      transpose: false
+    output: 1/68347566/input_9ig87jnsul/sample_mouse2p_behavior.pkl
+    type: behavior
+    nwbfile:
+      session_description: optinist
+      identifier: optinist
+      experiment_description: None
+      device:
+        name: Microscope device
+        description: Microscope Information
+        manufacturer: Microscope Manufacture
+      optical_channel:
+        name: OpticalChannel
+        description: optical channel
+        emission_lambda: 500.0
+      imaging_plane:
+        name: ImagingPlane
+        description: standard
+        imaging_rate: 30.0
+        excitation_lambda: 900.0
+        indicator: GCaMP
+        location: V1
+      image_series:
+        starting_time: 0
+        starting_frame:
+        - 0
+        save_raw_image_to_nwb: false
+      ophys:
+        plane_segmentation:
+          name: PlaneSegmentation
+          description: ''
+    hdf5Path: null
+    matPath: null
+    path: null
+  lda_hasufj1cnb:
+    input:
+    - 1/68347566/lccd_cell_detection_q9g9if8oeg/lccd_cell_detection.pkl
+    - 1/68347566/lccd_cell_detection_q9g9if8oeg/lccd_cell_detection.pkl
+    - 1/68347566/input_9ig87jnsul/sample_mouse2p_behavior.pkl
+    return_arg:
+      fluorescence: neural_data
+      iscell: iscell
+      input_9ig87jnsul: behaviors_data
+    params:
+      I/O:
+        target_index: 1
+        standard_x_mean: true
+        standard_x_std: true
+        transpose_x: true
+        transpose_y: false
+      cross_validation:
+        n_splits: 5
+        shuffle: false
+      LDA:
+        solver: svd
+        shrinkage: None
+        priors: None
+        n_components: None
+        store_covariance: false
+        tol: 0.0001
+        covariance_estimator: None
+    output: 1/68347566/lda_hasufj1cnb/lda.pkl
+    type: lda
+    nwbfile: null
+    hdf5Path: null
+    matPath: null
+    path: optinist/neural_decoding/lda
+last_output:
+- 1/68347566/lda_hasufj1cnb/lda.pkl

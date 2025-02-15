@@ -14,9 +14,9 @@ init_params:
   use_online: False  # If True, use CNMF Online instead of CNMF.
   do_refit: False
 
-  K: 4
+  K: 10
   gSig: [4, 4]
-  ssub: 1
+  ssub: 2
   tsub: 1
   nb: 2
   method_init: "greedy_roi"
@@ -24,7 +24,7 @@ init_params:
   roi_thr: 0.9  # Note: Extended param for ROI
 
 preprocess_params:
-  p: 1
+  p: 2
 
 patch_params:
   rf: null

@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useState,
+  createElement,
+  MouseEvent,
+} from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 
-import { useSnackbar, VariantType } from "notistack"
+import { OptionsObject, SnackbarKey, useSnackbar, VariantType } from "notistack"
 
 import { isRejected } from "@reduxjs/toolkit"
 
@@ -94,22 +100,76 @@ export function useRunPipeline() {
     (name: string) => {
       dispatch(run({ runPostData: { name, ...runPostData, forceRunList: [] } }))
         .unwrap()
-        .catch(() => {
-          enqueueSnackbar("Failed to Run workflow", { variant: "error" })
+        .catch((error) => {
+          // Catch workflow yaml parameter errors
+          if (error?.response?.status === 422) {
+            const snackbarOptions: OptionsObject = {
+              variant: "warning",
+              autoHideDuration: 30000,
+              action: function (_key: SnackbarKey) {
+                return createElement(
+                  "span",
+                  {
+                    role: "button",
+                    onMouseDown: (e: MouseEvent<HTMLSpanElement>) => {
+                      e.stopPropagation()
+                      window.open(
+                        "https://github.com/oist/optinist/wiki/FAQ",
+                        "_blank",
+                      )
+                    },
+                    className: "text-inherit underline cursor-pointer",
+                  },
+                  "Click here",
+                )
+              },
+            }
+            enqueueSnackbar("Workflow yaml error, see FAQ\n", snackbarOptions)
+          } else {
+            enqueueSnackbar("Failed to Run workflow", { variant: "error" })
+          }
         })
     },
     [dispatch, enqueueSnackbar, runPostData],
   )
+
   const handleClickVariant = (variant: VariantType, mess: string) => {
     enqueueSnackbar(mess, { variant })
   }
   const handleRunPipelineByUid = useCallback(() => {
     dispatch(runByCurrentUid({ runPostData }))
       .unwrap()
-      .catch(() => {
-        enqueueSnackbar("Failed to Run workflow", { variant: "error" })
+      .catch((error) => {
+        // Catch workflow yaml parameter errors
+        if (error?.response?.status === 422) {
+          const snackbarOptions: OptionsObject = {
+            variant: "warning",
+            autoHideDuration: 30000,
+            action: function (_key: SnackbarKey) {
+              return createElement(
+                "span",
+                {
+                  role: "button",
+                  onMouseDown: (e: MouseEvent<HTMLSpanElement>) => {
+                    e.stopPropagation()
+                    window.open(
+                      "https://github.com/oist/optinist/wiki/FAQ",
+                      "_blank",
+                    )
+                  },
+                  className: "text-inherit underline cursor-pointer",
+                },
+                "Click here",
+              )
+            },
+          }
+          enqueueSnackbar("Workflow yaml error, see FAQ\n", snackbarOptions)
+        } else {
+          enqueueSnackbar("Failed to Run workflow", { variant: "error" })
+        }
       })
   }, [dispatch, enqueueSnackbar, runPostData])
+
   const handleCancelPipeline = useCallback(async () => {
     if (uid != null) {
       const data = await dispatch(cancelResult({ uid }))

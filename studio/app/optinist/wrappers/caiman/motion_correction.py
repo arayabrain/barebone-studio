@@ -10,6 +10,7 @@ from studio.app.common.core.utils.filepath_creater import (
 from studio.app.common.dataclass import ImageData
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass import RoiData
+from studio.app.optinist.wrappers.optinist.utils import recursive_flatten_params
 
 logger = AppLogger.get_logger()
 
@@ -25,6 +26,10 @@ def caiman_mc(
 
     function_id = ExptOutputPathIds(output_dir).function_id
     logger.info(f"start caiman motion_correction: {function_id}")
+
+    flattened_params = {}
+    recursive_flatten_params(params, flattened_params)
+    params = flattened_params
 
     opts = CNMFParams()
 
@@ -95,7 +100,7 @@ def __process_images(images):
         .transpose(2, 0, 1)
     )
 
-    rois = rois.astype(np.float)
+    rois = rois.astype(np.float32)
     for i, _ in enumerate(rois):
         rois[i] *= i + 1
 

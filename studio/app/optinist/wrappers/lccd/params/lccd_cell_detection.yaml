@@ -2,13 +2,13 @@ blob_detector:
   filtersize1: 100
   filtersize2: 4
   sigma: 1.25
-  fsize: 30
-  min_area: 20
-  max_area: 50
+  fsize: 9
+  min_area: 16
+  max_area: 100
   sparse: False
 roi_integration:
-  overlap_threshold: 0.4
-  min_area: 20
+  overlap_threshold: 0.25
+  min_area: 16
   max_area: 100
   sparse: False
 lccd:
