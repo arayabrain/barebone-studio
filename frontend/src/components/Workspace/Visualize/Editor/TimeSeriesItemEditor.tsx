@@ -50,6 +50,7 @@ import {
   setTimeSeriesItemZeroLine,
   setTimeSeriesItemDrawOrderList,
   changeRangeUnit,
+  setClickedData,
 } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import { AppDispatch } from "store/store"
 import { arrayEqualityFn } from "utils/EqualityUtils"
@@ -290,6 +291,14 @@ const LegendSelect: FC = () => {
         drawOrderList: newDrawOrderList,
       }),
     )
+    dispatch(
+      setClickedData({
+        itemId,
+        clickedDataId: event.target.checked ? index : null,
+      }),
+    ),
+      // eslint-disable-next-line no-console
+      console.log("#############\n In TimeSeriesItemEditor.tsx, clickedDataId")
 
     if (filePath !== null) {
       dispatch(getTimeSeriesDataById({ path: filePath, index: index }))
