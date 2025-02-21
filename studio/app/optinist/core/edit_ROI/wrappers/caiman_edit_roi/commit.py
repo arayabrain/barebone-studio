@@ -18,8 +18,31 @@ def commit_edit(
     fluorescence = fluorescence.data
     num_cell = data.im.shape[0]
 
-    new_fluorescences = np.zeros((num_cell, fluorescence.shape[1]))
-    new_fluorescences[: len(fluorescence)] = fluorescence
+    # Special processing if saving with no ROIs
+    if all(i == CellType.TEMP_DELETE for i in iscell):
+        empty_fluorescences = np.zeros((0, fluorescence.shape[1]))  # Keep time dim
+        iscell[iscell == CellType.TEMP_DELETE] = CellType.NON_ROI
+        data.commit()
+
+        info = {
+            "cell_roi": RoiData(
+                np.full(data.im.shape[1:], np.nan),
+                output_dir=node_dirpath,
+                file_name="cell_roi",
+            ),
+            "fluorescence": FluoData(empty_fluorescences, file_name="fluorescence"),
+            "iscell": IscellData(iscell),
+            "edit_roi_data": data,
+            "nwbfile": set_nwbfile(data, iscell, function_id, empty_fluorescences),
+        }
+        return info
+
+    if fluorescence.size > 0:
+        new_fluorescences = np.zeros((num_cell, fluorescence.shape[1]))
+        new_fluorescences[: len(fluorescence)] = fluorescence
+    else:
+        # If starting with no ROIs, initialize with correct time dimension
+        new_fluorescences = np.zeros((num_cell, images.shape[0]))
 
     iscell[iscell == CellType.TEMP_DELETE] = CellType.NON_ROI
     for i in range(num_cell):

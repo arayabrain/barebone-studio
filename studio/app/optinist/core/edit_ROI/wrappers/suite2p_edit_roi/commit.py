@@ -32,6 +32,31 @@ def commit_edit(data: EditRoiData, ops: Suite2pData, iscell, node_dirpath, funct
         if isinstance(d0, int):
             d0 = [d0, d0]
 
+    # Special processing if saving with no ROIs
+    if all(i == CellType.TEMP_DELETE for i in iscell):
+        empty_F = np.zeros((0, ops["F"].shape[1]))  # Keep time dim
+        empty_Fneu = np.zeros((0, ops["Fneu"].shape[1]))
+
+        ops["F"] = empty_F
+        ops["Fneu"] = empty_Fneu
+        ops["stat"] = []  # Empty stat list
+        iscell[iscell == CellType.TEMP_DELETE] = CellType.NON_ROI
+        data.commit()
+
+        info = {
+            "ops": Suite2pData(ops),
+            "fluorescence": FluoData(empty_F, file_name="fluorescence"),
+            "iscell": IscellData(iscell),
+            "cell_roi": RoiData(
+                np.full(data.im.shape[1:], np.nan),
+                output_dir=node_dirpath,
+                file_name="cell_roi",
+            ),
+            "edit_roi_data": data,
+            "nwbfile": set_nwbfile(ops, iscell, data, function_id),
+        }
+        return info
+
     for roi_id, roi_data in temp_roi_data_dict.items():
         iscell[int(roi_id)] = CellType.ROI
         # Save fluorescence traces of added roi

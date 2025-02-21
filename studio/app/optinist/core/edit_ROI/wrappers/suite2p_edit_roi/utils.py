@@ -124,17 +124,24 @@ def get_stat0_add_roi(ops, posx, posy, sizex, sizey):
 
 
 def set_nwbfile(ops, iscell, edit_roi_data: EditRoiData, function_id):
-    stat = ops.get("stat")
-    F = ops.get("F")
-    Fneu = ops.get("Fneu")
+    stat = ops.get("stat", [])  # Default to empty
+    F = ops.get("F", np.zeros((1, 1)))  # Default to minimum
+    Fneu = ops.get("Fneu", np.zeros((1, 1)))
 
     roi_list = []
-    for i in range(len(stat)):
-        kargs = {}
-        kargs["pixel_mask"] = np.array(
-            [stat[i]["ypix"], stat[i]["xpix"], stat[i]["lam"]]
-        ).T
-        roi_list.append(kargs)
+    if len(stat) == 0:
+        # Add a dummy ROI entry if empty to maintain table structure
+        roi_list.append(
+            {"pixel_mask": np.zeros((1, 3))}  # Empty pixel mask (x,y,weight)
+        )
+        iscell = np.array([[0, 0]])  # [iscell, probcell]
+    else:
+        for i in range(len(stat)):
+            kargs = {}
+            kargs["pixel_mask"] = np.array(
+                [stat[i]["ypix"], stat[i]["xpix"], stat[i]["lam"]]
+            ).T
+            roi_list.append(kargs)
     nwbfile = {}
 
     nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
@@ -144,7 +151,7 @@ def set_nwbfile(ops, iscell, edit_roi_data: EditRoiData, function_id):
         function_id: {
             "name": "iscell",
             "description": "two columns - iscell & probcell",
-            "data": iscell,
+            "data": iscell if iscell.size > 0 else np.array([[0, 0]]),
         }
     }
 
@@ -153,17 +160,17 @@ def set_nwbfile(ops, iscell, edit_roi_data: EditRoiData, function_id):
         function_id: {
             "Fluorescence": {
                 "table_name": "Fluorescence",
-                "region": list(range(len(F))),
+                "region": list(range(F.shape[0])),
                 "name": "Fluorescence",
-                "data": F.T,
+                "data": F.T if F.size > 0 else np.array([]).reshape(0, 0),
                 "unit": "lumens",
                 "rate": ops["fs"],
             },
             "Neuropil": {
                 "table_name": "Neuropil",
-                "region": list(range(len(Fneu))),
+                "region": list(range(Fneu.shape[0])),
                 "name": "Neuropil",
-                "data": Fneu.T,
+                "data": Fneu.T if Fneu.size > 0 else np.array([]).reshape(0, 0),
                 "unit": "lumens",
                 "rate": ops["fs"],
             },

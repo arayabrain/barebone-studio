@@ -34,3 +34,7 @@ export function toDataType(value: string): DATA_TYPE {
       throw new Error(`failed to map dataType: ${value}`)
   }
 }
+
+export function isNoRoisFound(message: string | undefined): boolean {
+  return message === "0 ROIs found"
+}

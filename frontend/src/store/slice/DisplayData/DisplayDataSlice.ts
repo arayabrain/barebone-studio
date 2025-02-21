@@ -28,6 +28,7 @@ import {
   DisplayData,
   DISPLAY_DATA_SLICE_NAME,
 } from "store/slice/DisplayData/DisplayDataType"
+import { isNoRoisFound } from "store/slice/DisplayData/DisplayDataUtils"
 import { run, runByCurrentUid } from "store/slice/Pipeline/PipelineActions"
 import {
   deleteDisplayItem,
@@ -92,14 +93,27 @@ export const displayDataSlice = createSlice({
       })
       .addCase(getTimeSeriesDataById.rejected, (state, action) => {
         const { path } = action.meta.arg
-        state.timeSeries[path] = {
-          type: "timeSeries",
-          xrange: [],
-          data: {},
-          std: {},
-          pending: false,
-          fulfilled: false,
-          error: action.error.message ?? "rejected",
+        if (isNoRoisFound(action.error.message)) {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: true, // Note: this is fulfilled because it's a valid state
+            error: null, // Not an error state
+            meta: { title: "0 ROIs found" }, // User-facing message
+          }
+        } else {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: false,
+            error: action.error.message ?? "rejected",
+          }
         }
       })
       .addCase(getTimeSeriesDataById.fulfilled, (state, action) => {
@@ -134,14 +148,27 @@ export const displayDataSlice = createSlice({
       })
       .addCase(getTimeSeriesAllData.rejected, (state, action) => {
         const { path } = action.meta.arg
-        state.timeSeries[path] = {
-          type: "timeSeries",
-          xrange: [],
-          data: {},
-          std: {},
-          pending: false,
-          fulfilled: false,
-          error: action.error.message ?? "rejected",
+        if (isNoRoisFound(action.error.message)) {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: true,
+            error: null,
+            meta: { title: "0 ROIs found" },
+          }
+        } else {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: false,
+            error: action.error.message ?? "rejected",
+          }
         }
       })
       .addCase(getTimeSeriesAllData.fulfilled, (state, action) => {
@@ -176,14 +203,27 @@ export const displayDataSlice = createSlice({
       })
       .addCase(getTimeSeriesInitData.rejected, (state, action) => {
         const { path } = action.meta.arg
-        state.timeSeries[path] = {
-          type: "timeSeries",
-          xrange: [],
-          data: {},
-          std: {},
-          pending: false,
-          fulfilled: false,
-          error: action.error.message ?? "rejected",
+        if (isNoRoisFound(action.error.message)) {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: true,
+            error: null,
+            meta: { title: "0 ROIs found" },
+          }
+        } else {
+          state.timeSeries[path] = {
+            type: "timeSeries",
+            xrange: [],
+            data: {},
+            std: {},
+            pending: false,
+            fulfilled: false,
+            error: action.error.message ?? "rejected",
+          }
         }
       })
       .addCase(getTimeSeriesInitData.fulfilled, (state, action) => {
