@@ -619,6 +619,9 @@ export const selectImageItemRangeUnit =
     }
   }
 
+export const selectClickedRoi = (itemId: number) => (state: RootState) =>
+  state.visualaizeItem.clickedRois[itemId] || null
+
 export const selectImageItemShowRoiLabels =
   (itemId: number) => (state: RootState) => {
     const item = selectVisualizeItemById(itemId)(state)
