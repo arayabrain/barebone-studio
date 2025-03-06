@@ -24,6 +24,14 @@ export interface ConfirmDialogProps {
   content: string | JSX.Element
   confirmLabel?: string
   iconType?: "warning" | "info"
+  confirmButtonColor?:
+    | "inherit"
+    | "primary"
+    | "secondary"
+    | "success"
+    | "error"
+    | "info"
+    | "warning"
 }
 
 export const ConfirmDialog: FC<ConfirmDialogProps> = ({
@@ -36,6 +44,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
   content,
   confirmLabel,
   iconType,
+  confirmButtonColor = "primary",
 }) => {
   const dataTestId = confirmLabel
     ? `${confirmLabel}-confirm-button`
@@ -83,6 +92,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
           variant="contained"
           onClick={handleConfirm}
           data-testid={dataTestId}
+          color={confirmButtonColor}
         >
           {confirmLabel ?? "ok"}
         </Button>

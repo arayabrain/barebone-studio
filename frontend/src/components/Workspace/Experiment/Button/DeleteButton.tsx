@@ -63,6 +63,7 @@ export const DeleteButton = memo(function DeleteButton() {
         content={`${name} (${uid})`}
         confirmLabel="delete"
         iconType="warning"
+        confirmButtonColor="error"
       />
     </>
   )
