@@ -177,13 +177,10 @@ def get_experiment_urls(source, exp_dir, params=None):
     result = []
 
     for key, value in source.items():
-        # Get the graph configuration
-        graph_config = EXPERIMENT_GRAPHS[key]
-
-        if graph_config["type"] == "multi":
+        if value.get("type") == "multi":
             # Handle multi-image components (like PCA)
-            component_dir = graph_config["dir"]
-            pattern = graph_config["pattern"]
+            component_dir = value["dir"]
+            pattern = value["pattern"]
 
             # Construct the directory path
             dirs = exp_dir.split("/")
@@ -216,7 +213,7 @@ def get_experiment_urls(source, exp_dir, params=None):
                 result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
         else:
             # Handle single-image components (default behavior)
-            dir_path = graph_config["dir"]
+            dir_path = value["dir"]
             url = f"{exp_dir}/{dir_path}/{key}.png"
             thumb_url = url.replace(".png", ".thumb.png")
             result.append(ImageInfo(urls=[url], thumb_urls=[thumb_url], params=params))

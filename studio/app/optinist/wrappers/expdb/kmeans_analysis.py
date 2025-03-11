@@ -3,10 +3,13 @@ import numpy as np
 from matplotlib.colors import ListedColormap
 from sklearn.cluster import KMeans
 
+from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.dataclass.utils import save_thumbnail
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass.stat import StatData
+
+logger = AppLogger.get_logger()
 
 
 def kmeans_analysis(
@@ -22,15 +25,15 @@ def kmeans_analysis(
         iscell = cnmf_info["iscell"].data
         if len(iscell) == fluorescence.shape[0]:
             good_indices = np.where(iscell == 1)[0]
-            print(f"Using only iscell {len(good_indices)} ROI for KMeans")
+            logger.info(f"Using only iscell {len(good_indices)} ROI for KMeans")
 
             if len(good_indices) > 0:
                 # Filter fluorescence to only include good components
                 fluorescence = fluorescence[good_indices]
-                # print(f"Filtered fluorescence shape: {fluorescence.shape}")
+                # logger.info(f"Filtered fluorescence shape: {fluorescence.shape}")
 
     n_cells = fluorescence.shape[0]
-    print(f"KMeans will use {n_cells} cells")
+    logger.info(f"KMeans will use {n_cells} cells")
 
     # Set default parameters if none provided
     if params is None:
@@ -40,7 +43,7 @@ def kmeans_analysis(
 
     # Handle case when there are insufficient cells for clustering
     if n_cells < 2:
-        print("Not enough cells for KMeans clustering (minimum 2 required)")
+        logger.warn("Not enough cells for KMeans clustering (minimum 2 required)")
         # Set dummy values
         cluster_labels = np.zeros(max(1, n_cells), dtype=int)
         corr_matrix = np.ones((max(1, n_cells), max(1, n_cells)), dtype=float)
@@ -134,7 +137,7 @@ def generate_kmeans_visualization(
         Directory for saving output files
     """
     if labels is None or len(labels) == 0:
-        print("Warning: Missing cluster labels")
+        logger.warn("Warning: Missing cluster labels")
         return
 
     # Handle the case of insufficient ROIs

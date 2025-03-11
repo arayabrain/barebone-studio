@@ -2,10 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import PCA
 
+from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.dataclass.utils import save_thumbnail
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass.stat import StatData
+
+logger = AppLogger.get_logger()
 
 
 def pca_analysis(
@@ -21,15 +24,15 @@ def pca_analysis(
         iscell = cnmf_info["iscell"].data
         if len(iscell) == fluorescence.shape[0]:
             good_indices = np.where(iscell == 1)[0]
-            print(f"Using iscell {len(iscell)} total cells for PCA")
+            logger.info(f"Using iscell {len(iscell)} total cells for PCA")
 
             if len(good_indices) > 0:
                 # Filter fluorescence to only include good components
                 fluorescence = fluorescence[good_indices]
-                # print(f"Filtered fluorescence shape: {fluorescence.shape}")
+                # logger.info(f"Filtered fluorescence shape: {fluorescence.shape}")
 
     n_cells = fluorescence.shape[0]
-    print(f"PCA will use {n_cells} cells")
+    logger.info(f"PCA will use {n_cells} cells")
 
     # Check if we have enough ROIs for PCA
     if n_cells < 2:
@@ -153,20 +156,19 @@ def generate_pca_visualization(
     """
     # Check if inputs are valid
     if components is None or scores is None:
-        print("Warning: Missing PCA components or scores")
+        logger.warn("Warning: Missing PCA components or scores")
         return
 
     if roi_masks is not None and hasattr(roi_masks, "shape"):
-        print(roi_masks)
-        # Print number of unique ROI IDs (excluding NaN)
+        # Confirm number of unique ROI IDs (excluding NaN)
         non_nan_mask = ~np.isnan(roi_masks)
         if np.any(non_nan_mask):
             unique_ids = np.unique(roi_masks[non_nan_mask])
             for val in unique_ids:
                 count = np.sum(np.isclose(roi_masks, val))
-                print(f"  ROI ID {val}: {count} pixels")
+                logger.info(f"  ROI ID {val}: {count} pixels")
         else:
-            print("WARNING: All values in ROI mask are NaN")
+            logger.warn("WARNING: All values in ROI mask are NaN")
 
     # Handle the case of insufficient ROIs - create error images
     is_data_insufficient = (
@@ -369,7 +371,7 @@ def generate_pca_visualization(
                     raise ValueError("No non-NaN values found in ROI mask")
 
             except Exception as e:
-                print(f"Error creating spatial map for PC {i+1}: {str(e)}")
+                logger.error(f"Error creating spatial map for PC {i+1}: {str(e)}")
 
                 # Create fallback visualization
                 plt.figure()
@@ -386,7 +388,7 @@ def generate_pca_visualization(
                 plt.close()
                 save_thumbnail(spatial_path)
 
-                print(f"Created fallback bar visualization for PC {i+1}")
+                logger.warn(f"Created fallback bar visualization for PC {i+1}")
         else:
             # Create alternative visualization using direct component values
             plt.figure()
