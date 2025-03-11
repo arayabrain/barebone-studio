@@ -27,7 +27,7 @@ def kmeans_analysis(
             if len(good_indices) > 0:
                 # Filter fluorescence to only include good components
                 fluorescence = fluorescence[good_indices]
-                print(f"Filtered fluorescence shape: {fluorescence.shape}")
+                # print(f"Filtered fluorescence shape: {fluorescence.shape}")
 
     n_cells = fluorescence.shape[0]
     print(f"KMeans will use {n_cells} cells")

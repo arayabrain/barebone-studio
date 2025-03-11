@@ -26,7 +26,7 @@ def pca_analysis(
             if len(good_indices) > 0:
                 # Filter fluorescence to only include good components
                 fluorescence = fluorescence[good_indices]
-                print(f"Filtered fluorescence shape: {fluorescence.shape}")
+                # print(f"Filtered fluorescence shape: {fluorescence.shape}")
 
     n_cells = fluorescence.shape[0]
     print(f"PCA will use {n_cells} cells")
@@ -134,8 +134,6 @@ def generate_pca_visualization(
     components,
     roi_masks,
     output_dir,
-    pca_spatial_dir,
-    pca_time_dir,
 ):
     """
     Generate PCA visualization with separate files for each component
@@ -152,10 +150,6 @@ def generate_pca_visualization(
         2D ROI mask where each non-NaN value identifies a cell
     output_dir : str
         Directory for saving output files
-    pca_spatial_dir : str
-        Directory for saving spatial component visualizations
-    pca_time_dir : str
-        Directory for saving time component visualizations
     """
     # Check if inputs are valid
     if components is None or scores is None:
@@ -244,7 +238,7 @@ def generate_pca_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        spatial_path = join_filepath([pca_spatial_dir, "pca_component_1_spatial.png"])
+        spatial_path = join_filepath([output_dir, "pca_component_1_spatial.png"])
         plt.savefig(spatial_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(spatial_path)
@@ -260,7 +254,7 @@ def generate_pca_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        time_path = join_filepath([pca_time_dir, "pca_component_1_time.png"])
+        time_path = join_filepath([output_dir, "pca_component_1_time.png"])
         plt.savefig(time_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(time_path)
@@ -317,7 +311,7 @@ def generate_pca_visualization(
         plt.ylabel("Component Value")
         plt.grid(True, alpha=0.3)
 
-        time_path = join_filepath([pca_time_dir, f"pca_component_{i+1}_time.png"])
+        time_path = join_filepath([output_dir, f"pca_component_{i+1}_time.png"])
         plt.savefig(time_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(time_path)
@@ -364,7 +358,7 @@ def generate_pca_visualization(
                         plt.title(f"PC {i+1} Spatial Map")
 
                         spatial_path = join_filepath(
-                            [pca_spatial_dir, f"pca_component_{i+1}_spatial.png"]
+                            [output_dir, f"pca_component_{i+1}_spatial.png"]
                         )
                         plt.savefig(spatial_path, bbox_inches="tight")
                         plt.close()
@@ -386,7 +380,7 @@ def generate_pca_visualization(
                 plt.grid(True, alpha=0.3)
 
                 spatial_path = join_filepath(
-                    [pca_spatial_dir, f"pca_component_{i+1}_spatial.png"]
+                    [output_dir, f"pca_component_{i+1}_spatial.png"]
                 )
                 plt.savefig(spatial_path, bbox_inches="tight")
                 plt.close()
@@ -403,7 +397,7 @@ def generate_pca_visualization(
             plt.grid(True, alpha=0.3)
 
             spatial_path = join_filepath(
-                [pca_spatial_dir, f"pca_component_{i+1}_spatial.png"]
+                [output_dir, f"pca_component_{i+1}_spatial.png"]
             )
             plt.savefig(spatial_path, bbox_inches="tight")
             plt.close()

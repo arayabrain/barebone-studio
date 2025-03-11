@@ -353,8 +353,6 @@ class ExpDbBatch:
         # Save plots for each path
         for expdb_path in self.expdb_paths:
             create_directory(expdb_path.plot_dir)
-            create_directory(expdb_path.pca_spatial_dir)
-            create_directory(expdb_path.pca_time_dir)
 
             # Save visualization objects with correct names
             stat_data.pca_analysis.save_plot(expdb_path.plot_dir)
@@ -368,8 +366,6 @@ class ExpDbBatch:
                 components=stat_data.pca_components,
                 roi_masks=cnmf_info["cell_roi"].data,
                 output_dir=expdb_path.plot_dir,
-                pca_spatial_dir=expdb_path.pca_spatial_dir,
-                pca_time_dir=expdb_path.pca_time_dir,
             )
 
         self.logger_.info("process 'generate_kmeans_analysis_plots' start.")

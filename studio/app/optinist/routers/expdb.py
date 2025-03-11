@@ -84,43 +84,106 @@ EXPERIMENT_GRAPHS = {
     "direction_responsivity_ratio": {
         "title": "Direction Responsivity Ratio",
         "dir": "plots",
+        "type": "single",
     },
     "orientation_responsivity_ratio": {
         "title": "Orientation Responsivity Ratio",
         "dir": "plots",
+        "type": "single",
     },
-    "preferred_direction": {"title": "Preferred Direction", "dir": "plots"},
-    "preferred_orientation": {"title": "Preferred Orientation", "dir": "plots"},
-    "direction_selectivity": {"title": "Direction Selectivity", "dir": "plots"},
-    "orientation_selectivity": {"title": "Orientation Selectivity", "dir": "plots"},
-    "best_responsivity": {"title": "Peak Response", "dir": "plots"},
-    "direction_tuning_width": {"title": "Direction Tuning Width", "dir": "plots"},
-    "sf_selectivity": {"title": "Spatial Selectivity", "dir": "plots"},
-    "sf_responsivity": {"title": "Spatial Peak Response", "dir": "plots"},
-    "sf_responsivity_ratio": {"title": "Spatial Response Ratio", "dir": "plots"},
-    "pca_analysis": {"title": "PCA Analysis", "dir": "plots"},
-    "pca_analysis_variance": {"title": "PCA Explained Variance", "dir": "plots"},
-    "pca_contribution": {"title": "PCA Component Contribution", "dir": "plots"},
-    "pca_spatial_components": {"title": "PCA Spatial Components", "dir": "plots"},
-    "pca_time_components": {"title": "PCA Time Components", "dir": "plots"},
-    "clustering_analysis": {"title": "k-means Clustering Analysis", "dir": "plots"},
-    "cluster_spatial_map": {"title": "Cluster Spatial Map", "dir": "plots"},
-    "cluster_time_courses": {"title": "Cluster Time Courses", "dir": "plots"},
+    "preferred_direction": {
+        "title": "Preferred Direction",
+        "dir": "plots",
+        "type": "single",
+    },
+    "preferred_orientation": {
+        "title": "Preferred Orientation",
+        "dir": "plots",
+        "type": "single",
+    },
+    "direction_selectivity": {
+        "title": "Direction Selectivity",
+        "dir": "plots",
+        "type": "single",
+    },
+    "orientation_selectivity": {
+        "title": "Orientation Selectivity",
+        "dir": "plots",
+        "type": "single",
+    },
+    "best_responsivity": {"title": "Peak Response", "dir": "plots", "type": "single"},
+    "direction_tuning_width": {
+        "title": "Direction Tuning Width",
+        "dir": "plots",
+        "type": "single",
+    },
+    "sf_selectivity": {
+        "title": "Spatial Selectivity",
+        "dir": "plots",
+        "type": "single",
+    },
+    "sf_responsivity": {
+        "title": "Spatial Peak Response",
+        "dir": "plots",
+        "type": "single",
+    },
+    "sf_responsivity_ratio": {
+        "title": "Spatial Response Ratio",
+        "dir": "plots",
+        "type": "single",
+    },
+    "pca_analysis": {"title": "PCA Analysis", "dir": "plots", "type": "single"},
+    "pca_analysis_variance": {
+        "title": "PCA Explained Variance",
+        "dir": "plots",
+        "type": "single",
+    },
+    "pca_contribution": {
+        "title": "PCA Component Contribution",
+        "dir": "plots",
+        "type": "single",
+    },
+    "pca_spatial_components": {
+        "title": "PCA Spatial Components",
+        "dir": "plots",
+        "type": "multi",
+        "pattern": "pca_component_*_spatial.png",
+    },
+    "pca_time_components": {
+        "title": "PCA Time Components",
+        "dir": "plots",
+        "type": "multi",
+        "pattern": "pca_component_*_time.png",
+    },
+    "clustering_analysis": {
+        "title": "k-means Clustering Analysis",
+        "dir": "plots",
+        "type": "single",
+    },
+    "cluster_spatial_map": {
+        "title": "Cluster Spatial Map",
+        "dir": "plots",
+        "type": "single",
+    },
+    "cluster_time_courses": {
+        "title": "Cluster Time Courses",
+        "dir": "plots",
+        "type": "single",
+    },
 }
 
 
 def get_experiment_urls(source, exp_dir, params=None):
     result = []
-    for k, v in source.items():
-        # Special handling for PCA components
-        if k in ["pca_spatial_components", "pca_time_components"]:
-            # Determine the component directory and pattern
-            if k == "pca_spatial_components":
-                component_dir = "pca_components_spatial"
-                pattern = "pca_component_*_spatial.png"
-            elif k == "pca_time_components":
-                component_dir = "pca_components_time"
-                pattern = "pca_component_*_time.png"
+
+    for key, value in source.items():
+        # Get the graph configuration
+        graph_config = EXPERIMENT_GRAPHS[key]
+
+        if graph_config["type"] == "multi":
+            # Handle multi-image components (like PCA)
+            component_dir = graph_config["dir"]
+            pattern = graph_config["pattern"]
 
             # Construct the directory path
             dirs = exp_dir.split("/")
@@ -128,7 +191,7 @@ def get_experiment_urls(source, exp_dir, params=None):
                 f"{DIRPATH.PUBLIC_EXPDB_DIR}/{dirs[-2]}/{dirs[-1]}/{component_dir}/"
             )
 
-            # Find all matching files using the specific pattern
+            # Find all matching files using the pattern
             component_files = sorted(
                 list(
                     set(glob(f"{pub_dir}/{pattern}"))
@@ -148,11 +211,13 @@ def get_experiment_urls(source, exp_dir, params=None):
                     ImageInfo(urls=urls, thumb_urls=thumb_urls, params=params)
                 )
             else:
-                print(f"No PCA files found for {k}, adding empty placeholder")
+                # Add empty placeholder for debugging
+                print(f"No files found for {key}, adding empty placeholder")
                 result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
         else:
-            # Standard handling for regular plots
-            url = f"{exp_dir}/{v['dir']}/{k}.png"
+            # Handle single-image components (default behavior)
+            dir_path = graph_config["dir"]
+            url = f"{exp_dir}/{dir_path}/{key}.png"
             thumb_url = url.replace(".png", ".thumb.png")
             result.append(ImageInfo(urls=[url], thumb_urls=[thumb_url], params=params))
 
