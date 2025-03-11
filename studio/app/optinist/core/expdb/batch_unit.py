@@ -335,7 +335,7 @@ class ExpDbBatch:
                 pixlemaps_with_num
             ), f"generate pixelmaps failed in {expdb_path.pixelmap_dir}"
 
-    def generate_pca_plots(self, stat_data: StatData, cnmf_info: dict):
+    def generate_plots_using_cnmf_info(self, stat_data: StatData, cnmf_info: dict):
         self.logger_.info("process 'generate_pca_analysis_plots' start.")
 
         # Perform PCA analysis
@@ -372,7 +372,6 @@ class ExpDbBatch:
                 pca_time_dir=expdb_path.pca_time_dir,
             )
 
-    def generate_kmeans_plots(self, stat_data, cnmf_info):
         self.logger_.info("process 'generate_kmeans_analysis_plots' start.")
 
         # Perform KMeans analysis

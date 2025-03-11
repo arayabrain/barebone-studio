@@ -287,8 +287,9 @@ class ExpDbBatchRunner:
             expdb_batch.generate_cellmasks()
             expdb_batch.generate_pixelmaps()
             expdb_batch.generate_plots(stat_data=stat_data)
-            expdb_batch.generate_pca_plots(stat_data=stat_data, cnmf_info=cnmf_info)
-            expdb_batch.generate_kmeans_plots(stat_data=stat_data, cnmf_info=cnmf_info)
+            expdb_batch.generate_plots_using_cnmf_info(
+                stat_data=stat_data, cnmf_info=cnmf_info
+            )
 
             # Read metadata
             (attributes, view_attributes) = expdb_batch.load_exp_metadata()
