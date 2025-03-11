@@ -294,6 +294,7 @@ const TableImple = memo(function TableImple() {
         }
         iconType="warning"
         confirmLabel="delete"
+        confirmButtonColor="error"
       />
       <ConfirmDialog
         open={openCopy}
