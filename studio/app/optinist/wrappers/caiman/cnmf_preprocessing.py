@@ -12,7 +12,6 @@ from studio.app.common.core.utils.filepath_creater import (
 )
 from studio.app.common.dataclass import ImageData
 from studio.app.const import CELLMASK_SUFFIX, TC_SUFFIX, TS_SUFFIX
-from studio.app.dir_path import DIRPATH
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass import EditRoiData, FluoData, IscellData, RoiData
 from studio.app.optinist.dataclass.expdb import ExpDbData
@@ -214,6 +213,8 @@ def caiman_cnmf_preprocessing(
     from caiman.source_extraction.cnmf import cnmf, online_cnmf
     from caiman.source_extraction.cnmf.params import CNMFParams
 
+    from studio.app.expdb_dir_path import EXPDB_DIRPATH
+
     function_id = output_dir.split("/")[-1]  # get function_id from output_dir path
     logger.info(f"start caiman_cnmf: {function_id}")
 
@@ -306,7 +307,7 @@ def caiman_cnmf_preprocessing(
     timecourse_path = join_filepath([output_dir, f"{exp_id}_{TC_SUFFIX}.mat"])
     trialstructure_path = join_filepath(
         [
-            DIRPATH.EXPDB_DIR,
+            EXPDB_DIRPATH.EXPDB_DIR,
             exp_id.split("_")[0],
             exp_id,
             f"{exp_id}_{TS_SUFFIX}.mat",

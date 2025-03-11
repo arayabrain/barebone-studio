@@ -7,7 +7,7 @@ from studio.app.common.core.snakemake.smk import Rule
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.dataclass import CsvData, ImageData, TimeSeriesData
 from studio.app.const import EXP_METADATA_SUFFIX, FILETYPE
-from studio.app.dir_path import DIRPATH
+from studio.app.expdb_dir_path import EXPDB_DIRPATH
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass.expdb import ExpDbData
 from studio.app.optinist.dataclass.iscell import IscellData
@@ -128,7 +128,7 @@ class FileWriter:
         subject_id = exp_id.split("_")[0]
         metadata_path = join_filepath(
             [
-                DIRPATH.EXPDB_DIR,
+                EXPDB_DIRPATH.EXPDB_DIR,
                 subject_id,
                 exp_id,
                 f"{exp_id}_{EXP_METADATA_SUFFIX}.json",
