@@ -124,6 +124,8 @@ PCA_TYPES = {
 KMEANS_TYPES = {
     "cluster_labels": ("int", (None,)),
     "cluster_corr_matrix": ("float", (None, None)),
+    "silhouette_scores": ("float", (None,)),
+    "optimal_clusters": "int",
 }
 
 

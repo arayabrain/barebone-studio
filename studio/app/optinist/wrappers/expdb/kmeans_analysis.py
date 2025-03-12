@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import ListedColormap
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.filepath_creater import join_filepath
@@ -30,7 +31,6 @@ def kmeans_analysis(
             if len(good_indices) > 0:
                 # Filter fluorescence to only include good components
                 fluorescence = fluorescence[good_indices]
-                # logger.info(f"Filtered fluorescence shape: {fluorescence.shape}")
 
     n_cells = fluorescence.shape[0]
     logger.info(f"KMeans will use {n_cells} cells")
@@ -38,12 +38,10 @@ def kmeans_analysis(
     # Set default parameters if none provided
     if params is None:
         params = {}
-    # Ensure n_clusters exists and doesn't exceed the number of cells
-    params["n_clusters"] = min(params.get("n_clusters", 3), n_cells)
 
     # Handle case when there are insufficient cells for clustering
     if n_cells < 2:
-        logger.warn("Not enough cells for KMeans clustering (minimum 2 required)")
+        logger.info("Not enough cells for KMeans clustering (minimum 2 required)")
         # Set dummy values
         cluster_labels = np.zeros(max(1, n_cells), dtype=int)
         corr_matrix = np.ones((max(1, n_cells), max(1, n_cells)), dtype=float)
@@ -51,6 +49,8 @@ def kmeans_analysis(
         # Store results in StatData
         stat.cluster_labels = cluster_labels
         stat.cluster_corr_matrix = corr_matrix
+        stat.silhouette_scores = None
+        stat.optimal_clusters = 1
 
         # Store data needed for visualization
         stat.fluorescence = fluorescence
@@ -65,6 +65,8 @@ def kmeans_analysis(
         clustering_dict = {
             "cluster_labels": cluster_labels,
             "cluster_corr_matrix": corr_matrix,
+            "silhouette_scores": None,
+            "optimal_clusters": 1,
         }
         nwbfile = {
             NWBDATASET.ORISTATS: {
@@ -82,15 +84,43 @@ def kmeans_analysis(
     # Calculate correlation matrix
     corr_matrix = np.corrcoef(fluorescence)
 
-    # Perform clustering
-    kmeans = KMeans(
-        n_clusters=params["n_clusters"],
-    )
-    cluster_labels = kmeans.fit_predict(corr_matrix)
+    # Test clusters from 2 to 30 (or maximum cells if less)
+    k_range = range(2, min(31, n_cells))
+    silhouette_values = []
+    cluster_labels_list = []
+
+    # Calculate silhouette score for each number of clusters
+    for k in k_range:
+        kmeans_temp = KMeans(n_clusters=k, init="k-means++", n_init=10, random_state=42)
+        labels_temp = kmeans_temp.fit_predict(corr_matrix)
+        cluster_labels_list.append(labels_temp)
+        # Only calculate silhouette if we have at least 2 clusters and enough samples
+        if k >= 2 and n_cells > k:
+            try:
+                sil_score = silhouette_score(corr_matrix, labels_temp)
+                silhouette_values.append(sil_score)
+            except Exception as e:
+                print(f"Silhouette calculation failed for k={k}: {e}")
+                silhouette_values.append(-1)  # Use negative value to mark failure
+        else:
+            silhouette_values.append(-1)
+
+    # Find optimal number of clusters (if silhouette calculation succeeded)
+    if any(score > 0 for score in silhouette_values):
+        best_k_idx = np.argmax(silhouette_values)
+        k_optimal = k_range[best_k_idx]
+        cluster_labels = cluster_labels_list[best_k_idx]
+    else:
+        # Fallback to default if silhouette calculation failed
+        k_optimal = min(params.get("n_clusters", 3), n_cells)
+        kmeans = KMeans(n_clusters=k_optimal, init="k-means++", n_init=10)
+        cluster_labels = kmeans.fit_predict(corr_matrix)
 
     # Store results in StatData
     stat.cluster_labels = cluster_labels
     stat.cluster_corr_matrix = corr_matrix
+    stat.silhouette_scores = silhouette_values
+    stat.optimal_clusters = k_optimal
 
     # Store data needed for visualization
     stat.fluorescence = fluorescence
@@ -105,6 +135,8 @@ def kmeans_analysis(
     clustering_dict = {
         "cluster_labels": cluster_labels,
         "cluster_corr_matrix": corr_matrix,
+        "silhouette_scores": silhouette_values,
+        "optimal_clusters": k_optimal,
     }
     nwbfile = {
         NWBDATASET.ORISTATS: {**nwbfile.get(NWBDATASET.ORISTATS, {}), **clustering_dict}
@@ -118,7 +150,13 @@ def kmeans_analysis(
 
 
 def generate_kmeans_visualization(
-    labels, corr_matrix, fluorescence, roi_masks, output_dir
+    labels,
+    corr_matrix,
+    fluorescence,
+    roi_masks,
+    silhouette_scores,
+    optimal_clusters,
+    output_dir,
 ):
     """
     Generate KMeans visualizations with separate files for each component
@@ -135,6 +173,10 @@ def generate_kmeans_visualization(
         ROI masks data in any format
     output_dir : str
         Directory for saving output files
+    silhouette_scores : ndarray, optional
+        Silhouette scores for different numbers of clusters
+    optimal_clusters : int, optional
+        Optimal number of clusters based on silhouette analysis
     """
     if labels is None or len(labels) == 0:
         logger.warn("Warning: Missing cluster labels")
@@ -197,7 +239,79 @@ def generate_kmeans_visualization(
         plt.close()
         save_thumbnail(map_path)
 
+        plt.figure()
+        plt.text(
+            0.5,
+            0.5,
+            "Insufficient ROIs for k-means clustering.\nAt least 2 ROIs required.",
+            ha="center",
+            va="center",
+            transform=plt.gca().transAxes,
+        )
+        plt.axis("off")
+        silhouette_path = join_filepath([output_dir, "silhouette_scores.png"])
+        plt.savefig(silhouette_path, bbox_inches="tight")
+        plt.close()
+        save_thumbnail(silhouette_path)
+
         return
+
+    # 1. Plot silhouette scores for determining optimal number of clusters
+    if silhouette_scores is not None and len(silhouette_scores) > 0:
+        plt.figure(figsize=(10, 6))
+        k_range = range(2, 2 + len(silhouette_scores))
+
+        # Filter out negative values (failed calculations)
+        valid_indices = [i for i, score in enumerate(silhouette_scores) if score >= 0]
+        valid_k = [k_range[i] for i in valid_indices]
+        valid_scores = [silhouette_scores[i] for i in valid_indices]
+
+        if len(valid_scores) > 0:
+            plt.plot(valid_k, valid_scores, "o-", linewidth=2)
+
+            # Highlight the optimal cluster
+            if optimal_clusters is not None and optimal_clusters in valid_k:
+                opt_idx = valid_k.index(optimal_clusters)
+                plt.plot(
+                    optimal_clusters,
+                    valid_scores[opt_idx],
+                    "o",
+                    markersize=10,
+                    markerfacecolor="red",
+                    markeredgecolor="black",
+                )
+                plt.axvline(x=optimal_clusters, color="gray", linestyle="--", alpha=0.7)
+
+            plt.title("Silhouette Score Analysis for K-means Clustering")
+            plt.xlabel("Number of Clusters (k)")
+            plt.ylabel("Silhouette Score")
+            plt.grid(True, alpha=0.3)
+            plt.xticks(valid_k)  # Show all tested k values on x-axis
+
+            # Add text annotation for optimal cluster
+            if optimal_clusters is not None:
+                plt.figtext(
+                    0.5,
+                    0.01,
+                    f"Optimal number of clusters: {optimal_clusters}",
+                    ha="center",
+                    fontsize=12,
+                )
+        else:
+            plt.text(
+                0.5,
+                0.5,
+                "No valid silhouette scores available",
+                ha="center",
+                va="center",
+                transform=plt.gca().transAxes,
+            )
+            plt.axis("on")
+
+        silhouette_path = join_filepath([output_dir, "silhouette_scores.png"])
+        plt.savefig(silhouette_path, bbox_inches="tight")
+        plt.close()
+        save_thumbnail(silhouette_path)
 
     # Reorder correlation matrix based on clusters
     sort_idx = np.argsort(labels)
@@ -209,11 +323,14 @@ def generate_kmeans_visualization(
     colors = plt.cm.jet(np.linspace(0, 1, n_clusters))
     custom_cmap = ListedColormap(colors)
 
-    # 1. Correlation matrix heatmap
+    # 2. Correlation matrix heatmap
     plt.figure()
     im = plt.imshow(sorted_corr_matrix, cmap="jet")
     plt.colorbar(im)
-    plt.title(f"K-means Clustering (k={n_clusters})")
+    if optimal_clusters is not None:
+        plt.title(f"K-means Clustering k={optimal_clusters}")
+    else:
+        plt.title(f"K-means Clustering (k={n_clusters})")
     plt.xlabel("Cells")
     plt.ylabel("Cells")
 
@@ -222,7 +339,7 @@ def generate_kmeans_visualization(
     plt.close()
     save_thumbnail(matrix_path)
 
-    # 2. Mean time courses by cluster
+    # 3. Mean time courses by cluster
     if fluorescence is not None and fluorescence.shape[0] >= len(labels):
         plt.figure()
         cluster_averages = []
@@ -247,7 +364,7 @@ def generate_kmeans_visualization(
         plt.close()
         save_thumbnail(time_path)
 
-    # 3. Spatial cluster map - attempt only if roi_masks has appropriate shape
+    # 4. Spatial cluster map - attempt only if roi_masks has appropriate shape
     if roi_masks is not None and hasattr(roi_masks, "shape"):
         try:
             # Create cluster colormap

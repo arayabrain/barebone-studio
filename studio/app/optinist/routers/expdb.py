@@ -155,6 +155,11 @@ EXPERIMENT_GRAPHS = {
         "type": "multi",
         "pattern": "pca_component_*_time.png",
     },
+    "silhouette_scores": {
+        "title": "K-means Silhouette Analysis",
+        "dir": "plots",
+        "type": "single",
+    },
     "clustering_analysis": {
         "title": "k-means Clustering Analysis",
         "dir": "plots",

@@ -396,6 +396,8 @@ class ExpDbBatch:
                 corr_matrix=stat_data.cluster_corr_matrix,
                 fluorescence=stat_data.fluorescence,
                 roi_masks=cnmf_info["cell_roi"].data,
+                silhouette_scores=stat_data.silhouette_scores,
+                optimal_clusters=stat_data.optimal_clusters,
                 output_dir=dir_path,
             )
 
