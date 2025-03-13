@@ -41,7 +41,7 @@ class Runner:
 
             # write pid file
             workflow_dirpath = str(Path(__rule.output).parent.parent)
-            cls.write_pid_file(workflow_dirpath, run_script_path)
+            cls.write_pid_file(workflow_dirpath, __rule.type, run_script_path)
 
             input_info = cls.read_input_info(__rule.input)
             cls.__change_dict_key_exist(input_info, __rule)
@@ -110,12 +110,15 @@ class Runner:
         return pid_file_path
 
     @classmethod
-    def write_pid_file(cls, workflow_dirpath: str, run_script_path: str) -> None:
+    def write_pid_file(
+        cls, workflow_dirpath: str, func_name: str, run_script_path: str
+    ) -> None:
         """
         save snakemake script file path and PID of current running algo function
         """
         pid_data = WorkflowPIDFileData(
             last_pid=os.getpid(),
+            func_name=func_name,
             last_script_file=run_script_path,
             create_time=time.time(),
         )
@@ -129,6 +132,12 @@ class Runner:
             # Force immediate write of pid file
             f.flush()
             os.fsync(f.fileno())
+
+    @classmethod
+    def clear_pid_file(cls, workspace_id: str, unique_id: str) -> None:
+        pid_file_path = cls.__get_pid_file_path(workspace_id, unique_id)
+        if os.path.exists(pid_file_path):
+            os.remove(pid_file_path)
 
     @classmethod
     def read_pid_file(cls, workspace_id: str, unique_id: str) -> WorkflowPIDFileData:
