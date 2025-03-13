@@ -42,8 +42,6 @@ from studio.app.optinist.schemas.expdb.experiment import (
 router = APIRouter(tags=["Experiment Database"])
 public_router = APIRouter(tags=["Experiment Database"])
 
-logger = AppLogger.get_logger()
-
 
 # Load configuration from YAML files
 def load_graph_configs():
@@ -120,6 +118,7 @@ def experiment_transformer(items: Sequence) -> Sequence:
 
 
 def get_experiment_urls(source, exp_dir, params=None):
+    logger = AppLogger.get_logger()
     result = []
 
     for key, value in source.items():

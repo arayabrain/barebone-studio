@@ -156,7 +156,7 @@ def generate_pca_visualization(
     """
     # Check if inputs are valid
     if components is None or scores is None:
-        logger.warn("Warning: Missing PCA components or scores")
+        logger.warning("Warning: Missing PCA components or scores")
         return
 
     if roi_masks is not None and hasattr(roi_masks, "shape"):
@@ -168,7 +168,7 @@ def generate_pca_visualization(
                 count = np.sum(np.isclose(roi_masks, val))
                 logger.info(f"  ROI ID {val}: {count} pixels")
         else:
-            logger.warn("WARNING: All values in ROI mask are NaN")
+            logger.warning("WARNING: All values in ROI mask are NaN")
 
     # Handle the case of insufficient ROIs - create error images
     is_data_insufficient = (
@@ -388,7 +388,7 @@ def generate_pca_visualization(
                 plt.close()
                 save_thumbnail(spatial_path)
 
-                logger.warn(f"Created fallback bar visualization for PC {i+1}")
+                logger.warning(f"Created fallback bar visualization for PC {i+1}")
         else:
             # Create alternative visualization using direct component values
             plt.figure()
