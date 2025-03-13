@@ -315,6 +315,7 @@ class WorkflowMonitor:
             # Set dummy value to proceed to the next step.
             pid_data = WorkflowPIDFileData(
                 last_pid=999999,
+                func_name="__dummy_wrapper",
                 last_script_file="__dummy_wrapper_function.py",
                 create_time=expt_started_time.timestamp(),
             )

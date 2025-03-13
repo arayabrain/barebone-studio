@@ -25,7 +25,9 @@ def test_WorkflowResult_get():
     )
 
     # first, write pid_file
-    Runner.write_pid_file(output_dirpath, "xxxx_dummy_func_script.py")
+    Runner.write_pid_file(
+        output_dirpath, "xxxx_dummy_func", "xxxx_dummy_func_script.py"
+    )
 
     output = WorkflowResult(workspace_id=workspace_id, unique_id=unique_id).observe(
         node_id_list

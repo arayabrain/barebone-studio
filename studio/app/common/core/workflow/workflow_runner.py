@@ -10,6 +10,7 @@ import numpy as np
 
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
 from studio.app.common.core.experiment.experiment_writer import ExptConfigWriter
+from studio.app.common.core.rules.runner import Runner
 from studio.app.common.core.snakemake.smk import FlowConfig, Rule, SmkParam
 from studio.app.common.core.snakemake.snakemake_executor import (
     delete_dependencies,
@@ -60,6 +61,8 @@ class WorkflowRunner:
             snakemake=get_typecheck_params(self.runItem.snakemakeParam, "snakemake"),
         ).write()
 
+        Runner.clear_pid_file(self.workspace_id, self.unique_id)
+
     @staticmethod
     def create_workflow_unique_id() -> str:
         new_unique_id = str(uuid.uuid4())[:8]
@@ -81,6 +84,7 @@ class WorkflowRunner:
                 nodeDict=self.nodeDict,
                 edgeDict=self.edgeDict,
             )
+
         background_tasks.add_task(
             snakemake_execute, self.workspace_id, self.unique_id, snakemake_params
         )
