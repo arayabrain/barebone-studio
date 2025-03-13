@@ -214,7 +214,7 @@ def get_experiment_urls(source, exp_dir, params=None):
                 )
             else:
                 # Add empty placeholder for debugging
-                print(f"No files found for {key}, adding empty placeholder")
+                logger.info(f"No files found for {key}, adding empty placeholder")
                 result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
         else:
             # Handle single-image components (default behavior)

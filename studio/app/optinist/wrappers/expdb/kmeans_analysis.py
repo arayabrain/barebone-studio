@@ -100,7 +100,7 @@ def kmeans_analysis(
                 sil_score = silhouette_score(corr_matrix, labels_temp)
                 silhouette_values.append(sil_score)
             except Exception as e:
-                print(f"Silhouette calculation failed for k={k}: {e}")
+                logger.warn(f"Silhouette calculation failed for k={k}: {e}")
                 silhouette_values.append(-1)  # Use negative value to mark failure
         else:
             silhouette_values.append(-1)
@@ -446,4 +446,4 @@ def generate_kmeans_visualization(
                 plt.close()
                 save_thumbnail(map_path)
         except Exception as e:
-            print(f"Could not create cluster spatial map: {str(e)}")
+            logger.warn(f"Could not create cluster spatial map: {str(e)}")
