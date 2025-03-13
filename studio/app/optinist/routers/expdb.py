@@ -14,6 +14,9 @@ from studio.app.common.core.auth.auth_dependencies import (
     get_admin_data_user,
     get_current_user,
 )
+from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.utils.config_handler import ConfigReader
+from studio.app.common.core.utils.filepath_finder import find_param_filepath
 from studio.app.common.db.database import get_db
 from studio.app.common.schemas.users import User
 from studio.app.dir_path import DIRPATH
@@ -38,6 +41,42 @@ from studio.app.optinist.schemas.expdb.experiment import (
 
 router = APIRouter(tags=["Experiment Database"])
 public_router = APIRouter(tags=["Experiment Database"])
+
+logger = AppLogger.get_logger()
+
+
+# Load configuration from YAML files
+def load_graph_configs():
+    logger = AppLogger.get_logger()
+    experiment_graphs = {}
+    cell_graphs = {}
+
+    try:
+        experiment_graphs_path = find_param_filepath("experiment_graphs")
+        if experiment_graphs_path:
+            experiment_graphs = ConfigReader.read(experiment_graphs_path)
+            logger.info(
+                f"Loaded experiment graphs configuration from {experiment_graphs_path}"
+            )
+        else:
+            logger.warning("Could not find experiment_graphs.yaml")
+    except Exception as e:
+        logger.error(f"Error loading experiment_graphs.yaml: {e}")
+
+    try:
+        cell_graphs_path = find_param_filepath("cell_graphs")
+        if cell_graphs_path:
+            cell_graphs = ConfigReader.read(cell_graphs_path)
+            logger.info(f"Loaded cell graphs configuration from {cell_graphs_path}")
+        else:
+            logger.warning("Could not find cell_graphs.yaml")
+    except Exception as e:
+        logger.error(f"Error loading cell_graphs.yaml: {e}")
+
+    return experiment_graphs, cell_graphs
+
+
+EXPERIMENT_GRAPHS, CELL_GRAPHS = load_graph_configs()
 
 
 def expdbcell_transformer(items: Sequence) -> Sequence:
@@ -78,104 +117,6 @@ def experiment_transformer(items: Sequence) -> Sequence:
 
         experiments.append(exp)
     return experiments
-
-
-EXPERIMENT_GRAPHS = {
-    "direction_responsivity_ratio": {
-        "title": "Direction Responsivity Ratio",
-        "dir": "plots",
-        "type": "single",
-    },
-    "orientation_responsivity_ratio": {
-        "title": "Orientation Responsivity Ratio",
-        "dir": "plots",
-        "type": "single",
-    },
-    "preferred_direction": {
-        "title": "Preferred Direction",
-        "dir": "plots",
-        "type": "single",
-    },
-    "preferred_orientation": {
-        "title": "Preferred Orientation",
-        "dir": "plots",
-        "type": "single",
-    },
-    "direction_selectivity": {
-        "title": "Direction Selectivity",
-        "dir": "plots",
-        "type": "single",
-    },
-    "orientation_selectivity": {
-        "title": "Orientation Selectivity",
-        "dir": "plots",
-        "type": "single",
-    },
-    "best_responsivity": {"title": "Peak Response", "dir": "plots", "type": "single"},
-    "direction_tuning_width": {
-        "title": "Direction Tuning Width",
-        "dir": "plots",
-        "type": "single",
-    },
-    "sf_selectivity": {
-        "title": "Spatial Selectivity",
-        "dir": "plots",
-        "type": "single",
-    },
-    "sf_responsivity": {
-        "title": "Spatial Peak Response",
-        "dir": "plots",
-        "type": "single",
-    },
-    "sf_responsivity_ratio": {
-        "title": "Spatial Response Ratio",
-        "dir": "plots",
-        "type": "single",
-    },
-    "pca_analysis": {"title": "PCA Analysis", "dir": "plots", "type": "single"},
-    "pca_analysis_variance": {
-        "title": "PCA Explained Variance",
-        "dir": "plots",
-        "type": "single",
-    },
-    "pca_contribution": {
-        "title": "PCA Component Contribution",
-        "dir": "plots",
-        "type": "single",
-    },
-    "pca_spatial_components": {
-        "title": "PCA Spatial Components",
-        "dir": "plots",
-        "type": "multi",
-        "pattern": "pca_component_*_spatial.png",
-    },
-    "pca_time_components": {
-        "title": "PCA Time Components",
-        "dir": "plots",
-        "type": "multi",
-        "pattern": "pca_component_*_time.png",
-    },
-    "silhouette_scores": {
-        "title": "K-means Silhouette Analysis",
-        "dir": "plots",
-        "type": "single",
-    },
-    "clustering_analysis": {
-        "title": "k-means Clustering Analysis",
-        "dir": "plots",
-        "type": "single",
-    },
-    "cluster_spatial_map": {
-        "title": "Cluster Spatial Map",
-        "dir": "plots",
-        "type": "single",
-    },
-    "cluster_time_courses": {
-        "title": "Cluster Time Courses",
-        "dir": "plots",
-        "type": "single",
-    },
-}
 
 
 def get_experiment_urls(source, exp_dir, params=None):
@@ -238,13 +179,6 @@ def get_pixelmap_urls(exp_dir, params=None):
         for k in pixelmaps
     ]
 
-
-CELL_GRAPHS = {
-    "fov_cell_merge": {"title": "Cell Mask", "dir": "cellmasks"},
-    "tuning_curve": {"title": "Tuning Curve", "dir": "plots"},
-    "tuning_curve_polar": {"title": "Tuning Curve Polar", "dir": "plots"},
-    "spatial_frequency_tuning": {"title": "Spatial Freq Tuning", "dir": "plots"},
-}
 
 EXP_ATTRIBUTE_SORT_MAPPING = {
     "brain_area": func.json_value(
@@ -328,7 +262,11 @@ async def search_public_experiments(
         default=["experiment_id", SortDirection.asc],
     )
 
-    graph_titles = [v["title"] for v in EXPERIMENT_GRAPHS.values()]
+    graph_titles = (
+        [v.get("title", key) for key, v in EXPERIMENT_GRAPHS.items()]
+        if EXPERIMENT_GRAPHS
+        else []
+    )
     query = select(optinist_model.Experiment).filter_by(
         publish_status=PublishStatus.on.value
     )
@@ -399,7 +337,9 @@ async def search_public_cells(
         .join(sub_query, sub_query.c.id == optinist_model.Cell.id)
         .order_by(*sa_sort_list)
     )
-    graph_titles = [v["title"] for v in CELL_GRAPHS.values()]
+    graph_titles = (
+        [v.get("title", key) for key, v in CELL_GRAPHS.items()] if CELL_GRAPHS else []
+    )
 
     """
     The two indexes are used to improve performance of fetching data query.
@@ -511,7 +451,11 @@ async def search_db_experiments(
 
     query = query.group_by(optinist_model.Experiment.id).order_by(*sa_sort_list)
 
-    graph_titles = [v["title"] for v in EXPERIMENT_GRAPHS.values()]
+    graph_titles = (
+        [v.get("title", key) for key, v in EXPERIMENT_GRAPHS.items()]
+        if EXPERIMENT_GRAPHS
+        else []
+    )
 
     data = paginate(
         session=db,
@@ -683,7 +627,9 @@ async def search_db_cells(
 
     query = query.order_by(*sa_sort_list)
 
-    graph_titles = [v["title"] for v in CELL_GRAPHS.values()]
+    graph_titles = (
+        [v.get("title", key) for key, v in CELL_GRAPHS.items()] if CELL_GRAPHS else []
+    )
 
     return PageWithHeader[ExpDbCell](
         header=ExpDbExperimentHeader(graph_titles=graph_titles),

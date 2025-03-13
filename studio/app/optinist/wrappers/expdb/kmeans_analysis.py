@@ -179,7 +179,7 @@ def generate_kmeans_visualization(
         Optimal number of clusters based on silhouette analysis
     """
     if labels is None or len(labels) == 0:
-        logger.warn("Warning: Missing cluster labels")
+        logger.warn("Warning: Missing cluster labels ")
         return
 
     # Handle the case of insufficient ROIs

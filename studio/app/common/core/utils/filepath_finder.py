@@ -15,6 +15,12 @@ def find_filepath(name, category) -> Optional[str]:
         ),
         recursive=True,
     )
+
+    # If not found, try the routers path
+    if not filepaths:
+        filepaths = glob(
+            join_filepath([DIRPATH.APP_DIR, "*", "routers", category, f"{name}.yaml"])
+        )
     return filepaths[0] if len(filepaths) > 0 else None
 
 
