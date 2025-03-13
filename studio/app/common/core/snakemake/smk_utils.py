@@ -11,6 +11,7 @@ from studio.app.common.core.utils.filepath_finder import find_condaenv_filepath
 from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil
 from studio.app.const import ACCEPT_FILE_EXT, FILETYPE, TC_SUFFIX, TS_SUFFIX
 from studio.app.dir_path import DIRPATH
+from studio.app.expdb_dir_path import EXPDB_DIRPATH
 from studio.app.wrappers import wrapper_dict
 
 logger = AppLogger.get_logger()
@@ -25,7 +26,7 @@ class SmkUtils:
             elif details["type"] == FILETYPE.MICROSCOPE:
                 exp_id = details["input"]
                 subject_id = exp_id.split("_")[0]
-                exp_dir = join_filepath([DIRPATH.EXPDB_DIR, subject_id, exp_id])
+                exp_dir = join_filepath([EXPDB_DIRPATH.EXPDB_DIR, subject_id, exp_id])
 
                 microscope_files = []
                 for ext in ACCEPT_FILE_EXT.MICROSCOPE_EXT.value:
@@ -44,7 +45,7 @@ class SmkUtils:
                 return [
                     join_filepath(
                         [
-                            DIRPATH.EXPDB_DIR,
+                            EXPDB_DIRPATH.EXPDB_DIR,
                             subject_id,
                             exp_id,
                             f"{exp_id}_{TS_SUFFIX}.mat",
@@ -52,7 +53,7 @@ class SmkUtils:
                     ),
                     join_filepath(
                         [
-                            DIRPATH.EXPDB_DIR,
+                            EXPDB_DIRPATH.EXPDB_DIR,
                             subject_id,
                             exp_id,
                             "preprocess",

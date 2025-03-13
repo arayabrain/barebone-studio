@@ -14,6 +14,7 @@ from zc import lockfile
 from studio.app.common.core.users.crud_organizations import get_organization
 from studio.app.common.db.database import session_scope
 from studio.app.dir_path import DIRPATH
+from studio.app.expdb_dir_path import EXPDB_DIRPATH
 from studio.app.optinist.core.expdb.batch_unit import ExpDbBatch
 from studio.app.optinist.core.expdb.crud_cells import bulk_insert_cells
 from studio.app.optinist.core.expdb.crud_configs import summarize_experiment_metadata
@@ -246,11 +247,11 @@ class ExpDbBatchRunner:
         """
         処理対象datasets検索
         """
-        self.logger_.info("path: %s", DIRPATH.EXPDB_DIR)
+        self.logger_.info("path: %s", EXPDB_DIRPATH.EXPDB_DIR)
 
         # フラグファイル検索
         target_flag_files = sorted(
-            glob.glob(DIRPATH.EXPDB_DIR + "/*/*" + FLAG_FILE_EXT)
+            glob.glob(EXPDB_DIRPATH.EXPDB_DIR + "/*/*" + FLAG_FILE_EXT)
         )
 
         return target_flag_files

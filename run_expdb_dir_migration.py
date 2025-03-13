@@ -15,6 +15,7 @@ from studio.app.common.core.utils.filepath_creater import (
 )
 from studio.app.const import CELLMASK_SUFFIX, TC_SUFFIX
 from studio.app.dir_path import DIRPATH
+from studio.app.expdb_dir_path import EXPDB_DIRPATH
 
 
 class ExpDbDirMigration:
@@ -55,7 +56,7 @@ class ExpDbDirMigration:
     def __migrate(self):
         subject_dirs = [
             p
-            for p in glob(join_filepath([DIRPATH.EXPDB_DIR, "M*/"]))
+            for p in glob(join_filepath([EXPDB_DIRPATH.EXPDB_DIR, "M*/"]))
             if re.search(r"M\d{6}/", p)
         ]
 
