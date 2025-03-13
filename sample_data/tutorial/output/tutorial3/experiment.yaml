@@ -6,8 +6,8 @@ finished_at: '2025-02-13 15:34:57'
 success: success
 hasNWB: true
 function:
-  input_0:
-    unique_id: input_0
+  input_qsxe86gdqi:
+    unique_id: input_qsxe86gdqi
     name: sample_mouse2p_image.tiff
     success: success
     hasNWB: false

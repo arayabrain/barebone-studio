@@ -19,7 +19,7 @@ from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.filepath_finder import find_param_filepath
 from studio.app.common.db.database import get_db
 from studio.app.common.schemas.users import User
-from studio.app.dir_path import DIRPATH
+from studio.app.expdb_dir_path import EXPDB_DIRPATH
 from studio.app.optinist import models as optinist_model
 from studio.app.optinist.core.expdb.crud_expdb import extract_experiment_view_attributes
 from studio.app.optinist.schemas.base import SortDirection, SortOptions
@@ -82,7 +82,7 @@ def expdbcell_transformer(items: Sequence) -> Sequence:
     for item in items:
         expdbcell = ExpDbCell.from_orm(item)
         subject_id = expdbcell.experiment_id.split("_")[0]
-        exp_dir = f"{DIRPATH.GRAPH_HOST}/{subject_id}/{expdbcell.experiment_id}"
+        exp_dir = f"{EXPDB_DIRPATH.GRAPH_HOST}/{subject_id}/{expdbcell.experiment_id}"
         try:
             expdbcell.fields = ExpDbExperimentFields(**item.view_attributes)
         except Exception:
@@ -103,7 +103,7 @@ def experiment_transformer(items: Sequence) -> Sequence:
         expdb: optinist_model.Experiment = item
         exp = ExpDbExperiment.from_orm(expdb)
         subject_id = exp.experiment_id.split("_")[0]
-        exp_dir = f"{DIRPATH.GRAPH_HOST}/{subject_id}/{exp.experiment_id}"
+        exp_dir = f"{EXPDB_DIRPATH.GRAPH_HOST}/{subject_id}/{exp.experiment_id}"
 
         try:
             exp.fields = ExpDbExperimentFields(**expdb.view_attributes)
@@ -168,7 +168,7 @@ def get_experiment_urls(source, exp_dir, params=None):
 
 def get_pixelmap_urls(exp_dir, params=None):
     dirs = exp_dir.split("/")
-    pub_dir = f"{DIRPATH.PUBLIC_EXPDB_DIR}/{dirs[-2]}/{dirs[-1]}/pixelmaps/"
+    pub_dir = f"{EXPDB_DIRPATH.PUBLIC_EXPDB_DIR}/{dirs[-2]}/{dirs[-1]}/pixelmaps/"
     pixelmaps = sorted(
         list(set(glob(f"{pub_dir}/*.png")) - set(glob(f"{pub_dir}/*.thumb.png")))
     )

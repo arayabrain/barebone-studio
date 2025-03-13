@@ -34,6 +34,7 @@ from studio.app.common.routers import (
     workspace,
 )
 from studio.app.dir_path import DIRPATH
+from studio.app.expdb_dir_path import EXPDB_DIRPATH
 from studio.app.optinist.routers import expdb, hdf5, mat, nwb, roi
 
 
@@ -104,10 +105,10 @@ app.mount(
     name="static",
 )
 
-if DIRPATH.SELFHOST_GRAPH:
+if EXPDB_DIRPATH.SELFHOST_GRAPH:
     app.mount(
         "/datasets",
-        StaticFiles(directory=DIRPATH.PUBLIC_EXPDB_DIR),
+        StaticFiles(directory=EXPDB_DIRPATH.PUBLIC_EXPDB_DIR),
         name="datasets",
     )
 

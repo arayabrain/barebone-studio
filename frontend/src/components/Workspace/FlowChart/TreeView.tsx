@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from "react-redux"
 import AddIcon from "@mui/icons-material/Add"
 import ChevronRightIcon from "@mui/icons-material/ChevronRight"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
-import { styled, Typography } from "@mui/material"
+import { styled, Typography, Tooltip } from "@mui/material"
 import IconButton from "@mui/material/IconButton"
 import { treeItemClasses } from "@mui/x-tree-view"
 import { TreeItem } from "@mui/x-tree-view/TreeItem"
@@ -313,6 +313,7 @@ const AlgoNodeComponent = memo(function AlgoNodeComponent({
             style={{
               display: "flex", // Place Items on single line.
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             {node.condaEnvExists ? (
               <AddButton
@@ -329,7 +330,6 @@ const AlgoNodeComponent = memo(function AlgoNodeComponent({
                   if (reason !== undefined) {
                     return
                   }
-
                   onAddAlgoNode(name, node.functionPath)
                 }}
               />
@@ -357,17 +357,16 @@ const AddButton = memo(function AddButton({ name, onClick }: AddButtonProps) {
       >
         <AddIcon />
       </IconButton>
-      <Typography
-        variant="inherit"
-        style={{
-          textOverflow: "ellipsis",
-          overflow: "visible",
-          width: "8rem",
-          display: "inline-block",
-        }}
-      >
-        {name}
-      </Typography>
+      <Tooltip title={name} placement="right">
+        <Typography
+          variant="inherit"
+          style={{
+            display: "inline-block",
+          }}
+        >
+          {name}
+        </Typography>
+      </Tooltip>
     </>
   )
 })

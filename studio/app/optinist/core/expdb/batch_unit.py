@@ -31,7 +31,7 @@ from studio.app.const import (
     THUMBNAIL_HEIGHT,
     TS_SUFFIX,
 )
-from studio.app.dir_path import DIRPATH
+from studio.app.expdb_dir_path import EXPDB_DIRPATH
 from studio.app.optinist.core.expdb.crud_cells import bulk_delete_cells
 from studio.app.optinist.core.expdb.crud_expdb import (
     delete_experiment,
@@ -86,7 +86,7 @@ class ExpDbPath:
         subject_id = exp_id.split("_")[0]
 
         if is_raw:
-            self.exp_dir = join_filepath([DIRPATH.EXPDB_DIR, subject_id, exp_id])
+            self.exp_dir = join_filepath([EXPDB_DIRPATH.EXPDB_DIR, subject_id, exp_id])
             assert os.path.exists(self.exp_dir), f"exp_dir not found: {self.exp_dir}"
             self.output_dir = join_filepath([self.exp_dir, "outputs"])
 
@@ -120,7 +120,9 @@ class ExpDbPath:
                 [self.preprocess_dir, f"{exp_id}_{CELLMASK_SUFFIX}.mat"]
             )
         else:
-            self.exp_dir = join_filepath([DIRPATH.PUBLIC_EXPDB_DIR, subject_id, exp_id])
+            self.exp_dir = join_filepath(
+                [EXPDB_DIRPATH.PUBLIC_EXPDB_DIR, subject_id, exp_id]
+            )
             self.output_dir = self.exp_dir
 
         # outputs

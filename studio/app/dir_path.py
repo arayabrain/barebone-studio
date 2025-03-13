@@ -28,24 +28,6 @@ class DIRPATH:
     if os.path.isfile(f"{CONFIG_DIR}/.env"):
         load_dotenv(f"{CONFIG_DIR}/.env")
 
-    load_dotenv(f"{CONFIG_DIR}/.env")
-    EXPDB_DIR = os.environ.get("EXPDB_DIR")
-    assert EXPDB_DIR is not None, "EXPDB_DIR must be set"
-    assert os.path.exists(EXPDB_DIR), f"{EXPDB_DIR} does not exist"
-
-    PUBLIC_EXPDB_DIR = os.environ.get("PUBLIC_EXPDB_DIR")
-    assert PUBLIC_EXPDB_DIR is not None, "PUBLIC_EXPDB_DIR must be set"
-    assert os.path.exists(PUBLIC_EXPDB_DIR), f"{PUBLIC_EXPDB_DIR} does not exist"
-
-    assert (
-        EXPDB_DIR != PUBLIC_EXPDB_DIR
-    ), "EXPDB_DIR and PUBLIC_EXPDB_DIR must be different"
-
-    GRAPH_HOST = os.environ.get("GRAPH_HOST")
-    assert GRAPH_HOST is not None, "GRAPH_HOST must be set"
-
-    SELFHOST_GRAPH = os.environ.get("SELFHOST_GRAPH", True)
-
     CONDAENV_DIR = (
         f"{os.path.dirname(os.path.dirname(os.path.dirname(__file__)))}/conda"
     )
@@ -62,9 +44,6 @@ class DIRPATH:
         if not IS_TEST
         else f"{CONFIG_DIR}/auth/firebase_config.example.json"
     )
-
-    MICROSCOPE_LIB_DIR = f"{APP_DIR}/optinist/microscopes/libs"
-    MICROSCOPE_LIB_ZIP = f"{APP_DIR}/optinist/microscopes/libs.zip"
 
     MICROSCOPE_LIB_DIR = f"{APP_DIR}/optinist/microscopes/libs"
     MICROSCOPE_LIB_ZIP = f"{APP_DIR}/optinist/microscopes/libs.zip"

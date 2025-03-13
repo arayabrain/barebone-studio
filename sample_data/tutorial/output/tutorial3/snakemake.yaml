@@ -1,10 +1,10 @@
 rules:
-  input_0:
+  input_qsxe86gdqi:
     input:
     - 1/sample_mouse2p_image.tiff
-    return_arg: input_0
+    return_arg: input_qsxe86gdqi
     params: {}
-    output: 1/tutorial3/input_0/sample_mouse2p_image.pkl
+    output: 1/tutorial3/input_qsxe86gdqi/sample_mouse2p_image.pkl
     type: image
     nwbfile:
       session_description: optinist
@@ -39,9 +39,9 @@ rules:
     path: null
   suite2p_file_convert_uwyrgu1xyc:
     input:
-    - 1/tutorial3/input_0/sample_mouse2p_image.pkl
+    - 1/tutorial3/input_qsxe86gdqi/sample_mouse2p_image.pkl
     return_arg:
-      input_0: image
+      input_qsxe86gdqi: image
     params:
       force_sktiff: false
       batch_size: 500

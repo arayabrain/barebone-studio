@@ -1,4 +1,4 @@
-import { memo, SyntheticEvent, useState } from "react"
+import { memo, SyntheticEvent, useState, useCallback } from "react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { enqueueSnackbar } from "notistack"
@@ -6,6 +6,7 @@ import { enqueueSnackbar } from "notistack"
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined"
 import { Typography } from "@mui/material"
 import IconButton from "@mui/material/IconButton"
+import Tooltip from "@mui/material/Tooltip"
 
 import { ConfirmDialog } from "components/common/ConfirmDialog"
 import { AlgorithmChild } from "store/slice/AlgorithmList/AlgorithmListType"
@@ -33,14 +34,15 @@ interface CondaNoticeButtonProps {
 export const CondaNoticeButton = memo(function CondaNoticeButton({
   name,
   node,
-  onSkipClick: onSkipClick,
+  onSkipClick,
 }: CondaNoticeButtonProps) {
   const condaName = node.condaName
 
   const [open, setOpen] = useState(false)
-  const openDialog = () => {
+
+  const openDialog = useCallback(() => {
     setOpen(true)
-  }
+  }, [])
 
   const dispatch = useDispatch<AppDispatch>()
   const workspaceId = useSelector(selectCurrentWorkspaceId) || -1
@@ -99,17 +101,16 @@ export const CondaNoticeButton = memo(function CondaNoticeButton({
       >
         <InfoOutlinedIcon />
       </IconButton>
-      <Typography
-        variant="inherit"
-        style={{
-          textOverflow: "ellipsis",
-          overflow: "visible",
-          width: "8rem",
-          display: "inline-block",
-        }}
-      >
-        {name}
-      </Typography>
+      <Tooltip title={name} placement="right-start">
+        <Typography
+          variant="inherit"
+          style={{
+            display: "inline-block",
+          }}
+        >
+          {name}
+        </Typography>
+      </Tooltip>
 
       <ConfirmDialog
         open={open}

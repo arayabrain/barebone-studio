@@ -556,6 +556,7 @@ const Workspaces = () => {
         }
         iconType="warning"
         confirmLabel="delete"
+        confirmButtonColor="error"
       />
       <PopupNew
         open={open.new}
