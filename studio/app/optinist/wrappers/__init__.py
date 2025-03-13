@@ -1,4 +1,5 @@
 from studio.app.optinist.wrappers.caiman import caiman_wrapper_dict
+from studio.app.optinist.wrappers.custom import custom_wrapper_dict
 from studio.app.optinist.wrappers.expdb import expdb_wrapper_dict
 from studio.app.optinist.wrappers.lccd import lccd_wrapper_dict
 from studio.app.optinist.wrappers.maintenance import maintenance_wrapper_dict
@@ -12,3 +13,4 @@ wrapper_dict.update(**suite2p_wrapper_dict)
 wrapper_dict.update(**lccd_wrapper_dict)
 wrapper_dict.update(**optinist_wrapper_dict)
 wrapper_dict.update(**maintenance_wrapper_dict)
+wrapper_dict.update(**custom_wrapper_dict)

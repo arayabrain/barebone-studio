@@ -30,6 +30,7 @@ class WorkflowWithResults:
 @dataclass
 class WorkflowPIDFileData:
     last_pid: int
+    func_name: str
     last_script_file: str
     create_time: float
     elapsed_time: str = None
