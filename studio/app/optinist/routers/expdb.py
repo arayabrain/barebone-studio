@@ -130,7 +130,8 @@ def get_experiment_urls(source, exp_dir, params=None):
             # Construct the directory path
             dirs = exp_dir.split("/")
             pub_dir = (
-                f"{DIRPATH.PUBLIC_EXPDB_DIR}/{dirs[-2]}/{dirs[-1]}/{component_dir}/"
+                f"{EXPDB_DIRPATH.PUBLIC_EXPDB_DIR}"
+                f"/{dirs[-2]}/{dirs[-1]}/{component_dir}/"
             )
 
             # Find all matching files using the pattern
