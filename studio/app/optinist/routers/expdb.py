@@ -1,3 +1,4 @@
+import logging
 import os
 from glob import glob
 from typing import Dict, List, Optional, Sequence
@@ -14,7 +15,6 @@ from studio.app.common.core.auth.auth_dependencies import (
     get_admin_data_user,
     get_current_user,
 )
-from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.filepath_finder import find_param_filepath
 from studio.app.common.db.database import get_db
@@ -45,7 +45,7 @@ public_router = APIRouter(tags=["Experiment Database"])
 
 # Load configuration from YAML files
 def load_graph_configs():
-    logger = AppLogger.get_logger()
+    logger = logging.getLogger(__name__)
     experiment_graphs = {}
     cell_graphs = {}
 
@@ -118,7 +118,7 @@ def experiment_transformer(items: Sequence) -> Sequence:
 
 
 def get_experiment_urls(source, exp_dir, params=None):
-    logger = AppLogger.get_logger()
+    logger = logging.getLogger(__name__)
     result = []
 
     for key, value in source.items():
