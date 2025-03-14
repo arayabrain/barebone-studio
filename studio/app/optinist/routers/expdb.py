@@ -1,4 +1,3 @@
-import logging
 import os
 from glob import glob
 from typing import Dict, List, Optional, Sequence
@@ -15,8 +14,9 @@ from studio.app.common.core.auth.auth_dependencies import (
     get_admin_data_user,
     get_current_user,
 )
+from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.config_handler import ConfigReader
-from studio.app.common.core.utils.filepath_finder import find_param_filepath
+from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.db.database import get_db
 from studio.app.common.schemas.users import User
 from studio.app.expdb_dir_path import EXPDB_DIRPATH
@@ -42,43 +42,52 @@ from studio.app.optinist.schemas.expdb.experiment import (
 router = APIRouter(tags=["Experiment Database"])
 public_router = APIRouter(tags=["Experiment Database"])
 
+logger = AppLogger.get_logger()
 
-# Load configuration from YAML files
-def load_graph_configs():
-    logger = logging.getLogger(__name__)
-    experiment_graphs = {}
-    cell_graphs = {}
 
-    try:
-        experiment_graphs_path = find_param_filepath("experiment_graphs")
-        if experiment_graphs_path:
-            experiment_graphs = ConfigReader.read(experiment_graphs_path)
-            logger.info(
-                f"Loaded experiment graphs configuration from {experiment_graphs_path}"
-            )
+class GraphsConfigReader:
+    GRAPHS_CONFIG_DIR = "view_configs"
+    EXPERIMENT_GRAPHS_CONFIG_PATH = "experiment_graphs.yaml"
+    CELL_GRAPHS_CONFIG_PATH = "cell_graphs.yaml"
+
+    @classmethod
+    def __load_graphs_config(cls, config_file: str) -> dict:
+        """
+        Load graphs configuration from YAML files
+        """
+        default_config_path = join_filepath(
+            [os.path.dirname(__file__), cls.GRAPHS_CONFIG_DIR, config_file]
+        )
+        custom_config_path = join_filepath(
+            [EXPDB_DIRPATH.PUBLIC_EXPDB_DIR, cls.GRAPHS_CONFIG_DIR, config_file]
+        )
+
+        if os.path.exists(custom_config_path):
+            graphs_config = ConfigReader.read(custom_config_path)
         else:
-            logger.warning("Could not find experiment_graphs.yaml")
-    except Exception as e:
-        logger.error(f"Error loading experiment_graphs.yaml: {e}")
+            graphs_config = ConfigReader.read(default_config_path)
 
-    try:
-        cell_graphs_path = find_param_filepath("cell_graphs")
-        if cell_graphs_path:
-            cell_graphs = ConfigReader.read(cell_graphs_path)
-            logger.info(f"Loaded cell graphs configuration from {cell_graphs_path}")
-        else:
-            logger.warning("Could not find cell_graphs.yaml")
-    except Exception as e:
-        logger.error(f"Error loading cell_graphs.yaml: {e}")
+        return graphs_config
 
-    return experiment_graphs, cell_graphs
+    @classmethod
+    def load_experiment_graphs_config(cls) -> dict:
+        """
+        Load experiment graphs configuration from YAML files
+        """
+        return cls.__load_graphs_config(cls.EXPERIMENT_GRAPHS_CONFIG_PATH)
 
-
-EXPERIMENT_GRAPHS, CELL_GRAPHS = load_graph_configs()
+    @classmethod
+    def load_cell_graphs_config(cls) -> dict:
+        """
+        Load cell graphs configuration from YAML files
+        """
+        return cls.__load_graphs_config(cls.CELL_GRAPHS_CONFIG_PATH)
 
 
 def expdbcell_transformer(items: Sequence) -> Sequence:
+    CELL_GRAPHS = GraphsConfigReader.load_cell_graphs_config()
     expdbcells = []
+
     for item in items:
         expdbcell = ExpDbCell.from_orm(item)
         subject_id = expdbcell.experiment_id.split("_")[0]
@@ -98,7 +107,9 @@ def expdbcell_transformer(items: Sequence) -> Sequence:
 
 
 def experiment_transformer(items: Sequence) -> Sequence:
+    EXPERIMENT_GRAPHS = GraphsConfigReader.load_experiment_graphs_config()
     experiments = []
+
     for item in items:
         expdb: optinist_model.Experiment = item
         exp = ExpDbExperiment.from_orm(expdb)
@@ -118,7 +129,6 @@ def experiment_transformer(items: Sequence) -> Sequence:
 
 
 def get_experiment_urls(source, exp_dir, params=None):
-    logger = logging.getLogger(__name__)
     result = []
 
     for key, value in source.items():
@@ -155,7 +165,7 @@ def get_experiment_urls(source, exp_dir, params=None):
                 )
             else:
                 # Add empty placeholder for debugging
-                logger.info(f"No files found for {key}, adding empty placeholder")
+                logger.debug(f"No files found for {key}, adding empty placeholder")
                 result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
         else:
             # Handle single-image components (default behavior)
@@ -262,11 +272,13 @@ async def search_public_experiments(
         default=["experiment_id", SortDirection.asc],
     )
 
+    EXPERIMENT_GRAPHS = GraphsConfigReader.load_experiment_graphs_config()
     graph_titles = (
         [v.get("title", key) for key, v in EXPERIMENT_GRAPHS.items()]
         if EXPERIMENT_GRAPHS
         else []
     )
+
     query = select(optinist_model.Experiment).filter_by(
         publish_status=PublishStatus.on.value
     )
@@ -337,6 +349,8 @@ async def search_public_cells(
         .join(sub_query, sub_query.c.id == optinist_model.Cell.id)
         .order_by(*sa_sort_list)
     )
+
+    CELL_GRAPHS = GraphsConfigReader.load_cell_graphs_config()
     graph_titles = (
         [v.get("title", key) for key, v in CELL_GRAPHS.items()] if CELL_GRAPHS else []
     )
@@ -451,6 +465,7 @@ async def search_db_experiments(
 
     query = query.group_by(optinist_model.Experiment.id).order_by(*sa_sort_list)
 
+    EXPERIMENT_GRAPHS = GraphsConfigReader.load_experiment_graphs_config()
     graph_titles = (
         [v.get("title", key) for key, v in EXPERIMENT_GRAPHS.items()]
         if EXPERIMENT_GRAPHS
@@ -627,6 +642,7 @@ async def search_db_cells(
 
     query = query.order_by(*sa_sort_list)
 
+    CELL_GRAPHS = GraphsConfigReader.load_cell_graphs_config()
     graph_titles = (
         [v.get("title", key) for key, v in CELL_GRAPHS.items()] if CELL_GRAPHS else []
     )

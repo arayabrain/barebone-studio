@@ -1,4 +1,11 @@
 # Experiment-level graphs
+#
+# [Template]
+# my_primary_plot:
+#   title: "My Primary Visualization"  # Display name in the UI
+#   dir: "plots"                       # Directory where plot is saved
+#   type: "single"                     # "single" for one image, "multi" for patterns
+
 direction_responsivity_ratio:
   title: "Direction Responsivity Ratio"
   dir: "plots"

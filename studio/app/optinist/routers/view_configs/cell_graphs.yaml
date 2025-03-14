@@ -1,4 +1,10 @@
 # For each cell, the following graphs are generated
+#
+# [Template]
+# my_cell_plot:
+#   title: "My Cell Analysis"  # Display name in the UI
+#   dir: "cellplots"           # Directory where plot is saved
+
 fov_cell_merge:
   title: "Cell Mask"
   dir: "cellmasks"
