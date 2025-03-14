@@ -14,6 +14,9 @@ from studio.app.common.core.auth.auth_dependencies import (
     get_admin_data_user,
     get_current_user,
 )
+from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.utils.config_handler import ConfigReader
+from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.db.database import get_db
 from studio.app.common.schemas.users import User
 from studio.app.expdb_dir_path import EXPDB_DIRPATH
@@ -39,9 +42,52 @@ from studio.app.optinist.schemas.expdb.experiment import (
 router = APIRouter(tags=["Experiment Database"])
 public_router = APIRouter(tags=["Experiment Database"])
 
+logger = AppLogger.get_logger()
+
+
+class GraphsConfigReader:
+    GRAPHS_CONFIG_DIR = "view_configs"
+    EXPERIMENT_GRAPHS_CONFIG_PATH = "experiment_graphs.yaml"
+    CELL_GRAPHS_CONFIG_PATH = "cell_graphs.yaml"
+
+    @classmethod
+    def __load_graphs_config(cls, config_file: str) -> dict:
+        """
+        Load graphs configuration from YAML files
+        """
+        default_config_path = join_filepath(
+            [os.path.dirname(__file__), cls.GRAPHS_CONFIG_DIR, config_file]
+        )
+        custom_config_path = join_filepath(
+            [EXPDB_DIRPATH.PUBLIC_EXPDB_DIR, cls.GRAPHS_CONFIG_DIR, config_file]
+        )
+
+        if os.path.exists(custom_config_path):
+            graphs_config = ConfigReader.read(custom_config_path)
+        else:
+            graphs_config = ConfigReader.read(default_config_path)
+
+        return graphs_config
+
+    @classmethod
+    def load_experiment_graphs_config(cls) -> dict:
+        """
+        Load experiment graphs configuration from YAML files
+        """
+        return cls.__load_graphs_config(cls.EXPERIMENT_GRAPHS_CONFIG_PATH)
+
+    @classmethod
+    def load_cell_graphs_config(cls) -> dict:
+        """
+        Load cell graphs configuration from YAML files
+        """
+        return cls.__load_graphs_config(cls.CELL_GRAPHS_CONFIG_PATH)
+
 
 def expdbcell_transformer(items: Sequence) -> Sequence:
+    CELL_GRAPHS = GraphsConfigReader.load_cell_graphs_config()
     expdbcells = []
+
     for item in items:
         expdbcell = ExpDbCell.from_orm(item)
         subject_id = expdbcell.experiment_id.split("_")[0]
@@ -61,7 +107,9 @@ def expdbcell_transformer(items: Sequence) -> Sequence:
 
 
 def experiment_transformer(items: Sequence) -> Sequence:
+    EXPERIMENT_GRAPHS = GraphsConfigReader.load_experiment_graphs_config()
     experiments = []
+
     for item in items:
         expdb: optinist_model.Experiment = item
         exp = ExpDbExperiment.from_orm(expdb)
@@ -75,34 +123,58 @@ def experiment_transformer(items: Sequence) -> Sequence:
 
         exp.cell_image_urls = get_pixelmap_urls(exp_dir)
         exp.graph_urls = get_experiment_urls(EXPERIMENT_GRAPHS, exp_dir)
+
         experiments.append(exp)
     return experiments
 
 
-EXPERIMENT_GRAPHS = {
-    "direction_responsivity_ratio": {
-        "title": "Direction Responsivity Ratio",
-        "dir": "plots",
-    },
-    "orientation_responsivity_ratio": {
-        "title": "Orientation Responsivity Ratio",
-        "dir": "plots",
-    },
-    "preferred_direction": {"title": "Preferred Direction", "dir": "plots"},
-    "preferred_orientation": {"title": "Preferred Orientation", "dir": "plots"},
-    "direction_selectivity": {"title": "Direction Selectivity", "dir": "plots"},
-    "orientation_selectivity": {"title": "Orientation Selectivity", "dir": "plots"},
-    "best_responsivity": {"title": "Best Responsivity", "dir": "plots"},
-    "direction_tuning_width": {"title": "Direction Tuning Width", "dir": "plots"},
-    "orientation_tuning_width": {"title": "Orientation Tuning Width", "dir": "plots"},
-}
-
-
 def get_experiment_urls(source, exp_dir, params=None):
-    return [
-        ImageInfo(url=f"{exp_dir}/{v['dir']}/{k}.png", params=params)
-        for k, v in source.items()
-    ]
+    result = []
+
+    for key, value in source.items():
+        if value.get("type") == "multi":
+            # Handle multi-image components (like PCA)
+            component_dir = value["dir"]
+            pattern = value["pattern"]
+
+            # Construct the directory path
+            dirs = exp_dir.split("/")
+            pub_dir = (
+                f"{EXPDB_DIRPATH.PUBLIC_EXPDB_DIR}"
+                f"/{dirs[-2]}/{dirs[-1]}/{component_dir}/"
+            )
+
+            # Find all matching files using the pattern
+            component_files = sorted(
+                list(
+                    set(glob(f"{pub_dir}/{pattern}"))
+                    - set(glob(f"{pub_dir}/*.thumb.png"))
+                )
+            )
+
+            # Create a single ImageInfo with all found files or a placeholder
+            if component_files:
+                urls = [
+                    f"{exp_dir}/{component_dir}/{os.path.basename(file)}"
+                    for file in component_files
+                ]
+                thumb_urls = [url.replace(".png", ".thumb.png") for url in urls]
+
+                result.append(
+                    ImageInfo(urls=urls, thumb_urls=thumb_urls, params=params)
+                )
+            else:
+                # Add empty placeholder for debugging
+                logger.debug(f"No files found for {key}, adding empty placeholder")
+                result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
+        else:
+            # Handle single-image components (default behavior)
+            dir_path = value["dir"]
+            url = f"{exp_dir}/{dir_path}/{key}.png"
+            thumb_url = url.replace(".png", ".thumb.png")
+            result.append(ImageInfo(urls=[url], thumb_urls=[thumb_url], params=params))
+
+    return result
 
 
 def get_pixelmap_urls(exp_dir, params=None):
@@ -113,16 +185,10 @@ def get_pixelmap_urls(exp_dir, params=None):
     )
 
     return [
-        ImageInfo(url=f"{exp_dir}/pixelmaps/{os.path.basename(k)}", params=params)
+        ImageInfo(urls=[f"{exp_dir}/pixelmaps/{os.path.basename(k)}"], params=params)
         for k in pixelmaps
     ]
 
-
-CELL_GRAPHS = {
-    "fov_cell_merge": {"title": "Cell Mask", "dir": "cellmasks"},
-    "tuning_curve": {"title": "Tuning Curve", "dir": "plots"},
-    "tuning_curve_polar": {"title": "Tuning Curve Polar", "dir": "plots"},
-}
 
 EXP_ATTRIBUTE_SORT_MAPPING = {
     "brain_area": func.json_value(
@@ -142,7 +208,7 @@ EXP_ATTRIBUTE_SORT_MAPPING = {
 
 def get_cell_urls(source, exp_dir, index: int, params=None):
     return [
-        ImageInfo(url=f"{exp_dir}/{v['dir']}/{k}_{index}.png", params=params)
+        ImageInfo(urls=[f"{exp_dir}/{v['dir']}/{k}_{index}.png"], params=params)
         for k, v in source.items()
     ]
 
@@ -206,7 +272,13 @@ async def search_public_experiments(
         default=["experiment_id", SortDirection.asc],
     )
 
-    graph_titles = [v["title"] for v in EXPERIMENT_GRAPHS.values()]
+    EXPERIMENT_GRAPHS = GraphsConfigReader.load_experiment_graphs_config()
+    graph_titles = (
+        [v.get("title", key) for key, v in EXPERIMENT_GRAPHS.items()]
+        if EXPERIMENT_GRAPHS
+        else []
+    )
+
     query = select(optinist_model.Experiment).filter_by(
         publish_status=PublishStatus.on.value
     )
@@ -277,7 +349,11 @@ async def search_public_cells(
         .join(sub_query, sub_query.c.id == optinist_model.Cell.id)
         .order_by(*sa_sort_list)
     )
-    graph_titles = [v["title"] for v in CELL_GRAPHS.values()]
+
+    CELL_GRAPHS = GraphsConfigReader.load_cell_graphs_config()
+    graph_titles = (
+        [v.get("title", key) for key, v in CELL_GRAPHS.items()] if CELL_GRAPHS else []
+    )
 
     """
     The two indexes are used to improve performance of fetching data query.
@@ -389,7 +465,12 @@ async def search_db_experiments(
 
     query = query.group_by(optinist_model.Experiment.id).order_by(*sa_sort_list)
 
-    graph_titles = [v["title"] for v in EXPERIMENT_GRAPHS.values()]
+    EXPERIMENT_GRAPHS = GraphsConfigReader.load_experiment_graphs_config()
+    graph_titles = (
+        [v.get("title", key) for key, v in EXPERIMENT_GRAPHS.items()]
+        if EXPERIMENT_GRAPHS
+        else []
+    )
 
     data = paginate(
         session=db,
@@ -561,7 +642,10 @@ async def search_db_cells(
 
     query = query.order_by(*sa_sort_list)
 
-    graph_titles = [v["title"] for v in CELL_GRAPHS.values()]
+    CELL_GRAPHS = GraphsConfigReader.load_cell_graphs_config()
+    graph_titles = (
+        [v.get("title", key) for key, v in CELL_GRAPHS.items()] if CELL_GRAPHS else []
+    )
 
     return PageWithHeader[ExpDbCell](
         header=ExpDbExperimentHeader(graph_titles=graph_titles),
@@ -842,9 +926,6 @@ def update_multiple_experiment_database_share_status(
                     for group_id in data.group_ids
                 )
 
-    db.commit()
-
-    return True
     db.commit()
 
     return True

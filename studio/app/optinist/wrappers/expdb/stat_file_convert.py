@@ -165,6 +165,34 @@ def dir_index(ratio_change):
     return best, null, r_best, r_null, r_min, i
 
 
+def non_circular_index(ratio_change):
+    """
+    Calculate statistics for non-circular features like spatial frequency.
+    Unlike circular features, the minimum is not assumed to be 180° away.
+    """
+    best_sf = np.argmax(ratio_change, axis=0)
+    min_sf = np.argmin(ratio_change, axis=0)
+    r_best = np.max(ratio_change, axis=0)
+    r_min = np.min(ratio_change, axis=0)
+    # For non-circular features, selectivity index is defined as:
+    # 1 - minimum/maximum (different from direction selectivity)
+    si = 1 - r_min / r_best
+    sf_si = (r_best - np.maximum(r_min, 0)) / (r_best + np.maximum(r_min, 0))
+
+    threshold = r_best / 2
+    # Find indices where response crosses threshold
+    above_threshold = ratio_change >= threshold
+    if np.any(above_threshold):
+        # Calculate bandwidth (in octaves or frequency units)
+        low_idx = np.min(np.where(above_threshold)[0])
+        high_idx = np.max(np.where(above_threshold)[0])
+        bandwidth = high_idx - low_idx
+    else:
+        bandwidth = 0
+
+    return best_sf, min_sf, r_best, r_min, si, sf_si, bandwidth
+
+
 def get_stat_data(data_tables) -> StatData:
     stat = StatData(data_table=data_tables)
 
@@ -203,6 +231,15 @@ def get_stat_data(data_tables) -> StatData:
             stat.r_min_ori[i],
             stat.oi[i],
         ) = dir_index(stat.ori_ratio_change[i])
+        (
+            stat.best_sf[i],
+            stat.min_sf[i],
+            stat.r_best_sf[i],
+            stat.r_min_sf[i],
+            stat.si[i],
+            stat.sf_si[i],
+            stat.sf_bandwidth[i],
+        ) = non_circular_index(stat.dir_ratio_change[i])
 
     return stat
 
@@ -248,12 +285,19 @@ def stat_file_convert(
 
     stat = get_stat_data(data_tables)
     stat.nstim_per_trial = _nstim_per_trial
-    stat.set_file_convert_props()
+
+    sf_params = {
+        "sf_min_value": params.get("sf_min_value", 0),
+        "sf_max_value": params.get("sf_max_value", 1),
+        "sf_unit": params.get("sf_unit", "normalized"),
+    }
+    stat.set_file_convert_props(sf_params)
 
     return {
         "stat": stat,
         "tuning_curve": stat.tuning_curve,
         "tuning_curve_polar": stat.tuning_curve_polar,
+        "spatial_frequency_tuning": stat.sf_tuning_curve,
         "nwbfile": {
             NWBDATASET.ORISTATS: stat.nwb_dict_file_convert,
         },

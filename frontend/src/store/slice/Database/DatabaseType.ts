@@ -3,8 +3,8 @@ export const DATABASE_SLICE_NAME = "database"
 export type OrderBy = "ASC" | "DESC" | ""
 
 export type ImageUrls = {
-  url: string
-  thumb_url: string
+  urls: string[]
+  thumb_urls: string[]
   params: object
 }
 
@@ -19,11 +19,7 @@ export type DatabaseType = {
   experiment_id?: string
   attributes?: object
   cell_image_urls: ImageUrls[]
-  cell_image_url?: {
-    url: string
-    thumb_url: string
-    params: object
-  }
+  cell_image_url?: ImageUrls
   statistics?: {
     p_value_resp?: string
     p_value_sel?: string
@@ -38,8 +34,11 @@ export type DatabaseType = {
     r_best_dir?: string
     dir_tuning_width?: string
     ori_tuning_width?: string
+    sf_bandwidth?: string
+    best_sf?: string
+    sf_si?: string
   }
-  graph_urls: { url: string; params: object; thumb_url: string }[]
+  graph_urls: ImageUrls[]
   share_type?: number
   publish_status?: number
   created_at: string

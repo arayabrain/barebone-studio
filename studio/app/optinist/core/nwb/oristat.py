@@ -38,9 +38,13 @@ FILE_CONVERT_TYPES = {
     "oi": ("float", (None,)),
     "osi": ("float", (None,)),
 }
+
 FILE_CONVERT_PROPS = {
     "tuning_curve": ("float", (None, None)),
     "tuning_curve_polar": ("float", (None, None)),
+    "stim_selectivity": ("float", (None, None)),
+    "stim_responsivity": ("float", (None, None)),
+    "sf_responsivity_ratio": ("float", (None, None)),
 }
 
 ANOVA_TYPES = {
@@ -60,6 +64,7 @@ ANOVA_TYPES = {
     "index_orientation_selective_cell": ("bool", (None,)),
     "ncells_orientation_selective_cell": "int",
 }
+
 ANOVA_PROPS = {
     "direction_responsivity_ratio": ("float", (None, None)),
     "orientation_responsivity_ratio": ("float", (None, None)),
@@ -76,6 +81,7 @@ VECTOR_AVERAGE_TYPES = {
     "ori_vector_mag": ("float", (None,)),
     "ori_vector_tune": ("float", (None,)),
 }
+
 VECTOR_AVERAGE_PROPS = {
     "preferred_direction": ("float", (None, None)),
     "preferred_orientation": ("float", (None, None)),
@@ -103,9 +109,23 @@ CURVEFIT_TYPES = {
     "ori_a1": ("float", (None,)),
     "ori_k1": ("float", (None,)),
 }
+
 CURVEFIT_PROPS = {
     "direction_tuning_width": ("float", (None, None)),
     "orientation_tuning_width": ("float", (None, None)),
+}
+
+PCA_TYPES = {
+    "pca_scores": ("float", (None, None)),
+    "pca_explained_variance": ("float", (None,)),
+    "pca_components": ("float", (None, None)),
+}
+
+KMEANS_TYPES = {
+    "cluster_labels": ("int", (None,)),
+    "cluster_corr_matrix": ("float", (None, None)),
+    "silhouette_scores": ("float", (None,)),
+    "optimal_clusters": "int",
 }
 
 
@@ -132,6 +152,8 @@ oristat_ext = NWBGroupSpec(
         *get_dataset_list(VECTOR_AVERAGE_PROPS),
         *get_dataset_list(CURVEFIT_TYPES),
         *get_dataset_list(CURVEFIT_PROPS),
+        *get_dataset_list(PCA_TYPES),
+        *get_dataset_list(KMEANS_TYPES),
     ],
     name="oristats",
     neurodata_type_def="Oristats",

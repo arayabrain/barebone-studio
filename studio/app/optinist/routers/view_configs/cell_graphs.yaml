@@ -1,0 +1,19 @@
+# For each cell, the following graphs are generated
+#
+# [Template]
+# my_cell_plot:
+#   title: "My Cell Analysis"  # Display name in the UI
+#   dir: "cellplots"           # Directory where plot is saved
+
+fov_cell_merge:
+  title: "Cell Mask"
+  dir: "cellmasks"
+tuning_curve:
+  title: "Tuning Curve"
+  dir: "plots"
+tuning_curve_polar:
+  title: "Tuning Curve Polar"
+  dir: "plots"
+spatial_frequency_tuning:
+  title: "Spatial Freq Tuning"
+  dir: "plots"

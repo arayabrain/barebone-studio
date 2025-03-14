@@ -14,3 +14,8 @@ do_interpolation: True
 interp_method: 'spline'
 p_threshold: 0.05
 use_fourier: True
+
+# spatial_frequency
+sf_min_value: 0
+sf_max_value: 1
+sf_unit: "normalized"

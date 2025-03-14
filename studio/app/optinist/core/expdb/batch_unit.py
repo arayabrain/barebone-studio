@@ -47,6 +47,14 @@ from studio.app.optinist.wrappers.caiman.cnmf_preprocessing import (
 )
 from studio.app.optinist.wrappers.expdb import analyze_stats
 from studio.app.optinist.wrappers.expdb.get_orimap import get_orimap
+from studio.app.optinist.wrappers.expdb.kmeans_analysis import (
+    generate_kmeans_visualization,
+    kmeans_analysis,
+)
+from studio.app.optinist.wrappers.expdb.pca_analysis import (
+    generate_pca_visualization,
+    pca_analysis,
+)
 from studio.app.optinist.wrappers.expdb.preprocessing import preprocessing
 
 
@@ -204,12 +212,11 @@ class ExpDbBatch:
             params={**get_default_params("get_orimap"), "exp_id": self.exp_id},
         )
 
-    # TODO: implement cell_detection_cnmf
     @stopwatch(callback=__stopwatch_callback)
     def cell_detection_cnmf(self, stack: ImageData):
         # NOTE: frame rateなどの情報を引き渡すためにnwb_input_configを引数に与える
         self.logger_.info("process 'cell_detection_cnmf' start.")
-        caiman_cnmf_preprocessing(
+        return caiman_cnmf_preprocessing(
             images=stack,
             output_dir=self.raw_path.preprocess_dir,
             params=get_default_params("caiman_cnmf_preprocessing"),
@@ -285,6 +292,7 @@ class ExpDbBatch:
 
             stat_data.tuning_curve.save_plot(dir_path)
             stat_data.tuning_curve_polar.save_plot(dir_path)
+            stat_data.sf_tuning_curve.save_plot(dir_path)
 
             stat_data.direction_responsivity_ratio.save_plot(dir_path)
             stat_data.orientation_responsivity_ratio.save_plot(dir_path)
@@ -297,6 +305,10 @@ class ExpDbBatch:
 
             stat_data.direction_tuning_width.save_plot(dir_path)
             stat_data.orientation_tuning_width.save_plot(dir_path)
+
+            stat_data.stim_selectivity.save_plot(dir_path)
+            stat_data.stim_responsivity.save_plot(dir_path)
+            stat_data.sf_responsivity_ratio.save_plot(dir_path)
 
     @stopwatch(callback=__stopwatch_callback)
     def generate_pixelmaps(self):
@@ -324,6 +336,72 @@ class ExpDbBatch:
             ) == len(pixelmaps) + len(
                 pixlemaps_with_num
             ), f"generate pixelmaps failed in {expdb_path.pixelmap_dir}"
+
+    def generate_plots_using_cnmf_info(self, stat_data: StatData, cnmf_info: dict):
+        self.logger_.info("process 'generate_pca_analysis_plots' start.")
+
+        # Perform PCA analysis
+        pca_results = pca_analysis(
+            stat=stat_data,
+            cnmf_info=cnmf_info,
+            output_dir=self.raw_path.output_dir,
+            params=get_default_params("pca_analysis"),
+            nwbfile=self.nwbfile,
+        )
+
+        # Update nwbfile with PCA results
+        self.nwbfile = pca_results["nwbfile"]
+
+        # Save plots for each path
+        for expdb_path in self.expdb_paths:
+            create_directory(expdb_path.plot_dir)
+
+            # Save visualization objects with correct names
+            stat_data.pca_analysis.save_plot(expdb_path.plot_dir)
+            stat_data.pca_analysis_variance.save_plot(expdb_path.plot_dir)
+            stat_data.pca_contribution.save_plot(expdb_path.plot_dir)
+
+            # Generate additional detailed visualization
+            generate_pca_visualization(
+                scores=stat_data.pca_scores,
+                explained_variance=stat_data.pca_explained_variance,
+                components=stat_data.pca_components,
+                roi_masks=cnmf_info["cell_roi"].data,
+                output_dir=expdb_path.plot_dir,
+            )
+
+        self.logger_.info("process 'generate_kmeans_analysis_plots' start.")
+
+        # Perform KMeans analysis
+        kmeans_results = kmeans_analysis(
+            stat=stat_data,
+            cnmf_info=cnmf_info,
+            output_dir=self.raw_path.output_dir,
+            params=get_default_params("kmeans_analysis"),
+            nwbfile=self.nwbfile,
+        )
+
+        # Update nwbfile with clustering results
+        self.nwbfile = kmeans_results["nwbfile"]
+
+        # Save plots for each path
+        for expdb_path in self.expdb_paths:
+            dir_path = expdb_path.plot_dir
+            create_directory(dir_path)
+
+            # Save visualization object
+            stat_data.clustering_analysis.save_plot(dir_path)
+
+            # Generate additional visualizations
+            generate_kmeans_visualization(
+                labels=stat_data.cluster_labels,
+                corr_matrix=stat_data.cluster_corr_matrix,
+                fluorescence=stat_data.fluorescence,
+                roi_masks=cnmf_info["cell_roi"].data,
+                silhouette_scores=stat_data.silhouette_scores,
+                optimal_clusters=stat_data.optimal_clusters,
+                output_dir=dir_path,
+            )
 
     @stopwatch(callback=__stopwatch_callback)
     def load_exp_metadata(self) -> Tuple[dict, dict]:

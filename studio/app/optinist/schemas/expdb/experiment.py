@@ -38,14 +38,16 @@ class ExpDbExperimentHeader(BaseModel):
 
 
 class ImageInfo(BaseModel):
-    url: str
-    thumb_url: Optional[str]
+    urls: List[str]
+    thumb_urls: Optional[List[str]]
     params: Optional[dict]
 
-    def __init__(self, url, params=None, thumb_url=None):
-        super().__init__(url=url, thumb_url=thumb_url, params=params)
-        if thumb_url is None:
-            self.thumb_url = url.replace(".png", ".thumb.png")
+    def __init__(self, urls, params=None, thumb_urls=None):
+        if isinstance(urls, str):
+            urls = [urls]
+        super().__init__(urls=urls, thumb_urls=thumb_urls, params=params)
+        if thumb_urls is None:
+            self.thumb_urls = [url.replace(".png", ".thumb.png") for url in urls]
 
 
 class ExpDbExperiment(BaseModel):
@@ -56,6 +58,8 @@ class ExpDbExperiment(BaseModel):
     view_attributes: Optional[dict] = {}
     cell_image_urls: List[ImageInfo] = None
     graph_urls: List[ImageInfo] = None
+    pca_spatial_components: List[ImageInfo] = []
+    pca_time_components: List[ImageInfo] = []
     share_type: int = Field(description="1: default(per users), 2: for organization")
     publish_status: int = Field(description="0: private, 1: public")
     created_at: Optional[datetime]

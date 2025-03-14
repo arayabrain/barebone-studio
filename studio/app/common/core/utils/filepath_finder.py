@@ -15,6 +15,7 @@ def find_filepath(name, category) -> Optional[str]:
         ),
         recursive=True,
     )
+
     return filepaths[0] if len(filepaths) > 0 else None
 
 

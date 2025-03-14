@@ -388,7 +388,7 @@ const columns = (
         >
           {params.row?.cell_image_urls?.length > 0 && (
             <img
-              src={params.row?.cell_image_urls[0].thumb_url}
+              src={params.row?.cell_image_urls[0].thumb_urls[0]}
               alt={""}
               width={"100%"}
               height={"100%"}
@@ -723,10 +723,12 @@ const DatabaseExperiments = ({
     expId?: string,
     graphTitle?: string,
   ) => {
-    let newData: string | string[] = []
+    let newData: string[] = []
     if (Array.isArray(data)) {
-      newData = data.map((d) => d.url)
-    } else newData = data.url
+      newData = data.flatMap((d) => d.urls || [])
+    } else if (data && data.urls) {
+      newData = Array.isArray(data.urls) ? data.urls : [data.urls]
+    }
     setDataDialog({
       type: "image",
       data: newData,
@@ -980,19 +982,38 @@ const DatabaseExperiments = ({
           const { row } = params
           const { graph_urls } = row
           const graph_url = graph_urls[index]
-          if (!graph_url) return null
+
+          if (!graph_url) {
+            // eslint-disable-next-line no-console
+            console.log(`No graph_url for ${graphTitle}`)
+            return null
+          }
+
+          // Check if we have URLs to display
+          if (!graph_url.thumb_urls || graph_url.thumb_urls.length === 0) {
+            // eslint-disable-next-line no-console
+            console.log(`No thumbnail URLs to display for ${graphTitle}`)
+            return <Box>No images</Box>
+          }
+
           return (
             <Box
               sx={{ display: "flex", cursor: "pointer" }}
-              onClick={() =>
+              onClick={() => {
                 handleOpenDialog(graph_url, row.experiment_id, graphTitle)
-              }
+              }}
             >
+              {/* Just display the first thumbnail */}
               <img
-                src={graph_url.thumb_url}
+                src={graph_url.thumb_urls[0]}
                 alt={""}
                 width={"100%"}
                 height={"100%"}
+                onError={(e) => {
+                  // eslint-disable-next-line no-console
+                  console.error(`Error loading thumbnail for ${graphTitle}:`, e)
+                  e.currentTarget.style.display = "none"
+                }}
               />
             </Box>
           )

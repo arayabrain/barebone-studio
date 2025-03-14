@@ -1,5 +1,6 @@
 from typing import Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -7,6 +8,7 @@ from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.utils.json_writer import JsonWriter
 from studio.app.common.core.workflow.workflow import OutputPath, OutputType
 from studio.app.common.dataclass.base import BaseData
+from studio.app.common.dataclass.utils import save_thumbnail
 from studio.app.common.schemas.outputs import PlotMetaData
 
 
@@ -41,6 +43,15 @@ class BarData(BaseData):
         )
         JsonWriter.write_as_split(self.json_path, df)
         JsonWriter.write_plot_meta(json_dir, self.file_name, self.meta)
+
+    def save_plot(self, output_dir):
+        plt.figure()
+        plt.bar(range(len(self.data[0])), self.data[0])
+        plot_file = join_filepath([output_dir, f"{self.file_name}.png"])
+        plt.savefig(plot_file, bbox_inches="tight")
+        plt.close()
+
+        save_thumbnail(plot_file)
 
     @property
     def output_path(self) -> OutputPath:

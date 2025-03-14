@@ -281,12 +281,16 @@ class ExpDbBatchRunner:
                 stack = expdb_batch.preprocess()
                 expdb_batch.generate_orimaps(stack)
                 expdb_batch.cell_detection_cnmf(stack)
+                cnmf_info = expdb_batch.cell_detection_cnmf(stack)
                 del stack
 
             stat_data = expdb_batch.generate_statdata()
-            expdb_batch.generate_plots(stat_data=stat_data)
             expdb_batch.generate_cellmasks()
             expdb_batch.generate_pixelmaps()
+            expdb_batch.generate_plots(stat_data=stat_data)
+            expdb_batch.generate_plots_using_cnmf_info(
+                stat_data=stat_data, cnmf_info=cnmf_info
+            )
 
             # Read metadata
             (attributes, view_attributes) = expdb_batch.load_exp_metadata()

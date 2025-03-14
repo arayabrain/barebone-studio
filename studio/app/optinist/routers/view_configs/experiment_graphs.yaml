@@ -1,0 +1,109 @@
+# Experiment-level graphs
+#
+# [Template]
+# my_primary_plot:
+#   title: "My Primary Visualization"  # Display name in the UI
+#   dir: "plots"                       # Directory where plot is saved
+#   type: "single"                     # "single" for one image, "multi" for patterns
+
+direction_responsivity_ratio:
+  title: "Direction Responsivity Ratio"
+  dir: "plots"
+  type: "single"
+
+orientation_responsivity_ratio:
+  title: "Orientation Responsivity Ratio"
+  dir: "plots"
+  type: "single"
+
+preferred_direction:
+  title: "Preferred Direction"
+  dir: "plots"
+  type: "single"
+
+preferred_orientation:
+  title: "Preferred Orientation"
+  dir: "plots"
+  type: "single"
+
+direction_selectivity:
+  title: "Direction Selectivity"
+  dir: "plots"
+  type: "single"
+
+orientation_selectivity:
+  title: "Orientation Selectivity"
+  dir: "plots"
+  type: "single"
+
+best_responsivity:
+  title: "Peak Response"
+  dir: "plots"
+  type: "single"
+
+direction_tuning_width:
+  title: "Direction Tuning Width"
+  dir: "plots"
+  type: "single"
+
+sf_selectivity:
+  title: "Spatial Selectivity"
+  dir: "plots"
+  type: "single"
+
+sf_responsivity:
+  title: "Spatial Peak Response"
+  dir: "plots"
+  type: "single"
+
+sf_responsivity_ratio:
+  title: "Spatial Response Ratio"
+  dir: "plots"
+  type: "single"
+
+pca_analysis:
+  title: "PCA Analysis"
+  dir: "plots"
+  type: "single"
+
+pca_analysis_variance:
+  title: "PCA Explained Variance"
+  dir: "plots"
+  type: "single"
+
+pca_contribution:
+  title: "PCA Component Contribution"
+  dir: "plots"
+  type: "single"
+
+pca_spatial_components:
+  title: "PCA Spatial Components"
+  dir: "plots"
+  type: "multi"
+  pattern: "pca_component_*_spatial.png"
+
+pca_time_components:
+  title: "PCA Time Components"
+  dir: "plots"
+  type: "multi"
+  pattern: "pca_component_*_time.png"
+
+silhouette_scores:
+  title: "K-means Silhouette Analysis"
+  dir: "plots"
+  type: "single"
+
+clustering_analysis:
+  title: "k-means Clustering Analysis"
+  dir: "plots"
+  type: "single"
+
+cluster_spatial_map:
+  title: "Cluster Spatial Map"
+  dir: "plots"
+  type: "single"
+
+cluster_time_courses:
+  title: "Cluster Time Courses"
+  dir: "plots"
+  type: "single"

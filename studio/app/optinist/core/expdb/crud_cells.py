@@ -28,6 +28,9 @@ def bulk_insert_cells(
     r_best_dir = StatData.fill_nan_with_none(stat_data.r_best_dir)
     dir_tuning_width = StatData.fill_nan_with_none(stat_data.dir_tuning_width)
     ori_tuning_width = StatData.fill_nan_with_none(stat_data.ori_tuning_width)
+    sf_bandwidth = StatData.fill_nan_with_none(stat_data.sf_bandwidth)
+    best_sf = StatData.fill_nan_with_none(stat_data.best_sf)
+    sf_si = StatData.fill_nan_with_none(stat_data.sf_si)
 
     db.execute(
         insert(CellModel),
@@ -49,6 +52,9 @@ def bulk_insert_cells(
                     "r_best_dir": r_best_dir[i],
                     "dir_tuning_width": dir_tuning_width[i],
                     "ori_tuning_width": ori_tuning_width[i],
+                    "sf_bandwidth": sf_bandwidth[i],
+                    "best_sf": best_sf[i],
+                    "sf_si": sf_si[i],
                 },
             }
             for i in range(stat_data.ncells)

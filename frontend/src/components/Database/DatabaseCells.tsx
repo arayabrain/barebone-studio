@@ -415,6 +415,48 @@ const statistics = () => [
       )
     },
   },
+  {
+    field: "sf_bandwidth",
+    headerName: "SF Bandwidth",
+    filterable: false,
+    sortable: false,
+    width: 120,
+    renderCell: (params: { row: DatabaseType }) => {
+      return (
+        <Tooltip title={params.row.statistics?.sf_bandwidth}>
+          <SpanCustom>{params.row.statistics?.sf_bandwidth ?? "NA"}</SpanCustom>
+        </Tooltip>
+      )
+    },
+  },
+  {
+    field: "best_sf",
+    headerName: "Best SF",
+    filterable: false,
+    sortable: false,
+    width: 120,
+    renderCell: (params: { row: DatabaseType }) => {
+      return (
+        <Tooltip title={params.row.statistics?.best_sf}>
+          <SpanCustom>{params.row.statistics?.best_sf ?? "NA"}</SpanCustom>
+        </Tooltip>
+      )
+    },
+  },
+  {
+    field: "sf_si",
+    headerName: "SF Selectivity",
+    filterable: false,
+    sortable: false,
+    width: 120,
+    renderCell: (params: { row: DatabaseType }) => {
+      return (
+        <Tooltip title={params.row.statistics?.sf_si}>
+          <SpanCustom>{params.row.statistics?.sf_si ?? "NA"}</SpanCustom>
+        </Tooltip>
+      )
+    },
+  },
 ]
 
 const DatabaseCells = ({ user }: CellProps) => {
@@ -612,11 +654,12 @@ const DatabaseCells = ({ user }: CellProps) => {
     cellId?: number,
     graphTitle?: string,
   ) => {
-    let newData: string | string[] = []
-
+    let newData: string[] = []
     if (Array.isArray(data)) {
-      newData = data.map((d) => d.url)
-    } else newData = data.url
+      newData = data.flatMap((d) => d.urls || [])
+    } else if (data && data.urls) {
+      newData = Array.isArray(data.urls) ? data.urls : [data.urls]
+    }
     setDataDialog({
       type: "image",
       data: newData,
@@ -796,7 +839,7 @@ const DatabaseCells = ({ user }: CellProps) => {
             }
           >
             <img
-              src={graph_url.thumb_url}
+              src={graph_url?.thumb_urls?.[0] || ""}
               alt={""}
               width={"100%"}
               height={"100%"}

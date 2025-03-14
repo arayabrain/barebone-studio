@@ -1,5 +1,6 @@
 from typing import Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -10,6 +11,7 @@ from studio.app.common.core.utils.filepath_creater import (
 from studio.app.common.core.utils.json_writer import JsonWriter
 from studio.app.common.core.workflow.workflow import OutputPath, OutputType
 from studio.app.common.dataclass.base import BaseData
+from studio.app.common.dataclass.utils import save_thumbnail
 from studio.app.common.schemas.outputs import PlotMetaData
 
 
@@ -79,6 +81,16 @@ class TimeSeriesData(BaseData):
                 df = pd.DataFrame(data, index=self.index, columns=["data"])
 
             JsonWriter.write(join_filepath([self.json_path, f"{str(cell_i)}.json"]), df)
+
+    def save_plot(self, output_dir):
+        for i, cell_num in enumerate(self.cell_numbers):
+            plt.figure()
+            plt.plot(self.index, self.data[i])
+            plot_file = join_filepath([output_dir, f"{self.file_name}_{cell_num}.png"])
+            plt.savefig(plot_file, bbox_inches="tight")
+            plt.close()
+
+            save_thumbnail(plot_file)
 
     @property
     def output_path(self) -> OutputPath:
