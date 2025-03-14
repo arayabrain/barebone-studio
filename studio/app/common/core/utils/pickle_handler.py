@@ -1,3 +1,4 @@
+import os
 import pickle
 import traceback
 
@@ -37,11 +38,20 @@ class PickleReader:
 class PickleWriter:
     @classmethod
     def write(cls, pickle_path, info):
-        # ファイル保存先
         dirpath = join_filepath(pickle_path.split("/")[:-1])
         create_directory(dirpath)
-        with open(pickle_path, "wb") as f:
+
+        # Note: Use temporary files to avoid read during file writing.
+        tmp_pickle_path = f"{pickle_path}.tmp"
+
+        if os.path.exists(pickle_path):
+            os.remove(pickle_path)
+
+        with open(tmp_pickle_path, "wb") as f:
             pickle.dump(info, f)
+            f.flush()
+
+        os.rename(tmp_pickle_path, pickle_path)
 
     @classmethod
     def write_error(cls, pickle_path, err: Exception):
@@ -57,5 +67,14 @@ class PickleWriter:
         if isinstance(old_pkl, dict) and isinstance(info, dict):
             old_pkl.update(info)
 
-            with open(pickle_path, "wb") as f:
+            # Note: Use temporary files to avoid read during file writing.
+            tmp_pickle_path = f"{pickle_path}.tmp"
+
+            if os.path.exists(pickle_path):
+                os.remove(pickle_path)
+
+            with open(tmp_pickle_path, "wb") as f:
                 pickle.dump(old_pkl, f)
+                f.flush()
+
+            os.rename(tmp_pickle_path, pickle_path)

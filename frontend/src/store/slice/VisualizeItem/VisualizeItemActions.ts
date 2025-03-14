@@ -1,9 +1,13 @@
 import { createAsyncThunk, createAction } from "@reduxjs/toolkit"
 
 import { getTimeSeriesDataById } from "store/slice/DisplayData/DisplayDataActions"
-import { selectRoiData } from "store/slice/DisplayData/DisplayDataSelectors"
+import {
+  selectRoiData,
+  selectStatusRoiTempAdd,
+} from "store/slice/DisplayData/DisplayDataSelectors"
 import { DATA_TYPE } from "store/slice/DisplayData/DisplayDataType"
 import { selectVisualizeItems } from "store/slice/VisualizeItem/VisualizeItemSelectors"
+import { setClickedData } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import { VISUALIZE_ITEM_SLICE_NAME } from "store/slice/VisualizeItem/VisualizeItemType"
 import {
   isImageItem,
@@ -11,20 +15,24 @@ import {
 } from "store/slice/VisualizeItem/VisualizeItemUtils"
 import { ThunkApiConfig } from "store/store"
 
-export const setImageItemClikedDataId = createAsyncThunk<
+export const setImageItemClickedDataId = createAsyncThunk<
   void,
-  { itemId: number; clickedDataId: string },
+  { itemId: number; clickedDataId: string | null },
   ThunkApiConfig
 >(
-  `${VISUALIZE_ITEM_SLICE_NAME}/setImageItemClikedDataId`,
+  `${VISUALIZE_ITEM_SLICE_NAME}/setImageItemClickedDataId`,
   ({ itemId, clickedDataId }, thunkAPI) => {
+    thunkAPI.dispatch(setClickedData({ itemId, clickedDataId }))
     const items = selectVisualizeItems(thunkAPI.getState())
+    const tempAdd = selectStatusRoiTempAdd(thunkAPI.getState())
     Object.values(items).forEach((item) => {
       if (
         isTimeSeriesItem(item) &&
         item.filePath != null &&
         item.refImageItemId === itemId &&
-        !item.drawOrderList.includes(clickedDataId)
+        clickedDataId &&
+        !item.drawOrderList.includes(clickedDataId) &&
+        !tempAdd?.includes(Number(clickedDataId))
       ) {
         thunkAPI.dispatch(
           getTimeSeriesDataById({ path: item.filePath, index: clickedDataId }),
@@ -42,11 +50,12 @@ export const selectingImageArea = createAsyncThunk<
       x: number[]
       y: number[]
     }
+    callback?: (rois: string[]) => void
   },
   ThunkApiConfig
 >(
   `${VISUALIZE_ITEM_SLICE_NAME}/selectingImageArea`,
-  ({ itemId, range }, thunkAPI) => {
+  ({ itemId, range, callback }, thunkAPI) => {
     const { x, y } = range
     const [x1, x2] = x.map(Math.round)
     const [y1, y2] = y.map(Math.round)
@@ -69,20 +78,8 @@ export const selectingImageArea = createAsyncThunk<
           }
         }
         Object.values(items).forEach((item) => {
-          if (
-            isTimeSeriesItem(item) &&
-            item.filePath != null &&
-            item.refImageItemId === itemId
-          ) {
-            const path = item.filePath
-            selectedZList.forEach((selectedZ) => {
-              thunkAPI.dispatch(
-                getTimeSeriesDataById({
-                  path,
-                  index: String(selectedZ),
-                }),
-              )
-            })
+          if (isTimeSeriesItem(item) && item.filePath != null) {
+            callback?.(selectedZList)
           }
         })
       }

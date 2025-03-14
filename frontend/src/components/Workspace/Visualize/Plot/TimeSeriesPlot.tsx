@@ -15,13 +15,14 @@ import { LegendClickEvent } from "plotly.js"
 
 import { LinearProgress, Typography } from "@mui/material"
 
-import { getRoiDataApi, TimeSeriesData } from "api/outputs/Outputs"
+import { TimeSeriesData } from "api/outputs/Outputs"
 import {
   DialogContext,
   useRoisSelected,
 } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { useBoxFilter } from "components/Workspace/FlowChart/Dialog/FilterContext"
 import { DisplayDataContext } from "components/Workspace/Visualize/DataContext"
+import { useVisualize } from "components/Workspace/Visualize/VisualizeContext"
 import { selectAlgorithmDataFilterParam } from "store/slice/AlgorithmNode/AlgorithmNodeSelectors"
 import {
   getTimeSeriesDataById,
@@ -39,10 +40,7 @@ import {
   selectTimesSeriesMeta,
 } from "store/slice/DisplayData/DisplayDataSelectors"
 import { selectFrameRate } from "store/slice/Experiments/ExperimentsSelectors"
-import {
-  selectOutputFilePathCellRoi,
-  selectPipelineLatestUid,
-} from "store/slice/Pipeline/PipelineSelectors"
+import { selectPipelineLatestUid } from "store/slice/Pipeline/PipelineSelectors"
 import {
   selectTimeSeriesItemDrawOrderList,
   selectTimeSeriesItemOffset,
@@ -59,8 +57,6 @@ import {
   selectVisualizeSaveFormat,
   selectImageItemRangeUnit,
 } from "store/slice/VisualizeItem/VisualizeItemSelectors"
-import { setTimeSeriesItemDrawOrderList } from "store/slice/VisualizeItem/VisualizeItemSlice"
-import { selectCurrentWorkspaceId } from "store/slice/Workspace/WorkspaceSelector"
 import { AppDispatch } from "store/store"
 
 export const TimeSeriesPlot = memo(function TimeSeriesPlot() {
@@ -103,7 +99,6 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
     selectAlgorithmDataFilterParam(nodeId),
     shallowEqual,
   )
-  const workspaceId = useSelector(selectCurrentWorkspaceId)
   const meta = useSelector(selectTimesSeriesMeta(path))
   const dataXrange = useSelector(selectTimeSeriesXrange(path))
   const dataStd = useSelector(selectTimeSeriesStd(path))
@@ -127,46 +122,18 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
   const { dialogFilterNodeId, isOutput } = useContext(DialogContext)
   const { setRoiSelected, setMaxDim } = useRoisSelected()
   const { filterParam = filterSelector, roiPath } = useBoxFilter()
-  const roiUniqueListSelector = useSelector(
-    selectRoiUniqueList(roiPath),
-    shallowEqual,
-  )
-  const [roiUniqueList, setRoiUniqueList] = useState<null | string[]>(
-    roiUniqueListSelector,
-  )
-
-  const pathCellRoi = useSelector(selectOutputFilePathCellRoi(nodeId))
+  const roiUniqueList = useSelector(selectRoiUniqueList(roiPath))
+  const { setRoisClick, links } = useVisualize()
 
   const isExistFilterRoi = useMemo(
     () => filterParam?.roi?.length,
     [filterParam?.roi?.length],
   )
 
-  const getRoiUniqueList = useCallback(() => {
-    if (workspaceId && pathCellRoi) {
-      getRoiDataApi(pathCellRoi, { workspaceId }).then(({ data }) => {
-        const roi1Ddata: number[] = data[0]
-          .map((row) =>
-            Array.from(new Set(row.filter((value) => value != null))),
-          )
-          .flat()
-        const roiUniqueIds = Array.from(new Set(roi1Ddata))
-          .sort((n1, n2) => n1 - n2)
-          .map(String)
-        setRoiUniqueList(roiUniqueIds)
-      })
-    }
-  }, [pathCellRoi, workspaceId])
-
-  useEffect(() => {
-    if (isOutput && isExistFilterRoi) getRoiUniqueList()
-  }, [getRoiUniqueList, isExistFilterRoi, isOutput])
-
-  useEffect(() => {
-    if (!isOutput || dialogFilterNodeId) {
-      setRoiUniqueList(roiUniqueListSelector)
-    }
-  }, [dialogFilterNodeId, isOutput, roiUniqueListSelector])
+  const itemIdRoi = useMemo(
+    () => Object.keys(links).find((key) => links[key] === itemId),
+    [itemId, links],
+  )
 
   useEffect(() => {
     if (!timeSeriesData) return
@@ -418,27 +385,15 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
   }
 
   const onLegendClick = (event: LegendClickEvent) => {
-    const clickNumber = dataKeys[event.curveNumber]
-
+    const clickedSeriesId = dataKeys[event.curveNumber]
     if (dialogFilterNodeId) {
-      setRoiSelected(Number(clickNumber))
+      setRoiSelected(Number(clickedSeriesId))
       return false
     }
-
-    const newDrawOrderList = drawOrderList.includes(clickNumber)
-      ? drawOrderList.filter((value) => value !== clickNumber)
-      : [...drawOrderList, clickNumber]
-
-    dispatch(
-      setTimeSeriesItemDrawOrderList({
-        itemId,
-        drawOrderList: newDrawOrderList,
-      }),
-    )
-
+    if (itemIdRoi) setRoisClick(Number(itemIdRoi), Number(clickedSeriesId))
     // set DisplayNumbers
-    if (!drawOrderList.includes(clickNumber)) {
-      dispatch(getTimeSeriesDataById({ path, index: clickNumber }))
+    if (!drawOrderList.includes(clickedSeriesId)) {
+      dispatch(getTimeSeriesDataById({ path, index: clickedSeriesId }))
     }
 
     return false

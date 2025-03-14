@@ -50,7 +50,11 @@ const initialState: DisplayData = {
   polar: {},
   loading: false,
   loadingStack: [],
-  statusRoi: { temp_add_roi: [], temp_delete_roi: [], temp_merge_roi: [] },
+  statusRoi: {
+    temp_add_roi: [],
+    temp_delete_roi: [],
+    temp_merge_roi: [],
+  },
   isEditRoiCommitting: false,
 }
 

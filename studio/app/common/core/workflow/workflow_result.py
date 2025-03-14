@@ -202,8 +202,9 @@ class NodeResult:
             self.algo_name = os.path.splitext(os.path.basename(pickle_filepath))[0]
             try:
                 self.info = PickleReader.read(pickle_filepath)
-            except EOFError:
+            except Exception as e:
                 self.info = None  # indicates error
+                logger.error(e, exc_info=True)
         else:
             self.algo_name = None
             self.info = None

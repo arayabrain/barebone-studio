@@ -53,6 +53,7 @@ export const DialogContext = createContext<{
   onOpenClearWorkflowIdDialog: (value: ClearWorkflowIdDialogValue) => void
   onMessageError: (value: ErrorDialogValue) => void
   onOpenFilterDialog: (nodeId: string) => void
+  onOpenLogs: (open: boolean) => void
   dialogFilterNodeId?: string
   isOutput: boolean
 }>({
@@ -63,6 +64,7 @@ export const DialogContext = createContext<{
   onMessageError: () => null,
   onOpenFilterDialog: () => null,
   isOutput: false,
+  onOpenLogs: () => null,
 })
 
 export const RoiSelectedContext = createContext<{

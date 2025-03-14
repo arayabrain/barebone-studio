@@ -11,6 +11,9 @@ export type VisualaizeItem = {
     [itemId: number | string]: VisualaizeItemType
   }
   layout: ItemLayout
+  clickedRois: {
+    [itemId: number | string]: string | null
+  }
 }
 
 export type ItemLayout = number[][] // itemIdをrow,columnで並べる
@@ -77,7 +80,7 @@ export interface ImageItem extends DisplayDataItemBaseType {
   roiItem: RoiItem | null
   roiAlpha: number
   duration: number
-  clickedDataId?: string
+  clickedDataId?: string | null
   showRoiLabels: boolean
 }
 

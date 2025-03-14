@@ -1,4 +1,11 @@
-import { memo, useCallback, useState, MouseEvent, useEffect } from "react"
+import {
+  memo,
+  useCallback,
+  useState,
+  MouseEvent,
+  useEffect,
+  useRef,
+} from "react"
 import { useDispatch, useSelector } from "react-redux"
 
 import { Close, Numbers } from "@mui/icons-material"
@@ -14,6 +21,7 @@ import Loading from "components/common/Loading"
 import { useMouseDragHandler } from "components/utils/MouseDragUtil"
 import { DisplayDataItem } from "components/Workspace/Visualize/DisplayDataItem"
 import { FilePathSelect } from "components/Workspace/Visualize/FilePathSelect"
+import { useVisualize } from "components/Workspace/Visualize/VisualizeContext"
 import {
   selectLoading,
   selectIsEditRoiCommitting,
@@ -215,6 +223,7 @@ const FilePathSelectItem = memo(function FilePathSelectItem({
   itemId,
 }: ItemIdProps) {
   const dispatch = useDispatch()
+  const { resetRoisClick } = useVisualize()
   const dataType = useSelector(selectVisualizeDataType(itemId))
   const selectedNodeId = useSelector(selectVisualizeDataNodeId(itemId))
   const selectedFilePath = useSelector(selectImageItemFilePath(itemId))
@@ -246,6 +255,7 @@ const FilePathSelectItem = memo(function FilePathSelectItem({
             },
       ),
     )
+    resetRoisClick(itemId)
   }
 
   return (
@@ -260,6 +270,8 @@ const FilePathSelectItem = memo(function FilePathSelectItem({
 const RefImageItemIdSelect = memo(function RefImageItemIdSelect({
   itemId,
 }: ItemIdProps) {
+  const { setLinks } = useVisualize()
+  const refSub = useRef<() => void>()
   const dispatch = useDispatch()
   const itemIdList = useSelector(
     selectVisualizeImageAndRoiItemIdList,
@@ -273,10 +285,20 @@ const RefImageItemIdSelect = memo(function RefImageItemIdSelect({
         refImageItemId: isNaN(value) ? null : value,
       }),
     )
+    refSub.current?.()
+    refSub.current = setLinks(itemId, value)
   }
   const selectedRefImageItemId = useSelector(
     selectTimeSeriesItemRefImageItemId(itemId),
   )
+
+  useEffect(() => {
+    if (selectedRefImageItemId || selectedRefImageItemId === 0) {
+      refSub.current = setLinks(itemId, selectedRefImageItemId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <FormControl fullWidth variant="standard">
       <InputLabel>Link to box (#)</InputLabel>
@@ -382,6 +404,9 @@ const RoiSelect = memo(function RoiSelect({
   const dispatch = useDispatch()
   const roiItemNodeId = useSelector(selectRoiItemNodeId(itemId))
   const roiItemFilePath = useSelector(selectRoiItemFilePath(itemId))
+
+  const { resetRoisClick } = useVisualize()
+
   useEffect(() => {
     if (!roiItemFilePath) return
     setRoiFilePath?.(roiItemFilePath)
@@ -393,6 +418,7 @@ const RoiSelect = memo(function RoiSelect({
     dataType: string,
     outputKey?: string,
   ) => {
+    resetRoisClick(itemId)
     dispatch(setRoiItemFilePath({ itemId, nodeId, filePath, outputKey }))
   }
   return (

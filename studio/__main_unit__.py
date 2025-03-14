@@ -24,6 +24,7 @@ from studio.app.common.routers import (
     experiment,
     files,
     group,
+    logs,
     outputs,
     params,
     run,
@@ -60,6 +61,7 @@ app.include_router(algolist.router, dependencies=[Depends(get_current_user)])
 app.include_router(auth.router)
 app.include_router(experiment.router, dependencies=[Depends(get_current_user)])
 app.include_router(files.router, dependencies=[Depends(get_current_user)])
+app.include_router(logs.router, dependencies=[Depends(get_current_user)])
 app.include_router(outputs.router, dependencies=[Depends(get_current_user)])
 app.include_router(params.router, dependencies=[Depends(get_current_user)])
 app.include_router(run.router, dependencies=[Depends(get_current_user)])
