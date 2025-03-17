@@ -1,4 +1,4 @@
-import { memo, useState } from "react"
+import { memo, useCallback, useState } from "react"
 import { DndProvider } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
 import { useDispatch, useSelector } from "react-redux"
@@ -31,6 +31,7 @@ import {
   RoiSelectedProvider,
 } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { FileSelectDialog } from "components/Workspace/FlowChart/Dialog/FileSelectDialog"
+import ModalLogs from "components/Workspace/FlowChart/ModalLogs"
 import { ReactFlowComponent } from "components/Workspace/FlowChart/ReactFlowComponent"
 import RightDrawer from "components/Workspace/FlowChart/RightDrawer"
 import { AlgorithmTreeView } from "components/Workspace/FlowChart/TreeView"
@@ -70,6 +71,8 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
   const open = useSelector(selectRightDrawerIsOpen)
   const workspaceId = useSelector(selectCurrentWorkspaceId)
   const isDevelopment = process.env.NODE_ENV === "development"
+
+  const [openLogs, setOpenLogs] = useState(false)
 
   const [dialogNodeId, setDialogNodeId] = useState("")
   const [dialogFile, setDialogFile] =
@@ -158,8 +161,12 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
     })
   }
 
+  const onCloseModalLogs = useCallback(() => {
+    setOpenLogs(false)
+  }, [])
+
   return (
-    <Box display="flex">
+    <Box display="flex" position="relative">
       <DialogContext.Provider
         value={{
           onOpenOutputDialog: setDialogNodeId,
@@ -168,6 +175,7 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
           onOpenInputUrlDialog: setDialogViaUrl,
           onMessageError: setMessageError,
           onOpenFilterDialog: setFilterDialogNodeId,
+          onOpenLogs: setOpenLogs,
           dialogFilterNodeId,
           isOutput: true,
         }}
@@ -298,6 +306,7 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
         </DndProvider>
         <RightDrawer />
       </DialogContext.Provider>
+      {openLogs ? <ModalLogs isOpen onClose={onCloseModalLogs} /> : null}
     </Box>
   )
 })

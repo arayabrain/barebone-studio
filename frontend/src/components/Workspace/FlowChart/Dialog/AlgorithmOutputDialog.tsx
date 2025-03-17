@@ -59,7 +59,7 @@ export const AlgorithmOutputDialog = memo(function AlgorithmOutputDialog({
         nodeId={nodeId}
       />
       <DialogContent dividers sx={{ pt: 1, px: 2 }}>
-        <BoxFilterProvider>
+        <BoxFilterProvider nodeId={nodeId}>
           {open && <OutputViewer nodeId={nodeId} />}
           {open && dialogFilterNodeId ? <BoxFilter nodeId={nodeId} /> : null}
         </BoxFilterProvider>

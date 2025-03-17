@@ -186,10 +186,6 @@ const BoxFilter = ({ nodeId }: { nodeId: string }) => {
     return { dim1: dim1?.filter(Boolean), roi: roi?.filter(Boolean) }
   }, [filterParam])
 
-  useEffect(() => {
-    setFilterParam(filterSelector)
-  }, [filterSelector, setFilterParam])
-
   const getData = useCallback(
     (value?: TDim[]) =>
       value

@@ -14,33 +14,42 @@ const DatabaseWrapper: FC<{ children: ReactNode }> = ({ children }) => {
   }
 
   return (
-    <Box
-      sx={{
-        paddingTop: 2,
-        paddingBottom: 5,
-      }}
-    >
-      <Box>
-        <Button
-          variant="text"
-          onClick={handleClickExperiments}
-          disabled={location.pathname === "/console/experiments"}
-        >
-          Experiments
-        </Button>
-        /
-        <Button
-          variant="text"
-          onClick={handleClickCells}
-          disabled={location.pathname === "/console/cells"}
-        >
-          Cells
-        </Button>
+    <>
+      <Box
+        sx={{
+          paddingTop: 2,
+          paddingBottom: 5,
+        }}
+      >
+        <Box>
+          <NavButton
+            variant="text"
+            onClick={handleClickExperiments}
+            disabled={location.pathname === "/console/experiments"}
+          >
+            Experiments
+          </NavButton>
+          /
+          <NavButton
+            variant="text"
+            onClick={handleClickCells}
+            disabled={location.pathname === "/console/cells"}
+          >
+            Cells
+          </NavButton>
+        </Box>
+        <DataBaseContent>{children}</DataBaseContent>
       </Box>
-      <DataBaseContent>{children}</DataBaseContent>
-    </Box>
+    </>
   )
 }
+
+const NavButton = styled(Button)(({ theme }) => ({
+  "&.Mui-disabled": {
+    color: theme.palette.info.dark,
+    fontWeight: "bold",
+  },
+}))
 
 const DataBaseContent = styled(Box)(() => ({
   width: "94vw",

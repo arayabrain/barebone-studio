@@ -101,7 +101,7 @@ class WorkflowRunner:
             self.workspace_id, self.unique_id, asdict(flow_config)
         )
 
-    def rulefile(self):
+    def rulefile(self) -> Dict[str, Rule]:
         endNodeList = self.get_endNodeList()
 
         nwbfile = get_typecheck_params(self.runItem.nwbParam, "nwb")

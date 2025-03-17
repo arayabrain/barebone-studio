@@ -13,6 +13,7 @@ import {
 } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { useBoxFilter } from "components/Workspace/FlowChart/Dialog/FilterContext"
 import { DisplayDataContext } from "components/Workspace/Visualize/DataContext"
+import { useVisualize } from "components/Workspace/Visualize/VisualizeContext"
 import { getRoiData } from "store/slice/DisplayData/DisplayDataActions"
 import {
   selectRoiData,
@@ -68,11 +69,10 @@ const RoiPlotImple = memo(function RoiPlotImple() {
   const timeDataMaxIndex = useSelector(selectRoiItemIndex(itemId, path))
   const { setRoiSelected, roisSelected, setMaxRoi } = useRoisSelected()
 
-  const { filterParam, setRoiPath } = useBoxFilter()
+  const { filterParam } = useBoxFilter()
+  const { setRoisClickWithGetTime, roisClick, isVisualize } = useVisualize()
 
-  useEffect(() => {
-    setRoiPath(path)
-  }, [path, setRoiPath])
+  const roiVisualSelected = roisClick[itemId]
 
   useEffect(() => {
     setMaxRoi?.(Math.max(...imageDataSelector.flat()) + 1)
@@ -108,33 +108,39 @@ const RoiPlotImple = memo(function RoiPlotImple() {
   const onChartClick = (event: PlotMouseEvent) => {
     const point = event.points[0] as unknown as { z: number }
     setRoiSelected(point.z)
+    setRoisClickWithGetTime(itemId, point.z)
   }
 
   const colorscale = useMemo(() => {
-    if (!dialogFilterNodeId || timeDataMaxIndex < 1) {
-      return colorscaleRoi.map((value, idx) => {
-        if (timeDataMaxIndex < 1 && !roisSelected.includes(0)) {
-          return [
-            String(idx / (nshades - 1)),
-            `${value}${(77).toString(16).toUpperCase()}`,
-          ]
+    if ((dialogFilterNodeId || isVisualize) && timeDataMaxIndex >= 1) {
+      return [...Array(timeDataMaxIndex + 1)].map((_, i) => {
+        const new_i = Math.floor(((i % 10) * 10 + i / 10) % nshades)
+        const offset: number = i / timeDataMaxIndex
+        const rgba = colorscaleRoi[new_i]
+        if (
+          (!dialogFilterNodeId && !roiVisualSelected?.length) ||
+          [...roisSelected, ...(roiVisualSelected || [])].includes(i)
+        ) {
+          return [offset, rgba]
         }
-        return [String(idx / (nshades - 1)), value]
+        return [offset, `${rgba}${(77).toString(16).toUpperCase()}`]
       })
     }
-    return [...Array(timeDataMaxIndex + 1)].map((_, i) => {
-      const new_i = Math.floor(((i % 10) * 10 + i / 10) % nshades)
-      const offset: number = i / timeDataMaxIndex
-      const rgba = colorscaleRoi[new_i]
-      if (!dialogFilterNodeId || roisSelected.includes(i)) {
-        return [offset, rgba]
+    return colorscaleRoi.map((value, idx) => {
+      if (timeDataMaxIndex < 1 && !roisSelected.includes(0)) {
+        return [
+          String(idx / (nshades - 1)),
+          `${value}${(77).toString(16).toUpperCase()}`,
+        ]
       }
-      return [offset, `${rgba}${(77).toString(16).toUpperCase()}`]
+      return [String(idx / (nshades - 1)), value]
     })
   }, [
     colorscaleRoi,
     dialogFilterNodeId,
+    isVisualize,
     nshades,
+    roiVisualSelected,
     roisSelected,
     timeDataMaxIndex,
   ])
@@ -149,14 +155,14 @@ const RoiPlotImple = memo(function RoiPlotImple() {
         hoverongaps: false,
         // zsmooth: zsmooth, // ['best', 'fast', false]
         zsmooth: false,
-        showscale: !dialogFilterNodeId,
+        showscale: false,
         zmin: 0,
         zmax: timeDataMaxIndex,
         showlegend: true,
         hovertemplate: "ROI: %{z}",
       },
     ],
-    [imageData, dialogFilterNodeId, colorscale, timeDataMaxIndex],
+    [imageData, colorscale, timeDataMaxIndex],
   )
 
   const layout = useMemo(

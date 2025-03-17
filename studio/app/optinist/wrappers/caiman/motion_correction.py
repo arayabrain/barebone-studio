@@ -26,7 +26,6 @@ def caiman_mc(
 
     function_id = ExptOutputPathIds(output_dir).function_id
     logger.info(f"start caiman motion_correction: {function_id}")
-
     flattened_params = {}
     recursive_flatten_params(params, flattened_params)
     params = flattened_params
@@ -36,9 +35,20 @@ def caiman_mc(
     if params is not None:
         opts.change_params(params_dict=params)
 
-    c, dview, n_processes = setup_cluster(
-        backend="local", n_processes=None, single_thread=True
-    )
+    # TODO: Add parameters for node
+    n_processes = 1
+    dview = None
+    # This process launches another process to run the CNMF algorithm,
+    # so this node use at least 2 core.
+    if n_processes == 1:
+        c, dview, n_processes = setup_cluster(
+            backend="single", n_processes=n_processes, single_thread=True
+        )
+    else:
+        c, dview, n_processes = setup_cluster(
+            backend="multiprocessing", n_processes=n_processes
+        )
+    logger.info(f"n_processes: {n_processes}")
 
     mc = MotionCorrect(image.path, dview=dview, **opts.get_group("motion"))
 
@@ -49,7 +59,6 @@ def caiman_mc(
     fname_new = save_memmap(
         mc.mmap_file, base_name=function_id, order="C", border_to_0=border_to_0
     )
-
     stop_server(dview=dview)
 
     # now load the file
