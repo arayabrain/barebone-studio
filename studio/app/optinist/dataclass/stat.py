@@ -119,6 +119,7 @@ class StatData(BaseData):
         self.pca_scores = np.full((self.ncells, self.ncells), np.NaN)
         self.pca_explained_variance = np.full(self.ncells, np.NaN)
         self.pca_components = None
+        self.pca_scores_ave = None
 
         # --- kmeans ---
         self.cluster_labels = np.full(self.ncells, np.NaN)

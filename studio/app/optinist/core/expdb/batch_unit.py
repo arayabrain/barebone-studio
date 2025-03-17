@@ -346,6 +346,7 @@ class ExpDbBatch:
             cnmf_info=cnmf_info,
             output_dir=self.raw_path.output_dir,
             params=get_default_params("pca_analysis"),
+            ts_file=self.raw_path.ts_file,
             nwbfile=self.nwbfile,
         )
 
@@ -367,6 +368,7 @@ class ExpDbBatch:
                 explained_variance=stat_data.pca_explained_variance,
                 components=stat_data.pca_components,
                 roi_masks=cnmf_info["cell_roi"].data,
+                scores_ave=stat_data.pca_scores_ave,
                 output_dir=expdb_path.plot_dir,
             )
 
