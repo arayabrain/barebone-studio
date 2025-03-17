@@ -386,11 +386,11 @@ def generate_kmeans_visualization(
 
         # Determine the output filename
         if key == "optimal":
-            filename = "clustering_analysis_1.png"
+            filename = "clustering_analysis_001.png"
         elif key == "minus_1":
-            filename = "clustering_analysis_2.png"
+            filename = "clustering_analysis_002.png"
         elif key == "plus_1":
-            filename = "clustering_analysis_3.png"
+            filename = "clustering_analysis_003.png"
 
         # Create and save the plot
         plt.figure()
@@ -435,7 +435,7 @@ def generate_kmeans_visualization(
 
                 # Save individual time course plot
                 single_time_path = join_filepath(
-                    [output_dir, f"cluster_time_course_{i+1}.png"]
+                    [output_dir, f"cluster_time_course_{i+1:03d}.png"]
                 )
                 plt.savefig(single_time_path, bbox_inches="tight")
                 plt.close()
@@ -500,7 +500,7 @@ def generate_kmeans_visualization(
 
                 # Save individual cluster map
                 single_map_path = join_filepath(
-                    [output_dir, f"cluster_spatial_map_{i+1}.png"]
+                    [output_dir, f"cluster_spatial_map_{i+1:03d}.png"]
                 )
                 plt.savefig(single_map_path, bbox_inches="tight")
                 plt.close()

@@ -145,12 +145,46 @@ def get_experiment_urls(source, exp_dir, params=None):
             )
 
             # Find all matching files using the pattern
-            component_files = sorted(
-                list(
-                    set(glob(f"{pub_dir}/{pattern}"))
-                    - set(glob(f"{pub_dir}/*.thumb.png"))
-                )
+            component_files = list(
+                set(glob(f"{pub_dir}/{pattern}")) - set(glob(f"{pub_dir}/*.thumb.png"))
             )
+
+            # Sort files numerically based on the number in the filename
+            def extract_number(filename):
+                # Extract the number from filenames like "pca_component_01_spatial.png",
+                # or "clustering_analysis_01.png"
+                basename = os.path.basename(filename)
+                parts = basename.split("_")
+
+                # Try to find a part that's a number or ends with a number
+                for part in parts:
+                    # Check for parts that are entirely numbers
+                    if part.isdigit():
+                        return int(part)
+
+                    # For parts like "01.png", extract the number before the extension
+                    name_parts = part.split(".")
+                    if name_parts[0].isdigit():
+                        return int(name_parts[0])
+
+                # For patterns like "pca_component_01_time.png"
+                # where the number is not the last part
+                for i, part in enumerate(parts):
+                    if part.isdigit() and i < len(parts) - 1:
+                        return int(part)
+
+                # For more complex patterns, try to extract any digit sequence
+                import re
+
+                digits = re.findall(r"\d+", basename)
+                if digits:
+                    # Return the first number found
+                    return int(digits[0])
+
+                # If no number found, return the basename for alphabetical sorting
+                return basename
+
+            component_files = sorted(component_files, key=extract_number)
 
             # Create a single ImageInfo with all found files or a placeholder
             if component_files:
@@ -165,7 +199,6 @@ def get_experiment_urls(source, exp_dir, params=None):
                 )
             else:
                 # Add empty placeholder for debugging
-                logger.debug(f"No files found for {key}, adding empty placeholder")
                 result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
         else:
             # Handle single-image components (default behavior)
