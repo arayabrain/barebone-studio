@@ -378,7 +378,7 @@ def generate_pca_visualization(
             plt.xlabel("Time")
             plt.ylabel("Component Value")
             plt.grid(True, alpha=0.3)
-            time_path = join_filepath([output_dir, f"pca_component_{i+1:03d}_time.png"])
+            time_path = join_filepath([output_dir, f"pca_component_time_{i+1:03d}.png"])
             plt.savefig(time_path, bbox_inches="tight")
             plt.close()
             save_thumbnail(time_path)
@@ -391,7 +391,7 @@ def generate_pca_visualization(
             plt.ylabel("Component Value")
             plt.grid(True, alpha=0.3)
 
-            time_path = join_filepath([output_dir, f"pca_component_{i+1:03d}_time.png"])
+            time_path = join_filepath([output_dir, f"pca_component_time_{i+1:03d}.png"])
             plt.savefig(time_path, bbox_inches="tight")
             plt.close()
             save_thumbnail(time_path)
@@ -438,7 +438,7 @@ def generate_pca_visualization(
                         plt.title(f"PC {i+1} Spatial Map")
 
                         spatial_path = join_filepath(
-                            [output_dir, f"pca_component_{i+1:03d}_spatial.png"]
+                            [output_dir, f"pca_component_spatial_{i+1:03d}.png"]
                         )
                         plt.savefig(spatial_path, bbox_inches="tight")
                         plt.grid(True, alpha=0.3)
@@ -461,7 +461,7 @@ def generate_pca_visualization(
                 plt.grid(True, alpha=0.3)
 
                 spatial_path = join_filepath(
-                    [output_dir, f"pca_component_{i+1:03d}_spatial.png"]
+                    [output_dir, f"pca_component_spatial_{i+1:03d}.png"]
                 )
                 plt.savefig(spatial_path, bbox_inches="tight")
                 plt.close()
@@ -478,7 +478,7 @@ def generate_pca_visualization(
             plt.grid(True, alpha=0.3)
 
             spatial_path = join_filepath(
-                [output_dir, f"pca_component_{i+1:03d}_spatial.png"]
+                [output_dir, f"pca_component_spatial_{i+1:03d}.png"]
             )
             plt.savefig(spatial_path, bbox_inches="tight")
             plt.close()
@@ -518,8 +518,8 @@ def generate_pca_visualization(
             plt.bar(
                 x_positions,
                 cell_contributions,
-                # Only label first 10 cells to avoid cluttering
-                label=f"Cell {cell_idx}" if cell_idx < 10 else None,
+                # Only label first 20 cells to avoid cluttering
+                label=f"Cell {cell_idx}" if cell_idx < 20 else None,
                 width=0.8,
             )
 

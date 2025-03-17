@@ -322,36 +322,26 @@ def generate_kmeans_visualization(
                 )
                 plt.axvline(x=optimal_clusters, color="gray", linestyle="--", alpha=0.7)
 
-            plt.title("Silhouette Score Analysis for K-means Clustering")
+            # Create double-line title with optimal cluster information
+            main_title = "Silhouette Score Analysis for K-means Clustering"
+            if optimal_clusters is not None:
+                subtitle = f"Optimal number of clusters: {optimal_clusters}"
+                plt.title(f"{main_title}\n{subtitle}")
+            else:
+                plt.title(main_title)
+
             plt.xlabel("Number of Clusters (k)")
             plt.ylabel("Silhouette Score")
             plt.grid(True, alpha=0.3)
             plt.xticks(valid_k)  # Show all tested k values on x-axis
-
-            # Add text annotation for optimal cluster
-            if optimal_clusters is not None:
-                plt.figtext(
-                    0.5,
-                    0.01,
-                    f"Optimal number of clusters: {optimal_clusters}",
-                    ha="center",
-                    fontsize=12,
-                )
-        else:
-            plt.text(
-                0.5,
-                0.5,
-                "No valid silhouette scores available",
-                ha="center",
-                va="center",
-                transform=plt.gca().transAxes,
-            )
             plt.axis("on")
 
-        silhouette_path = join_filepath([output_dir, "cluster_silhouette_scores.png"])
-        plt.savefig(silhouette_path, bbox_inches="tight")
-        plt.close()
-        save_thumbnail(silhouette_path)
+            silhouette_path = join_filepath(
+                [output_dir, "cluster_silhouette_scores.png"]
+            )
+            plt.savefig(silhouette_path, bbox_inches="tight")
+            plt.close()
+            save_thumbnail(silhouette_path)
 
     # 2. Plot correlation matrices for optimal, k-1, and k+1
     # Loop through each matrix type in all_sorted_matrices
@@ -424,9 +414,9 @@ def generate_kmeans_visualization(
                 cluster_avg = np.mean(fluorescence[cluster_mask], axis=0)
                 plt.plot(cluster_avg, linewidth=2, color=colors[i])
 
-                # Add individual cell traces with lower alpha if there aren't too many
+                # Add individual cell traces with lower alpha
                 for cell_idx in np.where(cluster_mask)[0]:
-                    plt.plot(fluorescence[cell_idx], alpha=0.1, linewidth=0.5)
+                    plt.plot(fluorescence[cell_idx], alpha=0.2, linewidth=0.5)
 
                 plt.title(f"Cluster {i+1} Time Course")
                 plt.xlabel("Time")

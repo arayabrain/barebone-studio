@@ -129,79 +129,49 @@ def experiment_transformer(items: Sequence) -> Sequence:
 
 
 def get_experiment_urls(source, exp_dir, params=None):
+    """Optimized function for standardized filename patterns."""
     result = []
+
+    # Precompute the base directory path
+    dirs = exp_dir.split("/")
+    base_pub_dir = f"{EXPDB_DIRPATH.PUBLIC_EXPDB_DIR}/{dirs[-2]}/{dirs[-1]}"
 
     for key, value in source.items():
         if value.get("type") == "multi":
-            # Handle multi-image components (like PCA)
             component_dir = value["dir"]
             pattern = value["pattern"]
+            pub_dir = f"{base_pub_dir}/{component_dir}/"
 
-            # Construct the directory path
-            dirs = exp_dir.split("/")
-            pub_dir = (
-                f"{EXPDB_DIRPATH.PUBLIC_EXPDB_DIR}"
-                f"/{dirs[-2]}/{dirs[-1]}/{component_dir}/"
-            )
+            # Get files and filter out thumbnails
+            component_files = [
+                f for f in glob(f"{pub_dir}/{pattern}") if not f.endswith(".thumb.png")
+            ]
 
-            # Find all matching files using the pattern
-            component_files = list(
-                set(glob(f"{pub_dir}/{pattern}")) - set(glob(f"{pub_dir}/*.thumb.png"))
-            )
-
-            # Sort files numerically based on the number in the filename
+            # Simple and efficient number extraction
             def extract_number(filename):
-                # Extract the number from filenames like "pca_component_01_spatial.png",
-                # or "clustering_analysis_01.png"
                 basename = os.path.basename(filename)
-                parts = basename.split("_")
-
-                # Try to find a part that's a number or ends with a number
-                for part in parts:
-                    # Check for parts that are entirely numbers
-                    if part.isdigit():
-                        return int(part)
-
-                    # For parts like "01.png", extract the number before the extension
-                    name_parts = part.split(".")
-                    if name_parts[0].isdigit():
-                        return int(name_parts[0])
-
-                # For patterns like "pca_component_01_time.png"
-                # where the number is not the last part
-                for i, part in enumerate(parts):
-                    if part.isdigit() and i < len(parts) - 1:
-                        return int(part)
-
-                # For more complex patterns, try to extract any digit sequence
                 import re
 
                 digits = re.findall(r"\d+", basename)
-                if digits:
-                    # Return the first number found
-                    return int(digits[0])
+                return int(digits[0]) if digits else basename
 
-                # If no number found, return the basename for alphabetical sorting
-                return basename
+            # Sort files
+            component_files.sort(key=extract_number)
 
-            component_files = sorted(component_files, key=extract_number)
-
-            # Create a single ImageInfo with all found files or a placeholder
+            # Create ImageInfo object
             if component_files:
                 urls = [
                     f"{exp_dir}/{component_dir}/{os.path.basename(file)}"
                     for file in component_files
                 ]
                 thumb_urls = [url.replace(".png", ".thumb.png") for url in urls]
-
                 result.append(
                     ImageInfo(urls=urls, thumb_urls=thumb_urls, params=params)
                 )
             else:
-                # Add empty placeholder for debugging
                 result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
         else:
-            # Handle single-image components (default behavior)
+            # Handle single-image components
             dir_path = value["dir"]
             url = f"{exp_dir}/{dir_path}/{key}.png"
             thumb_url = url.replace(".png", ".thumb.png")

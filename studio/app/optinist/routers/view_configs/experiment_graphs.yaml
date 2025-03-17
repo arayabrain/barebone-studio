@@ -76,13 +76,13 @@ pca_spatial_components:
   title: "PCA Spatial Components"
   dir: "plots"
   type: "multi"
-  pattern: "pca_component_*_spatial.png"
+  pattern: "pca_component_spatial_*.png"
 
 pca_time_components:
   title: "PCA Time Components"
   dir: "plots"
   type: "multi"
-  pattern: "pca_component_*_time.png"
+  pattern: "pca_component_time_*.png"
 
 cluster_silhouette_scores:
   title: "K-means Silhouette Analysis"
