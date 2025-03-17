@@ -325,10 +325,24 @@ class StatData(BaseData):
 
     # --- kmeans ---
     def set_kmeans_props(self):
-        """Create visualization data structures for KMeans results"""
-        self.clustering_analysis = HeatMapData(
-            data=self.cluster_corr_matrix,
-            file_name="clustering_analysis",
+        """Set references to visualization files"""
+        self.cluster_corr_matrix = HeatMapData(
+            data=np.zeros((1, 1)), columns=[0], file_name="clustering_analysis_1"
+        )
+
+        # ScatterData does NOT accept columns
+        self.cluster_silhouette_scores = ScatterData(
+            data=np.zeros((2, 1)), file_name="cluster_silhouette_scores"
+        )
+
+        # HeatMapData accepts columns
+        self.cluster_spatial_map = HeatMapData(
+            data=np.zeros((1, 1)), columns=[0], file_name="cluster_spatial_map_1"
+        )
+
+        # LineData requires columns
+        self.cluster_time_courses = LineData(
+            data=np.zeros(1), columns=[0], file_name="cluster_time_course_1"
         )
 
     @property

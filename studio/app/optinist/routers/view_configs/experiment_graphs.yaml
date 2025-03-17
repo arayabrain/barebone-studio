@@ -88,13 +88,13 @@ pca_time_components:
   type: "multi"
   pattern: "pca_component_*_time.png"
 
-silhouette_scores:
+cluster_silhouette_scores:
   title: "K-means Silhouette Analysis"
   dir: "plots"
   type: "single"
 
 clustering_analysis:
-  title: "k-means Clustering Analysis"
+  title: "K-means Clustering Analysis"
   dir: "plots"
   type: "single"
 

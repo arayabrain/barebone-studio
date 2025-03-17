@@ -390,12 +390,12 @@ class ExpDbBatch:
             create_directory(dir_path)
 
             # Save visualization object
-            stat_data.clustering_analysis.save_plot(dir_path)
+            stat_data.cluster_corr_matrix.save_plot(dir_path)
 
             # Generate additional visualizations
             generate_kmeans_visualization(
-                labels=stat_data.cluster_labels,
-                corr_matrix=stat_data.cluster_corr_matrix,
+                all_labels=stat_data.all_labels,
+                all_sorted_matrices=stat_data.all_sorted_matrices,
                 fluorescence=stat_data.fluorescence,
                 roi_masks=cnmf_info["cell_roi"].data,
                 silhouette_scores=stat_data.silhouette_scores,

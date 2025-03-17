@@ -19,17 +19,17 @@ def pca_analysis(
     # Get the fluorescence data
     fluorescence = cnmf_info["fluorescence"].data
 
-    # If iscell data is available, use it to filter fluorescence
-    if "iscell" in cnmf_info and cnmf_info["iscell"] is not None:
-        iscell = cnmf_info["iscell"].data
-        if len(iscell) == fluorescence.shape[0]:
-            good_indices = np.where(iscell == 1)[0]
-            logger.info(f"Using iscell {len(iscell)} total cells for PCA")
+    # # If iscell data is available, use it to filter fluorescence
+    # if "iscell" in cnmf_info and cnmf_info["iscell"] is not None:
+    #     iscell = cnmf_info["iscell"].data
+    #     if len(iscell) == fluorescence.shape[0]:
+    #         good_indices = np.where(iscell == 1)[0]
+    #         logger.info(f"Using iscell {len(iscell)} total cells for PCA")
 
-            if len(good_indices) > 0:
-                # Filter fluorescence to only include good components
-                fluorescence = fluorescence[good_indices]
-                # logger.info(f"Filtered fluorescence shape: {fluorescence.shape}")
+    #         if len(good_indices) > 0:
+    #             # Filter fluorescence to only include good components
+    #             fluorescence = fluorescence[good_indices]
+    #             # logger.info(f"Filtered fluorescence shape: {fluorescence.shape}")
 
     n_cells = fluorescence.shape[0]
     logger.info(f"PCA will use {n_cells} cells")
@@ -197,22 +197,6 @@ def generate_pca_visualization(
         plt.close()
         save_thumbnail(variance_path)
 
-        # Create error image for scatter plot
-        plt.figure()
-        plt.text(
-            0.5,
-            0.5,
-            "Insufficient ROIs for PCA analysis.\nAt least 2 ROIs required.",
-            ha="center",
-            va="center",
-            transform=plt.gca().transAxes,
-        )
-        plt.axis("off")
-        scatter_path = join_filepath([output_dir, "pca_analysis.png"])
-        plt.savefig(scatter_path, bbox_inches="tight")
-        plt.close()
-        save_thumbnail(scatter_path)
-
         # Create error image for contribution plot
         plt.figure()
         plt.text(
@@ -283,29 +267,9 @@ def generate_pca_visualization(
     plt.close()
     save_thumbnail(variance_path)
 
-    # 2. Create PCA scatter plot (first 2-3 components)
-    plt.figure()
-    if scores.shape[1] >= 2:
-        plt.scatter(scores[:, 0], scores[:, 1], alpha=0.7)
-        plt.xlabel("PC 1")
-        plt.ylabel("PC 2")
-
-        if scores.shape[1] >= 3:
-            plt.figure()
-            plt.scatter(
-                scores[:, 0], scores[:, 1], c=scores[:, 2], cmap="viridis", alpha=0.7
-            )
-            plt.colorbar(label="PC 3")
-            plt.xlabel("PC 1")
-            plt.ylabel("PC 2")
-
-    scatter_path = join_filepath([output_dir, "pca_analysis.png"])
-    plt.savefig(scatter_path, bbox_inches="tight")
-    plt.close()
-    save_thumbnail(scatter_path)
-
-    # 3. For each component, create time course and spatial map
+    # For each component
     for i in range(num_components):
+        # 2. Time course plots
         plt.figure()
         plt.plot(scores[:, i], linewidth=2)
         plt.title(f"PC {i+1} Time Course")
@@ -318,7 +282,7 @@ def generate_pca_visualization(
         plt.close()
         save_thumbnail(time_path)
 
-        # 4. Spatial map - attempt only if roi_masks has appropriate shape
+        # 3. Spatial map - attempt only if roi_masks has appropriate shape
         component_weights = components[i]  # Using actual weights, not absolute values
 
         # Create spatial component maps
@@ -405,7 +369,7 @@ def generate_pca_visualization(
             plt.close()
             save_thumbnail(spatial_path)
 
-    # 5. Save the contribution weights as a separate visualization
+    # 4. Save the contribution weights as a separate visualization
     plt.figure()
     top_n = min(plots_to_show, components.shape[0])
     for i in range(top_n):
