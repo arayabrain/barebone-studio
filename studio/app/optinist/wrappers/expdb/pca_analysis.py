@@ -545,7 +545,7 @@ def generate_pca_visualization(
         plt.xlabel("PCA Components")
         plt.ylabel("Cell Contribution")
         plt.title(f"Cell Contributions to PCA Components {start_idx+1} to {end_idx}")
-        plt.xticks(x_positions, x_labels)
+        plt.xticks(x_positions[::2], x_labels[::2])
         plt.tight_layout()
         plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 
