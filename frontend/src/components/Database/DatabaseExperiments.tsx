@@ -993,7 +993,7 @@ const DatabaseExperiments = ({
           if (!graph_url.thumb_urls || graph_url.thumb_urls.length === 0) {
             // eslint-disable-next-line no-console
             console.log(`No thumbnail URLs to display for ${graphTitle}`)
-            return <Box>No images</Box>
+            return null
           }
 
           return (
