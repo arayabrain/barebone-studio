@@ -27,11 +27,11 @@ init_params:
   # NOTE: K would affect performance.
   # Set lower values (like 4) for faster processing. (eg., for development)
   # K: 2000  # for production.
-  K: 55
+  K: 10
 
   gSig: [4, 4]
-  ssub: 2
-  tsub: 2
+  ssub: 1
+  tsub: 1
   nb: 2
   method_init: "greedy_roi"
 
