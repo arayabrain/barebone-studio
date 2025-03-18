@@ -47,17 +47,17 @@ direction_tuning_width:
   type: "single"
 
 sf_selectivity:
-  title: "Spatial Selectivity"
+  title: "Selectivity"
   dir: "plots"
   type: "single"
 
 sf_responsivity:
-  title: "Spatial Peak Response"
+  title: "Peak Response"
   dir: "plots"
   type: "single"
 
 sf_responsivity_ratio:
-  title: "Spatial Response Ratio"
+  title: "Response Ratio"
   dir: "plots"
   type: "single"
 
