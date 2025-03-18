@@ -66,11 +66,6 @@ sf_responsivity_ratio:
   dir: "plots"
   type: "single"
 
-pca_analysis:
-  title: "PCA Analysis"
-  dir: "plots"
-  type: "single"
-
 pca_analysis_variance:
   title: "PCA Explained Variance"
   dir: "plots"
@@ -79,36 +74,40 @@ pca_analysis_variance:
 pca_contribution:
   title: "PCA Component Contribution"
   dir: "plots"
-  type: "single"
+  type: "multi"
+  pattern: "pca_contribution_*.png"
 
 pca_spatial_components:
   title: "PCA Spatial Components"
   dir: "plots"
   type: "multi"
-  pattern: "pca_component_*_spatial.png"
+  pattern: "pca_component_spatial_*.png"
 
 pca_time_components:
   title: "PCA Time Components"
   dir: "plots"
   type: "multi"
-  pattern: "pca_component_*_time.png"
+  pattern: "pca_component_time_*.png"
 
-silhouette_scores:
+cluster_silhouette_scores:
   title: "K-means Silhouette Analysis"
   dir: "plots"
   type: "single"
 
-clustering_analysis:
-  title: "k-means Clustering Analysis"
+cluster_corr_matrix:
+  title: "K-means Clustering Analysis"
   dir: "plots"
-  type: "single"
+  type: "multi"
+  pattern: "clustering_analysis_*.png"
 
 cluster_spatial_map:
   title: "Cluster Spatial Map"
   dir: "plots"
-  type: "single"
+  type: "multi"
+  pattern: "cluster_spatial_map_*.png"
 
 cluster_time_courses:
   title: "Cluster Time Courses"
   dir: "plots"
-  type: "single"
+  type: "multi"
+  pattern: "cluster_time_course_*.png"

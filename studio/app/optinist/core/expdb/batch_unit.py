@@ -153,6 +153,12 @@ class ExpDbBatch:
             watch.elapsed_time,
         )
 
+    def check_is_circular_data(self, data_name: str):
+        """Check if data is circular based on patterns in filename"""
+        circular_patterns = ["_ori", "_OF-PRC-", "_dot"]
+        is_circular_data = any(pattern in data_name for pattern in circular_patterns)
+        return is_circular_data
+
     @stopwatch(callback=__stopwatch_callback)
     def cleanup_exp_record(self, db: Session):
         try:
@@ -286,29 +292,33 @@ class ExpDbBatch:
     def generate_plots(self, stat_data: StatData):
         self.logger_.info("process 'generate_plots' start.")
 
+        is_circular = self.check_is_circular_data(self.exp_id)
+        self.logger_.info(f"Data is {'circular' if is_circular else 'non-circular'}")
+
         for expdb_path in self.expdb_paths:
             dir_path = expdb_path.plot_dir
             create_directory(dir_path)
 
-            stat_data.tuning_curve.save_plot(dir_path)
-            stat_data.tuning_curve_polar.save_plot(dir_path)
-            stat_data.sf_tuning_curve.save_plot(dir_path)
+            if is_circular:
+                stat_data.tuning_curve.save_plot(dir_path)
+                stat_data.tuning_curve_polar.save_plot(dir_path)
+                stat_data.sf_tuning_curve.save_plot(dir_path)
 
-            stat_data.direction_responsivity_ratio.save_plot(dir_path)
-            stat_data.orientation_responsivity_ratio.save_plot(dir_path)
-            stat_data.direction_selectivity.save_plot(dir_path)
-            stat_data.orientation_selectivity.save_plot(dir_path)
-            stat_data.best_responsivity.save_plot(dir_path)
+                stat_data.direction_responsivity_ratio.save_plot(dir_path)
+                stat_data.orientation_responsivity_ratio.save_plot(dir_path)
+                stat_data.direction_selectivity.save_plot(dir_path)
+                stat_data.orientation_selectivity.save_plot(dir_path)
+                stat_data.best_responsivity.save_plot(dir_path)
 
-            stat_data.preferred_direction.save_plot(dir_path)
-            stat_data.preferred_orientation.save_plot(dir_path)
+                stat_data.preferred_direction.save_plot(dir_path)
+                stat_data.preferred_orientation.save_plot(dir_path)
 
-            stat_data.direction_tuning_width.save_plot(dir_path)
-            stat_data.orientation_tuning_width.save_plot(dir_path)
-
-            stat_data.stim_selectivity.save_plot(dir_path)
-            stat_data.stim_responsivity.save_plot(dir_path)
-            stat_data.sf_responsivity_ratio.save_plot(dir_path)
+                stat_data.direction_tuning_width.save_plot(dir_path)
+                stat_data.orientation_tuning_width.save_plot(dir_path)
+            else:
+                stat_data.stim_selectivity.save_plot(dir_path)
+                stat_data.stim_responsivity.save_plot(dir_path)
+                stat_data.sf_responsivity_ratio.save_plot(dir_path)
 
     @stopwatch(callback=__stopwatch_callback)
     def generate_pixelmaps(self):
@@ -346,6 +356,7 @@ class ExpDbBatch:
             cnmf_info=cnmf_info,
             output_dir=self.raw_path.output_dir,
             params=get_default_params("pca_analysis"),
+            ts_file=self.raw_path.ts_file,
             nwbfile=self.nwbfile,
         )
 
@@ -357,7 +368,6 @@ class ExpDbBatch:
             create_directory(expdb_path.plot_dir)
 
             # Save visualization objects with correct names
-            stat_data.pca_analysis.save_plot(expdb_path.plot_dir)
             stat_data.pca_analysis_variance.save_plot(expdb_path.plot_dir)
             stat_data.pca_contribution.save_plot(expdb_path.plot_dir)
 
@@ -367,6 +377,7 @@ class ExpDbBatch:
                 explained_variance=stat_data.pca_explained_variance,
                 components=stat_data.pca_components,
                 roi_masks=cnmf_info["cell_roi"].data,
+                scores_ave=stat_data.pca_scores_ave,
                 output_dir=expdb_path.plot_dir,
             )
 
@@ -390,12 +401,12 @@ class ExpDbBatch:
             create_directory(dir_path)
 
             # Save visualization object
-            stat_data.clustering_analysis.save_plot(dir_path)
+            stat_data.cluster_corr_matrix.save_plot(dir_path)
 
             # Generate additional visualizations
             generate_kmeans_visualization(
-                labels=stat_data.cluster_labels,
-                corr_matrix=stat_data.cluster_corr_matrix,
+                all_labels=stat_data.all_labels,
+                all_sorted_matrices=stat_data.all_sorted_matrices,
                 fluorescence=stat_data.fluorescence,
                 roi_masks=cnmf_info["cell_roi"].data,
                 silhouette_scores=stat_data.silhouette_scores,

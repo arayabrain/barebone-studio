@@ -119,6 +119,7 @@ PCA_TYPES = {
     "pca_scores": ("float", (None, None)),
     "pca_explained_variance": ("float", (None,)),
     "pca_components": ("float", (None, None)),
+    "pca_scores_ave": ("float", (None, None)),
 }
 
 KMEANS_TYPES = {
