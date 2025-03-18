@@ -129,46 +129,49 @@ def experiment_transformer(items: Sequence) -> Sequence:
 
 
 def get_experiment_urls(source, exp_dir, params=None):
+    """Optimized function for standardized filename patterns."""
     result = []
+
+    # Precompute the base directory path
+    dirs = exp_dir.split("/")
+    base_pub_dir = f"{EXPDB_DIRPATH.PUBLIC_EXPDB_DIR}/{dirs[-2]}/{dirs[-1]}"
 
     for key, value in source.items():
         if value.get("type") == "multi":
-            # Handle multi-image components (like PCA)
             component_dir = value["dir"]
             pattern = value["pattern"]
+            pub_dir = f"{base_pub_dir}/{component_dir}/"
 
-            # Construct the directory path
-            dirs = exp_dir.split("/")
-            pub_dir = (
-                f"{EXPDB_DIRPATH.PUBLIC_EXPDB_DIR}"
-                f"/{dirs[-2]}/{dirs[-1]}/{component_dir}/"
-            )
+            # Get files and filter out thumbnails
+            component_files = [
+                f for f in glob(f"{pub_dir}/{pattern}") if not f.endswith(".thumb.png")
+            ]
 
-            # Find all matching files using the pattern
-            component_files = sorted(
-                list(
-                    set(glob(f"{pub_dir}/{pattern}"))
-                    - set(glob(f"{pub_dir}/*.thumb.png"))
-                )
-            )
+            # Simple and efficient number extraction
+            def extract_number(filename):
+                basename = os.path.basename(filename)
+                import re
 
-            # Create a single ImageInfo with all found files or a placeholder
+                digits = re.findall(r"\d+", basename)
+                return int(digits[0]) if digits else basename
+
+            # Sort files
+            component_files.sort(key=extract_number)
+
+            # Create ImageInfo object
             if component_files:
                 urls = [
                     f"{exp_dir}/{component_dir}/{os.path.basename(file)}"
                     for file in component_files
                 ]
                 thumb_urls = [url.replace(".png", ".thumb.png") for url in urls]
-
                 result.append(
                     ImageInfo(urls=urls, thumb_urls=thumb_urls, params=params)
                 )
             else:
-                # Add empty placeholder for debugging
-                logger.debug(f"No files found for {key}, adding empty placeholder")
                 result.append(ImageInfo(urls=[], thumb_urls=[], params=params))
         else:
-            # Handle single-image components (default behavior)
+            # Handle single-image components
             dir_path = value["dir"]
             url = f"{exp_dir}/{dir_path}/{key}.png"
             thumb_url = url.replace(".png", ".thumb.png")

@@ -37,20 +37,25 @@ def kmeans_analysis(
 
     # Set default parameters if none provided
     if params is None:
-        params = {}
+        params = {"n_clusters": min(10, n_cells)}
 
     # Handle case when there are insufficient cells for clustering
     if n_cells < 2:
-        logger.info("Not enough cells for KMeans clustering (minimum 2 required)")
         # Set dummy values
         cluster_labels = np.zeros(max(1, n_cells), dtype=int)
         corr_matrix = np.ones((max(1, n_cells), max(1, n_cells)), dtype=float)
+
+        # Initialize dictionaries with dummy values
+        all_labels = {"optimal": cluster_labels, "minus_1": None, "plus_1": None}
+        all_sorted_matrices = {"optimal": corr_matrix, "minus_1": None, "plus_1": None}
 
         # Store results in StatData
         stat.cluster_labels = cluster_labels
         stat.cluster_corr_matrix = corr_matrix
         stat.silhouette_scores = None
         stat.optimal_clusters = 1
+        stat.all_labels = all_labels
+        stat.all_sorted_matrices = all_sorted_matrices
 
         # Store data needed for visualization
         stat.fluorescence = fluorescence
@@ -77,7 +82,7 @@ def kmeans_analysis(
 
         return {
             "stat": stat,
-            "clustering_analysis": stat.clustering_analysis,
+            # "cluster_corr_matrix": stat.cluster_corr_matrix,
             "nwbfile": nwbfile,
         }
 
@@ -116,9 +121,42 @@ def kmeans_analysis(
         kmeans = KMeans(n_clusters=k_optimal, init="k-means++", n_init=10)
         cluster_labels = kmeans.fit_predict(corr_matrix)
 
+    # Initialize dictionaries for different k values
+    all_sorted_matrices = {"optimal": None, "minus_1": None, "plus_1": None}
+    all_labels = {"optimal": None, "minus_1": None, "plus_1": None}
+
+    # Create sorted correlation matrix for optimal k
+    sort_idx = np.argsort(cluster_labels)
+    all_sorted_matrices["optimal"] = corr_matrix[sort_idx][:, sort_idx]
+    all_labels["optimal"] = cluster_labels
+
+    # Create matrices for k-1 and k+1 if possible
+    if k_optimal > 2:
+        kmeans_minus1 = KMeans(
+            n_clusters=k_optimal - 1, init="k-means++", n_init=10, random_state=42
+        )
+        labels_minus1 = kmeans_minus1.fit_predict(corr_matrix)
+        all_labels["minus_1"] = labels_minus1
+        sort_idx_minus1 = np.argsort(labels_minus1)
+        all_sorted_matrices["minus_1"] = corr_matrix[sort_idx_minus1][
+            :, sort_idx_minus1
+        ]
+
+    # Create sorted correlation matrix for k+1 (if k < max_k)
+    if k_optimal < n_cells - 1:
+        kmeans_plus1 = KMeans(
+            n_clusters=k_optimal + 1, init="k-means++", n_init=10, random_state=42
+        )
+        labels_plus1 = kmeans_plus1.fit_predict(corr_matrix)
+        all_labels["plus_1"] = labels_plus1
+        sort_idx_plus1 = np.argsort(labels_plus1)
+        all_sorted_matrices["plus_1"] = corr_matrix[sort_idx_plus1][:, sort_idx_plus1]
+
     # Store results in StatData
-    stat.cluster_labels = cluster_labels
-    stat.cluster_corr_matrix = corr_matrix
+    stat.cluster_labels = all_labels["optimal"]
+    stat.cluster_corr_matrix = all_sorted_matrices["optimal"]
+    stat.all_labels = all_labels
+    stat.all_sorted_matrices = all_sorted_matrices
     stat.silhouette_scores = silhouette_values
     stat.optimal_clusters = k_optimal
 
@@ -144,14 +182,14 @@ def kmeans_analysis(
 
     return {
         "stat": stat,
-        "clustering_analysis": stat.clustering_analysis,
+        # "cluster_corr_matrix": stat.cluster_corr_matrix,
         "nwbfile": nwbfile,
     }
 
 
 def generate_kmeans_visualization(
-    labels,
-    corr_matrix,
+    all_labels,
+    all_sorted_matrices,
     fluorescence,
     roi_masks,
     silhouette_scores,
@@ -163,29 +201,31 @@ def generate_kmeans_visualization(
 
     Parameters
     ----------
-    labels : ndarray
-        Cluster assignments for each cell
-    corr_matrix : ndarray
-        Cell-to-cell correlation matrix
+    all_labels : dict
+        Dictionary of cluster assignments for each k value:
+        ("optimal", "minus_1", "plus_1")
+    all_sorted_matrices : dict
+        Dictionary of sorted correlation matrices for each k value
     fluorescence : ndarray
         Temporal components/fluorescence traces (n_cells x time)
     roi_masks : ndarray or None
         ROI masks data in any format
-    output_dir : str
-        Directory for saving output files
     silhouette_scores : ndarray, optional
         Silhouette scores for different numbers of clusters
     optimal_clusters : int, optional
         Optimal number of clusters based on silhouette analysis
+    output_dir : str
+        Directory for saving output files
     """
-    if labels is None or len(labels) == 0:
-        logger.warning("Warning: Missing cluster labels ")
-        return
-
     # Handle the case of insufficient ROIs
+    corr_matrix = all_sorted_matrices.get("optimal")
+    labels = all_labels.get("optimal")
+
     is_data_insufficient = (
-        labels is None
-        or len(labels) < 2
+        all_labels is None
+        or "optimal" not in all_labels
+        or all_labels["optimal"] is None
+        or len(all_labels["optimal"]) < 2
         or corr_matrix is None
         or corr_matrix.shape[0] < 2
     )
@@ -202,7 +242,7 @@ def generate_kmeans_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        matrix_path = join_filepath([output_dir, "clustering_analysis.png"])
+        matrix_path = join_filepath([output_dir, "clustering_analysis_001.png"])
         plt.savefig(matrix_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(matrix_path)
@@ -249,7 +289,7 @@ def generate_kmeans_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        silhouette_path = join_filepath([output_dir, "silhouette_scores.png"])
+        silhouette_path = join_filepath([output_dir, "cluster_silhouette_scores.png"])
         plt.savefig(silhouette_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(silhouette_path)
@@ -258,7 +298,7 @@ def generate_kmeans_visualization(
 
     # 1. Plot silhouette scores for determining optimal number of clusters
     if silhouette_scores is not None and len(silhouette_scores) > 0:
-        plt.figure(figsize=(10, 6))
+        plt.figure()
         k_range = range(2, 2 + len(silhouette_scores))
 
         # Filter out negative values (failed calculations)
@@ -282,168 +322,179 @@ def generate_kmeans_visualization(
                 )
                 plt.axvline(x=optimal_clusters, color="gray", linestyle="--", alpha=0.7)
 
-            plt.title("Silhouette Score Analysis for K-means Clustering")
+            # Create double-line title with optimal cluster information
+            main_title = "Silhouette Score Analysis for K-means Clustering"
+            if optimal_clusters is not None:
+                subtitle = f"Optimal number of clusters: {optimal_clusters}"
+                plt.title(f"{main_title}\n{subtitle}")
+            else:
+                plt.title(main_title)
+
             plt.xlabel("Number of Clusters (k)")
             plt.ylabel("Silhouette Score")
             plt.grid(True, alpha=0.3)
             plt.xticks(valid_k)  # Show all tested k values on x-axis
-
-            # Add text annotation for optimal cluster
-            if optimal_clusters is not None:
-                plt.figtext(
-                    0.5,
-                    0.01,
-                    f"Optimal number of clusters: {optimal_clusters}",
-                    ha="center",
-                    fontsize=12,
-                )
-        else:
-            plt.text(
-                0.5,
-                0.5,
-                "No valid silhouette scores available",
-                ha="center",
-                va="center",
-                transform=plt.gca().transAxes,
-            )
             plt.axis("on")
 
-        silhouette_path = join_filepath([output_dir, "silhouette_scores.png"])
-        plt.savefig(silhouette_path, bbox_inches="tight")
-        plt.close()
-        save_thumbnail(silhouette_path)
+            silhouette_path = join_filepath(
+                [output_dir, "cluster_silhouette_scores.png"]
+            )
+            plt.savefig(silhouette_path, bbox_inches="tight")
+            plt.close()
+            save_thumbnail(silhouette_path)
 
-    # Reorder correlation matrix based on clusters
-    sort_idx = np.argsort(labels)
-    sorted_corr_matrix = corr_matrix[sort_idx][:, sort_idx]
+    # 2. Plot correlation matrices for optimal, k-1, and k+1
+    # Loop through each matrix type in all_sorted_matrices
+    for key in ["optimal", "minus_1", "plus_1"]:
+        matrix = all_sorted_matrices.get(key)
+        if matrix is None:
+            continue  # Skip if the matrix is not present or is None
 
-    # Calculate cluster information
-    unique_clusters = np.unique(labels)
-    n_clusters = len(unique_clusters)
-    colors = plt.cm.jet(np.linspace(0, 1, n_clusters))
-    custom_cmap = ListedColormap(colors)
+        labels = all_labels.get(key)
+        if labels is None:
+            continue  # Skip if no labels for this k value
 
-    # 2. Correlation matrix heatmap
-    plt.figure()
-    im = plt.imshow(sorted_corr_matrix, cmap="jet")
-    plt.colorbar(im)
-    if optimal_clusters is not None:
-        plt.title(f"K-means Clustering k={optimal_clusters}")
-    else:
-        plt.title(f"K-means Clustering (k={n_clusters})")
-    plt.xlabel("Cells")
-    plt.ylabel("Cells")
+        # Calculate cluster information
+        unique_clusters = np.unique(labels)
+        n_clusters = len(unique_clusters)
+        colors = plt.cm.jet(np.linspace(0, 1, n_clusters))
 
-    matrix_path = join_filepath([output_dir, "clustering_analysis.png"])
-    plt.savefig(matrix_path, bbox_inches="tight")
-    plt.close()
-    save_thumbnail(matrix_path)
+        # Determine k and title based on the key
+        if key == "optimal":
+            if optimal_clusters is not None:
+                k = optimal_clusters
+                title = f"K-means Clustering k={k} (Optimal)"
+            else:
+                k = n_clusters
+                title = f"K-means Clustering (k={k}) (Default )"
+        elif key == "minus_1":
+            k = optimal_clusters - 1
+            title = f"K-means Clustering k={k} (Optimal k-1)"
+        elif key == "plus_1":
+            k = optimal_clusters + 1
+            title = f"K-means Clustering k={k} (Optimal k+1)"
 
-    # 3. Mean time courses by cluster
-    if fluorescence is not None and fluorescence.shape[0] >= len(labels):
+        # Determine the output filename
+        if key == "optimal":
+            filename = "clustering_analysis_001.png"
+        elif key == "minus_1":
+            filename = "clustering_analysis_002.png"
+        elif key == "plus_1":
+            filename = "clustering_analysis_003.png"
+
+        # Create and save the plot
         plt.figure()
-        cluster_averages = []
+        im = plt.imshow(matrix, cmap="viridis")
+        plt.colorbar(im)
+        plt.title(title)
+        plt.xlabel("Cells")
+        plt.ylabel("Cells")
+
+        output_path = join_filepath([output_dir, filename])
+        plt.savefig(output_path, bbox_inches="tight")
+        plt.close()
+        save_thumbnail(output_path)
+
+    # 3. Mean time courses by cluster (using optimal k labels)
+    labels = all_labels.get("optimal")
+    if (
+        labels is not None
+        and fluorescence is not None
+        and fluorescence.shape[0] >= len(labels)
+    ):
+        unique_clusters = np.unique(labels)
+        n_clusters = len(unique_clusters)
+        colors = plt.cm.jet(np.linspace(0, 1, n_clusters))
 
         for i, cluster in enumerate(unique_clusters):
+            plt.figure()
             cluster_mask = labels == cluster
+
             if np.any(cluster_mask):
                 cluster_avg = np.mean(fluorescence[cluster_mask], axis=0)
-                plt.plot(
-                    cluster_avg, color=colors[i], linewidth=2, label=f"Cluster {i+1}"
+                plt.plot(cluster_avg, linewidth=2, color=colors[i])
+
+                # Add individual cell traces with lower alpha
+                for cell_idx in np.where(cluster_mask)[0]:
+                    plt.plot(fluorescence[cell_idx], alpha=0.2, linewidth=0.5)
+
+                plt.title(f"Cluster {i+1} Time Course")
+                plt.xlabel("Time")
+                plt.ylabel("Fluorescence")
+                plt.grid(True, alpha=0.3)
+
+                # Save individual time course plot
+                single_time_path = join_filepath(
+                    [output_dir, f"cluster_time_course_{i+1:03d}.png"]
                 )
-                cluster_averages.append(cluster_avg)
-
-        plt.title("Mean Time Course by Cluster")
-        plt.xlabel("Time")
-        plt.ylabel("Fluorescence")
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-
-        time_path = join_filepath([output_dir, "cluster_time_courses.png"])
-        plt.savefig(time_path, bbox_inches="tight")
-        plt.close()
-        save_thumbnail(time_path)
+                plt.savefig(single_time_path, bbox_inches="tight")
+                plt.close()
+                save_thumbnail(single_time_path)
 
     # 4. Spatial cluster map - attempt only if roi_masks has appropriate shape
-    if roi_masks is not None and hasattr(roi_masks, "shape"):
+    if roi_masks is not None and hasattr(roi_masks, "shape") and labels is not None:
         try:
             # Create cluster colormap
             unique_clusters = np.unique(labels)
             n_clusters = len(unique_clusters)
             colors = plt.cm.jet(np.linspace(0, 1, n_clusters))
-            custom_cmap = ListedColormap(colors)
 
-            # Check for 3D mask (standard case with multiple ROIs)
-            if len(roi_masks.shape) == 3:
-                cluster_map = np.zeros(roi_masks.shape[:2])
-
-                # Create cluster map
-                for i, label in enumerate(labels):
-                    if i < roi_masks.shape[2]:
-                        roi_mask = roi_masks[:, :, i]
-                        cluster_map[roi_mask > 0] = (
-                            label + 1
-                        )  # +1 to avoid 0 (background)
-
-                # Create a mask of all cell locations
-                all_cells_mask = np.zeros(roi_masks.shape[:2], dtype=bool)
-                for i in range(roi_masks.shape[2]):
-                    all_cells_mask |= roi_masks[:, :, i] > 0
-
-                # Create masked cluster map for better visualization
-                masked_cluster_map = np.ma.masked_array(
-                    cluster_map,
-                    mask=~all_cells_mask,  # Mask background (non-cell areas)
-                )
-
-                # Plot cluster map
+            # Create individual plots for each cluster
+            for i, cluster_id in enumerate(unique_clusters):
                 plt.figure()
-                im = plt.imshow(
-                    masked_cluster_map, cmap=custom_cmap, interpolation="nearest"
+
+                # Count cells in this cluster
+                cluster_indices = np.where(labels == cluster_id)[0]
+                cells_in_cluster = len(cluster_indices)
+
+                # Create a binary mask of all ROIs for background
+                roi_binary_mask = (
+                    ~np.isnan(roi_masks)
+                    if np.any(np.isnan(roi_masks))
+                    else roi_masks > 0
                 )
 
-                # Add colorbar with cluster labels
-                colorbar = plt.colorbar(im, ticks=np.arange(1, n_clusters + 1))
-                colorbar.set_label("Cluster")
+                # Show all ROIs in light gray
+                white_cmap = ListedColormap(["white"])
+                plt.imshow(roi_binary_mask, cmap=white_cmap, alpha=0.2)
 
-                # Add cluster legend with unique colors
-                handles = [
-                    plt.Rectangle((0, 0), 1, 1, color=colors[i])
-                    for i in range(n_clusters)
-                ]
-                plt.legend(
-                    handles,
-                    [f"Cluster {i+1}" for i in range(n_clusters)],
-                    loc="upper right",
-                    bbox_to_anchor=(1.3, 1),
+                # Create a mask for only the cells in this cluster
+                cluster_mask = np.zeros_like(roi_masks, dtype=bool)
+
+                # Find unique cell IDs in roi_masks
+                valid_mask = (
+                    ~np.isnan(roi_masks)
+                    if np.any(np.isnan(roi_masks))
+                    else roi_masks > 0
                 )
+                unique_ids = np.unique(roi_masks[valid_mask])
 
-                plt.title("Cluster Spatial Map")
+                # Only include cells from current cluster
+                for idx, cell_id in zip(range(len(unique_ids)), unique_ids):
+                    if (
+                        idx in cluster_indices
+                    ):  # If this cell belongs to current cluster
+                        cell_mask = np.isclose(roi_masks, cell_id)
+                        cluster_mask = cluster_mask | cell_mask
 
-                # Save maps
-                map_path = join_filepath([output_dir, "cluster_spatial_map.png"])
-                plt.savefig(map_path, bbox_inches="tight")
+                # Create colored overlay for this cluster's cells only
+                colored_overlay = np.zeros((*roi_masks.shape, 4))  # RGBA
+                colored_overlay[cluster_mask, :3] = colors[
+                    i, :3
+                ]  # RGB from cluster color
+                colored_overlay[cluster_mask, 3] = 0.7  # Alpha for transparency
+                plt.imshow(colored_overlay)
+
+                plt.title(f"Cluster {i+1} ({cells_in_cluster} cells)")
+                plt.grid(True, alpha=0.3)
+
+                # Save individual cluster map
+                single_map_path = join_filepath(
+                    [output_dir, f"cluster_spatial_map_{i+1:03d}.png"]
+                )
+                plt.savefig(single_map_path, bbox_inches="tight")
                 plt.close()
-                save_thumbnail(map_path)
+                save_thumbnail(single_map_path)
 
-            # Simpler 2D mask case
-            elif len(roi_masks.shape) == 2:
-                cluster_map = np.zeros(roi_masks.shape)
-                # Use most common cluster for the mask
-                if len(labels) > 0:
-                    counts = np.bincount(labels)
-                    most_common = np.argmax(counts) if len(counts) > 0 else 0
-                    cluster_map[roi_masks > 0] = most_common + 1
-
-                # Plot and save as above
-                plt.figure()
-                im = plt.imshow(cluster_map, cmap=custom_cmap)
-                plt.colorbar(im, label="Cluster")
-                plt.title("Cluster Assignments")
-
-                map_path = join_filepath([output_dir, "cluster_spatial_map.png"])
-                plt.savefig(map_path, bbox_inches="tight")
-                plt.close()
-                save_thumbnail(map_path)
         except Exception as e:
             logger.warning(f"Could not create cluster spatial map: {str(e)}")
