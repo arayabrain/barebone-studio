@@ -104,15 +104,16 @@ def pca_analysis(
 
     # Set default parameters if none provided
     if params is None:
-        params = {"n_components": min(50, n_cells), "standard_norm": True}
+        params = {"n_components": n_cells, "standard_norm": True}
     else:
         # Extract parameters from the nested structure if present
         pca_params = params.get("PCA", {})
+
+        # Use n_cells as the default when the key is missing from parameters
         params = {
-            "n_components": min(pca_params.get("n_components", 50), n_cells),
+            "n_components": min(pca_params.get("n_components", n_cells), n_cells),
             "standard_norm": params.get("standard_mean", True),
         }
-
     # Prepare data
     if params.get("standard_norm", True):
         # Center the data
@@ -224,9 +225,9 @@ def pca_analysis(
 
     return {
         "stat": stat,
-        "pca_analysis": stat.pca_analysis,
-        "pca_analysis_variance": stat.pca_analysis_variance,
-        "pca_contribution": stat.pca_contribution,
+        # "pca_analysis": stat.pca_analysis,
+        # "pca_analysis_variance": stat.pca_analysis_variance,
+        # "pca_contribution": stat.pca_contribution,
         "nwbfile": nwbfile,
     }
 
@@ -309,7 +310,7 @@ def generate_pca_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        contrib_path = join_filepath([output_dir, "pca_contribution.png"])
+        contrib_path = join_filepath([output_dir, "pca_contribution_001.png"])
         plt.savefig(contrib_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(contrib_path)
@@ -325,7 +326,7 @@ def generate_pca_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        spatial_path = join_filepath([output_dir, "pca_component_1_spatial.png"])
+        spatial_path = join_filepath([output_dir, "pca_component_spatial_001.png"])
         plt.savefig(spatial_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(spatial_path)
@@ -341,7 +342,7 @@ def generate_pca_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        time_path = join_filepath([output_dir, "pca_component_1_time.png"])
+        time_path = join_filepath([output_dir, "pca_component_time_001.png"])
         plt.savefig(time_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(time_path)
@@ -486,15 +487,29 @@ def generate_pca_visualization(
 
     # 4. Save the contribution weights with PCA components
     # Calculate how many plots we need based on the number of cells
+
+    logger.info(f"Components shape: {components.shape}")
+    logger.info(f"Number of scores dimensions: {scores.shape[1]}")
+    logger.info(f"Explained variance values: {len(explained_variance)}")
+
     n_components = components.shape[0]
     components_per_plot = 20
     n_plots = int(np.ceil(n_components / components_per_plot))
+    logger.info(f"Number of plots: {n_plots}")
 
     for plot_idx in range(n_plots):
         start_idx = plot_idx * components_per_plot
         end_idx = min(start_idx + components_per_plot, n_components)
 
+        logger.info(
+            f"Contribution plot {plot_idx+1}: components {start_idx+1} to {end_idx}"
+        )
+
         if start_idx >= n_components:
+            logger.warning(
+                f"Skipping plot {plot_idx+1} - start_idx {start_idx}"
+                f">= n_components {n_components}"
+            )
             break
 
         # Get the components for this plot
@@ -535,7 +550,9 @@ def generate_pca_visualization(
         plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 
         # Save the figure
-        contrib_path = join_filepath([output_dir, f"pca_contribution_{plot_idx+1}.png"])
+        contrib_path = join_filepath(
+            [output_dir, f"pca_contribution_{plot_idx+1:03d}.png"]
+        )
         plt.savefig(contrib_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(contrib_path)

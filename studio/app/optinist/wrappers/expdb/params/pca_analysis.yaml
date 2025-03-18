@@ -4,7 +4,7 @@ standard_std: True
 
 # PCA parameters
 PCA:
-  n_components: 10
+  # n_components: 10
   copy: True
   whiten: False
   svd_solver: 'auto'

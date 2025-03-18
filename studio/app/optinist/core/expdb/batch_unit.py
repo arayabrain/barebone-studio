@@ -358,7 +358,6 @@ class ExpDbBatch:
             create_directory(expdb_path.plot_dir)
 
             # Save visualization objects with correct names
-            stat_data.pca_analysis.save_plot(expdb_path.plot_dir)
             stat_data.pca_analysis_variance.save_plot(expdb_path.plot_dir)
             stat_data.pca_contribution.save_plot(expdb_path.plot_dir)
 

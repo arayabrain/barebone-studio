@@ -82,7 +82,7 @@ def kmeans_analysis(
 
         return {
             "stat": stat,
-            "clustering_analysis": stat.clustering_analysis,
+            # "cluster_corr_matrix": stat.cluster_corr_matrix,
             "nwbfile": nwbfile,
         }
 
@@ -182,7 +182,7 @@ def kmeans_analysis(
 
     return {
         "stat": stat,
-        "cluster_corr_matrix": stat.cluster_corr_matrix,
+        # "cluster_corr_matrix": stat.cluster_corr_matrix,
         "nwbfile": nwbfile,
     }
 
@@ -242,7 +242,7 @@ def generate_kmeans_visualization(
             transform=plt.gca().transAxes,
         )
         plt.axis("off")
-        matrix_path = join_filepath([output_dir, "clustering_analysis_1.png"])
+        matrix_path = join_filepath([output_dir, "clustering_analysis_001.png"])
         plt.savefig(matrix_path, bbox_inches="tight")
         plt.close()
         save_thumbnail(matrix_path)
