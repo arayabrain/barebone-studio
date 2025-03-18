@@ -8,29 +8,35 @@ from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.dataclass.utils import save_thumbnail
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
+from studio.app.optinist.dataclass.expdb import ExpDbData
 from studio.app.optinist.dataclass.stat import StatData
 
 logger = AppLogger.get_logger()
 
 
 def kmeans_analysis(
-    stat: StatData, cnmf_info: dict, output_dir: str, params: dict = None, **kwargs
+    stat: StatData,
+    cnmf_info: dict,
+    output_dir: str,
+    params: dict = None,
+    ts_file=None,
+    **kwargs,
 ) -> dict:
     """Perform KMeans clustering analysis on CNMF results"""
 
     # Get the fluorescence data
     fluorescence = cnmf_info["fluorescence"].data
 
-    # If iscell data is available, use it to filter fluorescence
-    if "iscell" in cnmf_info and cnmf_info["iscell"] is not None:
-        iscell = cnmf_info["iscell"].data
-        if len(iscell) == fluorescence.shape[0]:
-            good_indices = np.where(iscell == 1)[0]
-            logger.info(f"Using only iscell {len(good_indices)} ROI for KMeans")
+    # # If iscell data is available, use it to filter fluorescence
+    # if "iscell" in cnmf_info and cnmf_info["iscell"] is not None:
+    #     iscell = cnmf_info["iscell"].data
+    #     if len(iscell) == fluorescence.shape[0]:
+    #         good_indices = np.where(iscell == 1)[0]
+    #         logger.info(f"Using only iscell {len(good_indices)} ROI for KMeans")
 
-            if len(good_indices) > 0:
-                # Filter fluorescence to only include good components
-                fluorescence = fluorescence[good_indices]
+    #         if len(good_indices) > 0:
+    #             # Filter fluorescence to only include good components
+    #             fluorescence = fluorescence[good_indices]
 
     n_cells = fluorescence.shape[0]
     logger.info(f"KMeans will use {n_cells} cells")
@@ -86,8 +92,117 @@ def kmeans_analysis(
             "nwbfile": nwbfile,
         }
 
-    # Calculate correlation matrix
-    corr_matrix = np.corrcoef(fluorescence)
+        # Get the fluorescence data
+    fluorescence = cnmf_info["fluorescence"].data
+    n_cells = fluorescence.shape[0]
+
+    # Initialize variables for trial-averaged fluorescence
+    fluorescence_ave = None
+    ts_data = None
+
+    # Load trial structure data if file is provided
+    if ts_file is not None:
+        try:
+            # Create an ExpDbData object with the trial structure file
+            expdb = ExpDbData(paths=[ts_file])
+
+            if hasattr(expdb, "ts") and expdb.ts is not None:
+                ts_data = expdb.ts
+                logger.info(f"Successfully loaded trial structure data from {ts_file}")
+            else:
+                logger.warning(f"Trial structure data not found in {ts_file}")
+        except Exception as e:
+            logger.error(f"Failed to load trial structure data from {ts_file}: {e}")
+
+    # Compute trial-averaged fluorescence if trial structure data is available
+    if ts_data is not None and hasattr(ts_data, "stim_log"):
+        try:
+            stim_log = ts_data.stim_log
+            n_frames = fluorescence.shape[1]
+
+            # Log stim_log info for debugging
+            logger.info(f"Stim log shape: {stim_log.shape}")
+
+            # Check if stim_log exists and calculate dimensions
+            if stim_log is not None and len(stim_log) > 0:
+                n_stims = int(np.max(stim_log)) + 1
+
+                # Calculate and use only complete trials
+                complete_trials = len(stim_log) // n_stims
+
+                if complete_trials > 0:
+                    n_trials = complete_trials
+                    # Use only the portion of stim_log that contains complete trials
+                    usable_stim_log = stim_log[: n_stims * n_trials]
+
+                    # Calculate frame dimensions
+                    n_frames_ave = n_frames // n_trials
+                    n_frames_epoch = n_frames_ave // n_stims
+
+                    # Verify frame dimensions are compatible
+                    if n_frames_epoch * n_stims * n_trials <= n_frames:
+                        # Now do reshaping with verified dimensions
+                        stim_matrix = np.reshape(usable_stim_log, (n_stims, n_trials))
+                        sort_idx_log = np.argsort(stim_matrix, axis=1).ravel()
+
+                        # Initialize trial-averaged fluorescence array
+                        fluorescence_ave = np.zeros((n_cells, n_frames_epoch * n_stims))
+
+                        # Process each cell
+                        for cell_idx in range(n_cells):
+                            # Get the cell's fluorescence data (usable frames)
+                            usable_frames = n_frames_epoch * n_stims * n_trials
+                            cell_fluo = fluorescence[cell_idx, :usable_frames]
+
+                            # Reshape to (n_frames_epoch, n_stims * n_trials)
+                            cell_fluo_reshape = np.reshape(
+                                cell_fluo, (n_frames_epoch, n_stims * n_trials)
+                            )
+
+                            # Sort according to stim_matrix sort_idx_log
+                            cell_fluo_sort = cell_fluo_reshape[:, sort_idx_log]
+
+                            # Reshape for trial averaging
+                            cell_fluo_3d = np.reshape(
+                                cell_fluo_sort, (n_frames_epoch, n_stims, n_trials)
+                            )
+
+                            # Average across trials
+                            # (keeping n_frames_epoch and n_stims dimensions)
+                            cell_fluo_avg = np.mean(
+                                cell_fluo_3d, axis=2
+                            )  # (n_frames_epoch, n_stims)
+
+                            # Reshape to flatten time dimension
+                            # (n_frames_epoch * n_stims)
+                            fluorescence_ave[cell_idx] = np.reshape(cell_fluo_avg, -1)
+
+                        logger.info(
+                            f"Trial-averaged fluo shape: {fluorescence_ave.shape}"
+                        )
+                    else:
+                        logger.warning(
+                            f"Dimensions mismatch: n_frames_epoch({n_frames_epoch}) "
+                            f"* n_stims({n_stims}) * n_trials({n_trials}) > "
+                            f"n_frames({n_frames})"
+                        )
+                else:
+                    logger.warning(
+                        f"No complete trials available "
+                        f"(n_stims={n_stims}, stim_log length={len(stim_log)})"
+                    )
+            else:
+                logger.warning("No stim_log data available in trial structure")
+        except Exception as e:
+            logger.error(f"Error computing trial-averaged fluorescence: {e}")
+
+    # Choose which data to use for clustering
+    data_for_clustering = (
+        fluorescence_ave if fluorescence_ave is not None else fluorescence
+    )
+
+    # Compute correlation matrix
+    corr_matrix = np.corrcoef(data_for_clustering)
 
     # Test clusters from 2 to 30 (or maximum cells if less)
     k_range = range(2, min(31, n_cells))
@@ -162,6 +277,7 @@ def kmeans_analysis(
 
     # Store data needed for visualization
     stat.fluorescence = fluorescence
+    stat.fluorescence_ave = fluorescence_ave
     if not hasattr(stat, "roi_masks") or stat.roi_masks is None:
         stat.roi_masks = cnmf_info["cell_roi"].data
 
@@ -194,6 +310,7 @@ def generate_kmeans_visualization(
     roi_masks,
     silhouette_scores,
     optimal_clusters,
+    fluorescence_ave,
     output_dir,
 ):
     """
@@ -214,6 +331,8 @@ def generate_kmeans_visualization(
         Silhouette scores for different numbers of clusters
     optimal_clusters : int, optional
         Optimal number of clusters based on silhouette analysis
+    fluorescence_ave : ndarray, optional
+        Trial-averaged fluorescence data (n_cells x time)
     output_dir : str
         Directory for saving output files
     """
@@ -399,26 +518,38 @@ def generate_kmeans_visualization(
     labels = all_labels.get("optimal")
     if (
         labels is not None
-        and fluorescence is not None
-        and fluorescence.shape[0] >= len(labels)
+        and (fluorescence is not None or fluorescence_ave is not None)
+        and (
+            (fluorescence is not None and fluorescence.shape[0] >= len(labels))
+            or (
+                fluorescence_ave is not None
+                and fluorescence_ave.shape[0] >= len(labels)
+            )
+        )
     ):
         unique_clusters = np.unique(labels)
         n_clusters = len(unique_clusters)
         colors = plt.cm.jet(np.linspace(0, 1, n_clusters))
+
+        # Choose which fluorescence data to use
+        fluo_data = fluorescence_ave if fluorescence_ave is not None else fluorescence
+        time_course_type = (
+            "Trial-Averaged" if fluorescence_ave is not None else "All Trials"
+        )
 
         for i, cluster in enumerate(unique_clusters):
             plt.figure()
             cluster_mask = labels == cluster
 
             if np.any(cluster_mask):
-                cluster_avg = np.mean(fluorescence[cluster_mask], axis=0)
+                cluster_avg = np.mean(fluo_data[cluster_mask], axis=0)
                 plt.plot(cluster_avg, linewidth=2, color=colors[i])
 
                 # Add individual cell traces with lower alpha
                 for cell_idx in np.where(cluster_mask)[0]:
-                    plt.plot(fluorescence[cell_idx], alpha=0.2, linewidth=0.5)
+                    plt.plot(fluo_data[cell_idx], alpha=0.2, linewidth=0.5)
 
-                plt.title(f"Cluster {i+1} Time Course")
+                plt.title(f"Cluster {i+1} {time_course_type} Time Course")
                 plt.xlabel("Time")
                 plt.ylabel("Fluorescence")
                 plt.grid(True, alpha=0.3)

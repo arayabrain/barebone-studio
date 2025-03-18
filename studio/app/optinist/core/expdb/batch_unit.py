@@ -389,6 +389,7 @@ class ExpDbBatch:
             cnmf_info=cnmf_info,
             output_dir=self.raw_path.output_dir,
             params=get_default_params("kmeans_analysis"),
+            ts_file=self.raw_path.ts_file,
             nwbfile=self.nwbfile,
         )
 
@@ -411,6 +412,7 @@ class ExpDbBatch:
                 roi_masks=cnmf_info["cell_roi"].data,
                 silhouette_scores=stat_data.silhouette_scores,
                 optimal_clusters=stat_data.optimal_clusters,
+                fluorescence_ave=stat_data.fluorescence_ave,
                 output_dir=dir_path,
             )
 
