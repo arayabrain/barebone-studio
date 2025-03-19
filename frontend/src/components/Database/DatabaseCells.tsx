@@ -826,6 +826,11 @@ const DatabaseCells = ({ user }: CellProps) => {
         const { graph_urls } = row
         const graph_url = graph_urls[index]
         if (!graph_url) return null
+        if (!graph_url.thumb_urls || graph_url.thumb_urls.length === 0) {
+          // eslint-disable-next-line no-console
+          console.log(`No thumbnail URLs to display for ${graphTitle}`)
+          return null
+        }
         return (
           <Box
             sx={{ display: "flex", cursor: "pointer" }}
