@@ -78,7 +78,7 @@ def pca_analysis(
         stat.pca_explained_variance = dummy_explained_variance
 
         # Store ROI masks for visualization
-        stat.roi_masks = cnmf_info["cell_roi"].data
+        stat.roi_masks = cnmf_info["all_roi"].data
 
         # Still create visualization objects for proper UI display
         stat.set_pca_props()
@@ -220,7 +220,8 @@ def pca_analysis(
     stat.pca_explained_variance = explained_variance
 
     # Store ROI masks for visualization
-    stat.roi_masks = cnmf_info["cell_roi"].data
+    # Request from client to use data not filtered by iscell
+    stat.roi_masks = cnmf_info["all_roi"].data
 
     # Create visualization objects within the function
     stat.set_pca_props()
@@ -239,9 +240,6 @@ def pca_analysis(
 
     return {
         "stat": stat,
-        # "pca_analysis": stat.pca_analysis,
-        # "pca_analysis_variance": stat.pca_analysis_variance,
-        # "pca_contribution": stat.pca_contribution,
         "nwbfile": nwbfile,
     }
 

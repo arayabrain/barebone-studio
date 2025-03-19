@@ -97,7 +97,7 @@ def kmeans_analysis(
         # Store data needed for visualization
         stat.fluorescence = fluorescence
         stat.fluorescence_ave = np.zeros((1, 1))
-        stat.roi_masks = cnmf_info["cell_roi"].data
+        stat.roi_masks = cnmf_info["all_roi"].data
 
         # Create visualization objects within the function
         stat.set_kmeans_props()
@@ -306,7 +306,8 @@ def kmeans_analysis(
     # Store data needed for visualization
     stat.fluorescence = fluorescence
     stat.fluorescence_ave = fluorescence_ave
-    stat.roi_masks = cnmf_info["cell_roi"].data
+    # Request from client to use data not filtered by iscell
+    stat.roi_masks = cnmf_info["all_roi"].data
 
     # Create visualization objects within the function
     stat.set_kmeans_props()
@@ -325,7 +326,6 @@ def kmeans_analysis(
 
     return {
         "stat": stat,
-        # "cluster_corr_matrix": stat.cluster_corr_matrix,
         "nwbfile": nwbfile,
     }
 
