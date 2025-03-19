@@ -302,7 +302,6 @@ class ExpDbBatch:
             if is_circular:
                 stat_data.tuning_curve.save_plot(dir_path)
                 stat_data.tuning_curve_polar.save_plot(dir_path)
-                stat_data.sf_tuning_curve.save_plot(dir_path)
 
                 stat_data.direction_responsivity_ratio.save_plot(dir_path)
                 stat_data.orientation_responsivity_ratio.save_plot(dir_path)
@@ -316,6 +315,7 @@ class ExpDbBatch:
                 stat_data.direction_tuning_width.save_plot(dir_path)
                 stat_data.orientation_tuning_width.save_plot(dir_path)
             else:
+                stat_data.sf_tuning_curve.save_plot(dir_path)
                 stat_data.stim_selectivity.save_plot(dir_path)
                 stat_data.stim_responsivity.save_plot(dir_path)
                 stat_data.sf_responsivity_ratio.save_plot(dir_path)

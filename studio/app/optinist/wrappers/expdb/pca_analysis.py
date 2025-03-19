@@ -20,46 +20,47 @@ def pca_analysis(
     ts_file=None,
     **kwargs,
 ) -> dict:
-    """Perform PCA analysis on CNMF results with trial structure support"""
+    """
+    Perform PCA analysis on CNMF results with trial structure support
 
-    logger = AppLogger.get_logger()
+    Parameters
+    ----------
+    stat : StatData
+        StatData object to store analysis results
+    cnmf_info : dict
+        Dictionary containing CNMF results including fluorescence data
+    output_dir : str
+        Directory for saving output files
+    params : dict, optional
+        Dictionary of parameters for PCA analysis
+    ts_file : str, optional
+        Path to trial structure file for trial averaging
+    **kwargs : dict
+        Additional keyword arguments
+
+    Returns
+    -------
+    dict
+        Dictionary containing analysis results
+    """
 
     # Get the fluorescence data
     fluorescence = cnmf_info["fluorescence"].data
+    n_cells = fluorescence.shape[0]
 
     # # If iscell data is available, use it to filter fluorescence
     # if "iscell" in cnmf_info and cnmf_info["iscell"] is not None:
     #     iscell = cnmf_info["iscell"].data
     #     if len(iscell) == fluorescence.shape[0]:
     #         good_indices = np.where(iscell == 1)[0]
-    #         logger.info(f"Using iscell {len(iscell)} total cells for PCA")
+    #         logger.info(f"Using only iscell {len(good_indices)} ROI for KMeans")
 
     #         if len(good_indices) > 0:
     #             # Filter fluorescence to only include good components
     #             fluorescence = fluorescence[good_indices]
-    #             # logger.info(f"Filtered fluorescence shape: {fluorescence.shape}")
-
-    # Initialize variables for trial-averaged scores
-    scores_ave = None
-    ts_data = None
-
-    # Load trial structure data if file is provided
-    if ts_file is not None:
-        try:
-            # Create an ExpDbData object with the trial structure file
-            expdb = ExpDbData(paths=[ts_file])
-
-            if hasattr(expdb, "ts") and expdb.ts is not None:
-                ts_data = expdb.ts
-                logger.info(f"Successfully loaded trial structure data from {ts_file}")
-            else:
-                logger.warning(f"Trial structure data not found in {ts_file}")
-        except Exception as e:
-            logger.error(f"Failed to load trial structure data from {ts_file}: {e}")
 
     # Get data shape
     n_cells = fluorescence.shape[0]
-    logger.info(f"PCA will use {n_cells} cells")
 
     # Check if we have enough ROIs for PCA
     if n_cells < 2:
@@ -101,6 +102,7 @@ def pca_analysis(
             "pca_contribution": stat.pca_contribution,
             "nwbfile": nwbfile,
         }
+    logger.info(f"PCA will use {n_cells} cells")
 
     # Set default parameters if none provided
     if params is None:
@@ -127,77 +129,89 @@ def pca_analysis(
         data = fluorescence
 
     # Perform PCA
-    pca = PCA(n_components=params["n_components"])
+    pca = PCA(n_components=params["n_components"], svd_solver="randomized")
     scores = pca.fit_transform(data.T)  # time x components
     components = pca.components_  # components x cells
     explained_variance = pca.explained_variance_ratio_ * 100
 
-    # Compute trial-averaged scores if trial structure data is available
-    if ts_data is not None and hasattr(ts_data, "stim_log"):
-        try:
-            stim_log = ts_data.stim_log
-            n_frames = fluorescence.shape[1]
+    if len(explained_variance) > 1:
+        # Get indices sorted by explained variance (descending)
+        sort_idx = np.argsort(explained_variance)[::-1]
 
-            # Log stim_log info for debugging
-            logger.info(f"Stim log shape: {stim_log.shape}")
+        # Reorder results
+        scores = scores[:, sort_idx]
+        components = components[sort_idx]
+        explained_variance = explained_variance[sort_idx]
 
-            # Check if stim_log exists and calculate dimensions
-            if stim_log is not None and len(stim_log) > 0:
-                n_stims = int(np.max(stim_log)) + 1
+    # Initialize variables for trial-averaging
+    scores_ave = None
 
-                # Calculate and use only complete trials
-                complete_trials = len(stim_log) // n_stims
-                n_components = scores.shape[1]
+    # Create an ExpDbData object with the trial structure file
+    expdb = ExpDbData(paths=[ts_file])
+    ts_data = expdb.ts
+    logger.info(f"Successfully loaded trial structure data from {ts_file}")
 
-                if complete_trials > 0:
-                    n_trials = complete_trials
-                    # Use only the portion of stim_log that contains complete trials
-                    usable_stim_log = stim_log[: n_stims * n_trials]
+    try:
+        stim_log = ts_data.stim_log
+        n_frames = fluorescence.shape[1]
 
-                    # Calculate frame dimensions
-                    n_frames_ave = n_frames // n_trials
-                    n_frames_epoch = n_frames_ave // n_stims
+        # Check if stim_log exists and calculate dimensions
+        if stim_log is not None and len(stim_log) > 0:
+            n_stims = int(np.max(stim_log)) + 1
 
-                    # Verify frame dimensions are compatible
-                    if n_frames_epoch * n_stims * n_trials <= n_frames:
-                        # Now do reshaping with verified dimensions
-                        stim_matrix = np.reshape(usable_stim_log, (n_stims, n_trials))
-                        sort_idx_log = np.argsort(stim_matrix, axis=1).ravel()
+            # Calculate and use only complete trials
+            complete_trials = len(stim_log) // n_stims
+            n_components = scores.shape[1]
 
-                        # Only use the portion of scores in complete trials
-                        usable_frames = n_frames_epoch * n_stims * n_trials
-                        scores_sort = np.reshape(
-                            scores[:usable_frames],
-                            (n_frames_epoch, n_stims * n_trials, n_components),
-                        )[:, sort_idx_log, :]
+            if complete_trials > 0:
+                n_trials = complete_trials
+                # Use only the portion of stim_log that contains complete trials
+                usable_stim_log = stim_log[: n_stims * n_trials]
 
-                        # Final reshape and average as in original code
-                        scores_ave = np.mean(
-                            np.reshape(
-                                scores_sort,
-                                (n_frames_epoch * n_stims, n_trials, n_components),
-                            ),
-                            axis=1,
-                        )
+                # Calculate frame dimensions
+                n_frames_ave = n_frames // n_trials
+                n_frames_epoch = n_frames_ave // n_stims
 
-                        logger.info(
-                            f"Trial-averaged PCA scores shape: {scores_ave.shape}"
-                        )
-                    else:
-                        logger.warning(
-                            f"Dimensions mismatch: n_frames_epoch({n_frames_epoch}) "
-                            f"* n_stims({n_stims}) * n_trials({n_trials}) > "
-                            f"n_frames({n_frames})"
-                        )
+                # Verify frame dimensions are compatible
+                if n_frames_epoch * n_stims * n_trials <= n_frames:
+                    # Now do reshaping with verified dimensions
+                    stim_matrix = np.reshape(usable_stim_log, (n_stims, n_trials))
+                    sort_idx_log = np.argsort(stim_matrix, axis=1).ravel() + np.repeat(
+                        np.arange(0, n_stims), n_trials
+                    )
+
+                    # Only use the portion of scores in complete trials
+                    usable_frames = n_frames_epoch * n_stims * n_trials
+                    scores_sort = np.reshape(
+                        scores[:usable_frames],
+                        (n_frames_epoch, n_stims * n_trials, n_components),
+                    )[:, sort_idx_log, :]
+
+                    # Final reshape and average as in original code
+                    scores_ave = np.mean(
+                        np.reshape(
+                            scores_sort,
+                            (n_frames_epoch * n_stims, n_trials, n_components),
+                        ),
+                        axis=1,
+                    )
+
+                    logger.info(f"Trial-averaged PCA scores shape: {scores_ave.shape}")
                 else:
                     logger.warning(
-                        f"No complete trials available "
-                        f"(n_stims={n_stims}, stim_log length={len(stim_log)})"
+                        f"Dimensions mismatch: n_frames_epoch({n_frames_epoch}) "
+                        f"* n_stims({n_stims}) * n_trials({n_trials}) > "
+                        f"n_frames({n_frames})"
                     )
             else:
-                logger.warning("No stim_log data available in trial structure")
-        except Exception as e:
-            logger.error(f"Error computing trial-averaged PCA scores: {e}")
+                logger.warning(
+                    f"No complete trials available "
+                    f"(n_stims={n_stims}, stim_log length={len(stim_log)})"
+                )
+        else:
+            logger.warning("No stim_log data available in trial structure")
+    except Exception as e:
+        logger.error(f"Error computing trial-averaged PCA scores: {e}")
 
     # Store results in StatData
     stat.pca_scores = scores
@@ -352,7 +366,7 @@ def generate_pca_visualization(
     # Number of components to visualize
     num_components = min(50, components.shape[0], scores.shape[1])
 
-    # Set to 10 as too many make legend illegible
+    # Set to 20 as too many make legend illegible
     plots_to_show = 20
 
     # 1. Plot explained variance
@@ -441,8 +455,8 @@ def generate_pca_visualization(
                         spatial_path = join_filepath(
                             [output_dir, f"pca_component_spatial_{i+1:03d}.png"]
                         )
-                        plt.savefig(spatial_path, bbox_inches="tight")
                         plt.grid(True, alpha=0.3)
+                        plt.savefig(spatial_path, bbox_inches="tight")
                         plt.close()
                         save_thumbnail(spatial_path)
                     else:
@@ -487,7 +501,6 @@ def generate_pca_visualization(
 
     # 4. Save the contribution weights with PCA components
     # Calculate how many plots we need based on the number of cells
-
     logger.info(f"Components shape: {components.shape}")
     logger.info(f"Number of scores dimensions: {scores.shape[1]}")
     logger.info(f"Explained variance values: {len(explained_variance)}")
@@ -496,6 +509,46 @@ def generate_pca_visualization(
     components_per_plot = 20
     n_plots = int(np.ceil(n_components / components_per_plot))
     logger.info(f"Number of plots: {n_plots}")
+
+    # Extract actual cell IDs from roi_masks
+    cell_ids = []
+    if roi_masks is not None and hasattr(roi_masks, "shape"):
+        try:
+            # Extract non-NaN values from roi_masks
+            non_nan_mask = (
+                ~np.isnan(roi_masks)
+                if np.any(np.isnan(roi_masks))
+                else np.ones_like(roi_masks, dtype=bool)
+            )
+
+            if np.any(non_nan_mask):
+                # Get unique cell IDs
+                valid_ids = np.unique(roi_masks[non_nan_mask])
+                cell_ids = list(np.sort(valid_ids))
+                logger.info(f"Found {len(cell_ids)} unique cell IDs in ROI masks")
+            else:
+                logger.warning("No valid values in ROI masks for cell ID extraction")
+        except Exception as e:
+            logger.error(f"Error extracting cell IDs from ROI masks: {str(e)}")
+
+    # If we couldn't extract cell IDs, use sequential numbering
+    if not cell_ids:
+        cell_ids = list(range(components.shape[1]))
+        logger.info("Using sequential numbering for cell IDs")
+
+    # Sort components by explained variance (descending)
+    if explained_variance is not None and len(explained_variance) == n_components:
+        # Get indices sorted by explained variance
+        sorted_indices = np.argsort(explained_variance)[::-1]
+        # Reorder components based on sorted indices
+        sorted_components = components[sorted_indices]
+        # Create mapping from new indices to original indices
+        sorted_to_original = {i: sorted_indices[i] for i in range(len(sorted_indices))}
+        logger.info("Sorted components by explained variance")
+    else:
+        sorted_components = components
+        sorted_to_original = {i: i for i in range(n_components)}
+        logger.warning("Could not sort components by variance - using original order")
 
     for plot_idx in range(n_plots):
         start_idx = plot_idx * components_per_plot
@@ -512,40 +565,67 @@ def generate_pca_visualization(
             )
             break
 
-        # Get the components for this plot
-        plot_components = components[start_idx:end_idx]
-        n_cells = len(plot_components[0])
-
-        # Create figure with appropriate size
         plt.figure()
 
+        # Get the components for this plot
+        plot_components = sorted_components[start_idx:end_idx]
+        n_cells = len(plot_components[0])
+
         # Create x-axis labels for the PCA components
-        x_labels = [f"PC {start_idx + i + 1}" for i in range(len(plot_components))]
+        x_labels = [
+            f"PC {sorted_to_original[start_idx + i] + 1}"
+            for i in range(len(plot_components))
+        ]
         x_positions = np.arange(len(x_labels))
 
-        # For each cell, plot its contribution to each PCA component
+        # Calculate the total contribution magnitude for each cell
+        cell_total_contributions = []
         for cell_idx in range(n_cells):
             # Get this cell's contribution to each component in this plot
             cell_contributions = [comp[cell_idx] for comp in plot_components]
+            # Use sum of absolute values to measure total contribution
+            total_contribution = sum(abs(c) for c in cell_contributions)
+            cell_total_contributions.append((cell_idx, total_contribution))
 
-            # Plot the bar for this cell with a slight offset for visibility
-            # The number of cells might be large, so we use alpha for transparency
+        # Sort cells by their total contribution (descending)
+        sorted_cells = sorted(
+            cell_total_contributions, key=lambda x: x[1], reverse=True
+        )
+
+        # Limit to top 20 contributing cells for readability
+        top_cells = sorted_cells[:20]
+
+        # For each of the top contributing cells, plot its contribution
+        for rank, (cell_idx, _) in enumerate(top_cells):
+            # Get this cell's contribution to each component in this plot
+            cell_contributions = [comp[cell_idx] for comp in plot_components]
+
+            # Get the actual cell ID
+            cell_id = cell_ids[cell_idx] if cell_idx < len(cell_ids) else cell_idx
+            if isinstance(cell_id, (int, float)) and not np.isnan(cell_id):
+                cell_id_label = f"ROI {int(cell_id)}"
+            else:
+                cell_id_label = f"ROI {cell_id}"
+
+            # Plot the bar for this cell
             plt.bar(
                 x_positions,
                 cell_contributions,
-                # Only label first 20 cells to avoid cluttering
-                label=f"Cell {cell_idx}" if cell_idx < 20 else None,
+                label=cell_id_label,  # Use actual cell ID in legend
                 width=0.8,
+                alpha=0.7,
             )
 
         # Add horizontal line at y=0
         plt.axhline(y=0, color="black", linestyle="-", linewidth=1)
 
         # Add labels and title
-        plt.xlabel("PCA Components")
+        plt.xlabel("PCA Components (Sorted by Explained Variance)")
         plt.ylabel("Cell Contribution")
-        plt.title(f"Cell Contributions to PCA Components {start_idx+1} to {end_idx}")
-        plt.xticks(x_positions[::2], x_labels[::2])
+
+        plt.title(f"PCA Components {start_idx+1} to {end_idx} and Cell Contributions")
+
+        plt.xticks(x_positions, x_labels, rotation=45)
         plt.tight_layout()
         plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 
