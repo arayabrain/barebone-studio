@@ -4,6 +4,7 @@ from typing import Tuple
 
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
+from firebase_admin import auth
 from requests.exceptions import HTTPError
 from sqlmodel import Session
 
@@ -79,3 +80,36 @@ async def send_reset_password_mail(db: Session, email: str):
     except Exception as e:
         logging.getLogger().error(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+async def login_with_uid(db: Session, uid: str) -> Token:
+    try:
+        user_db = (
+            db.query(UserModel)
+            .filter(UserModel.uid == uid, UserModel.active.is_(True))
+            .first()
+        )
+        assert user_db is not None, "Invalid user uid"
+
+        token = auth.create_custom_token(uid)
+        user = pyrebase_app.auth().sign_in_with_custom_token(token.decode())
+
+        ex_token = create_access_token(uid)
+        token = Token(
+            access_token=user["idToken"],
+            refresh_token=create_refresh_token(subject=user["refreshToken"]),
+            token_type="bearer",
+            ex_token=ex_token,
+        )
+
+        return token
+
+    except (HTTPError, AssertionError) as e:
+        logging.getLogger().error(e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    except Exception as e:
+        logging.getLogger().error(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
