@@ -215,6 +215,20 @@ class EditROI:
                 self.function_id,
             )
 
+        elif "vacant_roi" in self.function_id:
+            from studio.app.optinist.core.edit_ROI.wrappers.vacant_roi_edit_roi import (
+                commit_edit as vacant_roi_commit,
+            )
+
+            info = vacant_roi_commit(
+                self.data.images,
+                self.tmp_data,
+                self.output_info.get("fluorescence"),
+                self.tmp_iscell,
+                self.node_dirpath,
+                self.function_id,
+            )
+
         elif "caiman" in self.function_id:
             from studio.app.optinist.core.edit_ROI.wrappers.caiman_edit_roi import (
                 commit_edit as caiman_commit,
