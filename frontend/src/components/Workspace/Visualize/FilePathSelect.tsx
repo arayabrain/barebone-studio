@@ -229,6 +229,7 @@ function toDataTypeFromFileType(fileType: FILE_TYPE) {
       return DATA_TYPE_SET.BEHAVIOR
     case FILE_TYPE_SET.MATLAB:
     case FILE_TYPE_SET.MICROSCOPE:
+    case FILE_TYPE_SET.MICROSCOPE_EXPDB:
     case FILE_TYPE_SET.EXPDB:
       return DATA_TYPE_SET.MATLAB
   }

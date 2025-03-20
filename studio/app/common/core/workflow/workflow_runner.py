@@ -134,6 +134,8 @@ class WorkflowRunner:
                     data_rule = data_common_rule.mat()
                 elif node.type == NodeType.MICROSCOPE:
                     data_rule = data_common_rule.microscope()
+                elif node.type == NodeType.MICROSCOPE_EXPDB:
+                    data_rule = data_common_rule.microscope_expdb()
                 elif node.type == NodeType.EXPDB:
                     data_rule = data_common_rule.expdb()
 

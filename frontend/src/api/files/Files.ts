@@ -11,6 +11,7 @@ export const FILE_TREE_TYPE_SET = {
   BEHAVIOR: "behavior",
   MATLAB: "matlab",
   MICROSCOPE: "microscope",
+  MICROSCOPE_EXPDB: "microscope_expdb",
   EXPDB: "expdb",
   ALL: "all",
 } as const

@@ -47,6 +47,8 @@ def main():
             outputfile = FileWriter.mat(rule_config)
         elif rule_config.type == FILETYPE.MICROSCOPE:
             outputfile = FileWriter.microscope(rule_config)
+        elif rule_config.type == FILETYPE.MICROSCOPE_EXPDB:
+            outputfile = FileWriter.microscope_expdb(rule_config)
         elif rule_config.type == FILETYPE.EXPDB:
             outputfile = FileWriter.exp_db(rule_config)
         else:

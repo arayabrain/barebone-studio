@@ -10,6 +10,7 @@ class FILETYPE:
     BEHAVIOR: str = "behavior"
     MATLAB: str = "matlab"
     MICROSCOPE: str = "microscope"
+    MICROSCOPE_EXPDB: str = "microscope_expdb"
     EXPDB: str = "expdb"
 
 
@@ -19,9 +20,17 @@ class ACCEPT_FILE_EXT(Enum):
     HDF5_EXT = [".hdf5", ".nwb", ".HDF5", ".NWB"]
     MATLAB_EXT = [".mat"]
     MICROSCOPE_EXT = [".nd2", ".oir", ".isxd", ".thor.zip", ".xml"]
+    MICROSCOPE_EXPDB_EXT = [".nd2", ".oir", ".isxd", ".thor.zip", ".xml"]
     EXPDB = []  # Note: EXPDB does not have a file ext.
 
-    ALL_EXT = TIFF_EXT + CSV_EXT + HDF5_EXT + MATLAB_EXT + MICROSCOPE_EXT
+    ALL_EXT = (
+        TIFF_EXT
+        + CSV_EXT
+        + HDF5_EXT
+        + MATLAB_EXT
+        + MICROSCOPE_EXT
+        + MICROSCOPE_EXPDB_EXT
+    )
 
 
 ORIGINAL_DATA_EXT = ".orig"

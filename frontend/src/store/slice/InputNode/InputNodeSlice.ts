@@ -150,6 +150,12 @@ export const inputNodeSlice = createSlice({
                 param: {},
               }
               break
+            case FILE_TYPE_SET.MICROSCOPE_EXPDB:
+              state[node.id] = {
+                fileType,
+                param: {},
+              }
+              break
             case FILE_TYPE_SET.EXPDB:
               state[node.id] = {
                 fileType,
@@ -216,6 +222,13 @@ export const inputNodeSlice = createSlice({
                   fileType: FILE_TYPE_SET.MICROSCOPE,
                   param: {},
                 }
+              } else if (
+                node.data.fileType === FILE_TYPE_SET.MICROSCOPE_EXPDB
+              ) {
+                newState[node.id] = {
+                  fileType: FILE_TYPE_SET.MICROSCOPE_EXPDB,
+                  param: {},
+                }
               } else if (node.data.fileType === FILE_TYPE_SET.EXPDB) {
                 newState[node.id] = {
                   fileType: FILE_TYPE_SET.EXPDB,
@@ -263,6 +276,14 @@ export const inputNodeSlice = createSlice({
                 } else if (node.data.fileType === FILE_TYPE_SET.MICROSCOPE) {
                   newState[node.id] = {
                     fileType: FILE_TYPE_SET.MICROSCOPE,
+                    selectedFilePath: node.data.path as string,
+                    param: {},
+                  }
+                } else if (
+                  node.data.fileType === FILE_TYPE_SET.MICROSCOPE_EXPDB
+                ) {
+                  newState[node.id] = {
+                    fileType: FILE_TYPE_SET.MICROSCOPE_EXPDB,
                     selectedFilePath: node.data.path as string,
                     param: {},
                   }

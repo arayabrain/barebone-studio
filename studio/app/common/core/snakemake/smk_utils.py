@@ -20,23 +20,40 @@ logger = AppLogger.get_logger()
 class SmkUtils:
     @classmethod
     def input(cls, details):
+
+        logger.debug("======================================================  input:")
+        logger.debug(details)
+        logger.debug(details["type"])
+        # print(
+        #     "======================================================  input:",
+        #     details,
+        #     details["type"],
+        # )
+
         if NodeTypeUtil.check_nodetype_from_filetype(details["type"]) == NodeType.DATA:
             if details["type"] in [FILETYPE.IMAGE]:
                 return [join_filepath([DIRPATH.INPUT_DIR, x]) for x in details["input"]]
-            elif details["type"] == FILETYPE.MICROSCOPE:
+            elif details["type"] == FILETYPE.MICROSCOPE_EXPDB:
                 exp_id = details["input"]
                 subject_id = exp_id.split("_")[0]
                 exp_dir = join_filepath([EXPDB_DIRPATH.EXPDB_DIR, subject_id, exp_id])
 
                 microscope_files = []
-                for ext in ACCEPT_FILE_EXT.MICROSCOPE_EXT.value:
+                for ext in ACCEPT_FILE_EXT.MICROSCOPE_EXPDB_EXT.value:
                     microscope_files.extend(glob(join_filepath([exp_dir, f"*{ext}"])))
 
                 assert (
                     len(microscope_files) > 0
                 ), "No Microscope data file found. " + str(
-                    ACCEPT_FILE_EXT.MICROSCOPE_EXT.value
+                    ACCEPT_FILE_EXT.MICROSCOPE_EXPDB_EXT.value
                 )
+
+                logger.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> microscope_files:")
+                logger.debug(microscope_files)
+                # print(
+                #     ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> microscope_files:",
+                #     microscope_files,
+                # )
 
                 return microscope_files
             elif details["type"] == FILETYPE.EXPDB:

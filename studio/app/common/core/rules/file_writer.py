@@ -12,6 +12,7 @@ from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass.expdb import ExpDbData
 from studio.app.optinist.dataclass.iscell import IscellData
 from studio.app.optinist.dataclass.microscope import MicroscopeData
+from studio.app.optinist.dataclass.microscope_expdb import MicroscopeExpdbData
 from studio.app.optinist.routers.mat import MatGetter
 
 
@@ -68,6 +69,14 @@ class FileWriter:
     @classmethod
     def microscope(cls, rule_config: Rule):
         info = {rule_config.return_arg: MicroscopeData(rule_config.input)}
+        nwbfile = rule_config.nwbfile
+        nwbfile["image_series"]["external_file"] = info[rule_config.return_arg]
+        info["nwbfile"] = {"input": nwbfile}
+        return info
+
+    @classmethod
+    def microscope_expdb(cls, rule_config: Rule):
+        info = {rule_config.return_arg: MicroscopeExpdbData(rule_config.input)}
         nwbfile = rule_config.nwbfile
         nwbfile["image_series"]["external_file"] = info[rule_config.return_arg]
 
