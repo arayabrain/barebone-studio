@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { LoginDTO, loginApi } from "api/auth/Auth"
+import { LoginDTO, loginApi, proxyLoginApi } from "api/auth/Auth"
 import {
   deleteUserApi,
   createUserApi,
@@ -28,6 +28,19 @@ export const login = createAsyncThunk(
   async (data: LoginDTO, thunkAPI) => {
     try {
       const responseData = await loginApi(data)
+      return responseData
+    } catch (e) {
+      return thunkAPI.rejectWithValue(e)
+    }
+  },
+)
+
+export const proxyLogin = createAsyncThunk(
+  `${USER_SLICE_NAME}/login`,
+  async (uid: string, thunkAPI) => {
+    try {
+      const responseData = await proxyLoginApi(uid)
+      await thunkAPI.dispatch(getMe())
       return responseData
     } catch (e) {
       return thunkAPI.rejectWithValue(e)

@@ -36,3 +36,8 @@ export const sendResetPasswordMailApi = async (
   )
   return response.data
 }
+
+export const proxyLoginApi = async (uid: string): Promise<TokenDTO> => {
+  const response = await axios.post(`/auth/proxy-login/${uid}`)
+  return response.data
+}
