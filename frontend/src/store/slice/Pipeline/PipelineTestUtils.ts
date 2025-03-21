@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { createElement, MouseEvent } from "react"
 import { Edge } from "reactflow"
+
+import { OptionsObject, SnackbarKey } from "notistack"
 
 import { AsyncThunk, AnyAction } from "@reduxjs/toolkit"
 
@@ -175,3 +178,34 @@ export const createRunResultAndCancelRejectedAction = (
   },
   error: errorMessage,
 })
+
+// Handle workflow yaml error occurring when using v1.0 yaml in v2.0
+export function handleWorkflowYamlError(
+  error: any,
+  enqueueSnackbar: (message: string, options?: OptionsObject) => SnackbarKey,
+): void {
+  // Catch workflow yaml parameter errors
+  if (error?.response?.status === 422) {
+    const snackbarOptions: OptionsObject = {
+      variant: "warning",
+      autoHideDuration: 30000,
+      action: function (_key: SnackbarKey) {
+        return createElement(
+          "span",
+          {
+            role: "button",
+            onMouseDown: (e: MouseEvent<HTMLSpanElement>) => {
+              e.stopPropagation()
+              window.open("https://github.com/oist/optinist/wiki/FAQ", "_blank")
+            },
+            className: "text-inherit underline cursor-pointer",
+          },
+          "Click here",
+        )
+      },
+    }
+    enqueueSnackbar("Workflow yaml error, see FAQ\n", snackbarOptions)
+  } else {
+    enqueueSnackbar("Failed to Run workflow", { variant: "error" })
+  }
+}

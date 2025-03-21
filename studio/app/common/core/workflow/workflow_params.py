@@ -13,11 +13,10 @@ def get_typecheck_params(message_params, name):
 
 
 def check_types(params, default_params):
+    faq_url = "https://github.com/oist/optinist/wiki/FAQ"
     for key in params.keys():
         if key not in default_params:
-            logger.error(f"Missing key: {key} in parameters")
-            logger.error("You may need to update your workflow yaml file see FAQ")
-            logger.error("https://github.com/oist/optinist/wiki/FAQ")
+            logger.error(f"Invalid Workflow yaml param: [{key}]. See {faq_url}")
             raise KeyError("Workflow yaml error, see FAQ")
         if isinstance(params[key], dict):
             params[key] = check_types(params[key], default_params[key])

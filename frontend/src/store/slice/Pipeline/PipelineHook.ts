@@ -31,6 +31,7 @@ import {
   selectPipelineStatus,
 } from "store/slice/Pipeline/PipelineSelectors"
 import { RUN_STATUS } from "store/slice/Pipeline/PipelineType"
+import { handleWorkflowYamlError } from "store/slice/Pipeline/PipelineUtils"
 import { selectRunPostData } from "store/slice/Run/RunSelectors"
 import { selectModeStandalone } from "store/slice/Standalone/StandaloneSeclector"
 import { fetchWorkflow } from "store/slice/Workflow/WorkflowActions"
@@ -115,33 +116,7 @@ export function useRunPipeline() {
       )
         .unwrap()
         .catch((error) => {
-          // Catch workflow yaml parameter errors
-          if (error?.response?.status === 422) {
-            const snackbarOptions: OptionsObject = {
-              variant: "warning",
-              autoHideDuration: 30000,
-              action: function (_key: SnackbarKey) {
-                return createElement(
-                  "span",
-                  {
-                    role: "button",
-                    onMouseDown: (e: MouseEvent<HTMLSpanElement>) => {
-                      e.stopPropagation()
-                      window.open(
-                        "https://github.com/oist/optinist/wiki/FAQ",
-                        "_blank",
-                      )
-                    },
-                    className: "text-inherit underline cursor-pointer",
-                  },
-                  "Click here",
-                )
-              },
-            }
-            enqueueSnackbar("Workflow yaml error, see FAQ\n", snackbarOptions)
-          } else {
-            enqueueSnackbar("Failed to Run workflow", { variant: "error" })
-          }
+          handleWorkflowYamlError(error, enqueueSnackbar)
         })
     },
     [dispatch, enqueueSnackbar, runPostData],
@@ -151,33 +126,7 @@ export function useRunPipeline() {
     dispatch(runByCurrentUid({ runPostData }))
       .unwrap()
       .catch((error) => {
-        // Catch workflow yaml parameter errors
-        if (error?.response?.status === 422) {
-          const snackbarOptions: OptionsObject = {
-            variant: "warning",
-            autoHideDuration: 30000,
-            action: function (_key: SnackbarKey) {
-              return createElement(
-                "span",
-                {
-                  role: "button",
-                  onMouseDown: (e: MouseEvent<HTMLSpanElement>) => {
-                    e.stopPropagation()
-                    window.open(
-                      "https://github.com/oist/optinist/wiki/FAQ",
-                      "_blank",
-                    )
-                  },
-                  className: "text-inherit underline cursor-pointer",
-                },
-                "Click here",
-              )
-            },
-          }
-          enqueueSnackbar("Workflow yaml error, see FAQ\n", snackbarOptions)
-        } else {
-          enqueueSnackbar("Failed to Run workflow", { variant: "error" })
-        }
+        handleWorkflowYamlError(error, enqueueSnackbar)
       })
   }, [dispatch, enqueueSnackbar, runPostData])
 
