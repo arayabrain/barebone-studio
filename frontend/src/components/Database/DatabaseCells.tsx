@@ -848,6 +848,11 @@ const DatabaseCells = ({ user }: CellProps) => {
               alt={""}
               width={"100%"}
               height={"100%"}
+              onError={(e) => {
+                // eslint-disable-next-line no-console
+                console.error(`Error loading thumbnail for ${graphTitle}:`, e)
+                e.currentTarget.style.display = "none"
+              }}
             />
           </Box>
         )
