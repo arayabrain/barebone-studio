@@ -27,6 +27,7 @@ from studio.app.const import (
     EXP_METADATA_SUFFIX,
     FOV_CONTRAST,
     FOV_SUFFIX,
+    TC_FIELDNAME,
     TC_SUFFIX,
     THUMBNAIL_HEIGHT,
     TS_SUFFIX,
@@ -41,6 +42,7 @@ from studio.app.optinist.core.expdb.crud_expdb import (
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.core.nwb.nwb_creater import save_nwb
 from studio.app.optinist.dataclass import ExpDbData, StatData
+from studio.app.optinist.dataclass.fluo import FluoData
 from studio.app.optinist.dataclass.microscope import MicroscopeData
 from studio.app.optinist.wrappers.caiman.cnmf_preprocessing import (
     caiman_cnmf_preprocessing,
@@ -182,6 +184,20 @@ class ExpDbBatch:
         return (cellmask, imxx, ncells)
 
     @stopwatch(callback=__stopwatch_callback)
+    def load_raw_timecourse_data(self):
+        """
+        Load timecourse data from .mat file
+        Returns the timecourse data array
+        """
+        from scipy.io import loadmat
+
+        timecourse = loadmat(self.raw_path.tc_file).get(TC_FIELDNAME)
+        if timecourse is None:
+            self.logger_.info(f"Failed to load timecourse from {self.raw_path.tc_file}")
+
+        return timecourse
+
+    @stopwatch(callback=__stopwatch_callback)
     def preprocess(self) -> ImageData:
         self.logger_.info("process 'preprocess' start.")
         create_directory(self.raw_path.preprocess_dir)
@@ -287,6 +303,79 @@ class ExpDbBatch:
             ), f"generate cellmasks failed in {expdb_path.cellmask_dir}"
 
         return ncells
+
+    @stopwatch(callback=__stopwatch_callback)
+    def create_cnmf_info_from_mat_files(self):
+        """
+        Create a minimal cnmf_info dictionary from existing mat files
+        when microscope data is not available
+
+        Returns:
+            dict: cnmf_info dictionary with fluorescence and cell_roi data
+        """
+        try:
+            # Load existing data
+            timecourse = self.load_raw_timecourse_data()
+
+            cellmask, imxx, ncells = self.load_raw_cellmask_data()
+
+            self.logger_.info(
+                f"Loaded timecourse shape: {timecourse.shape}, ncells: {ncells}"
+            )
+            self.logger_.info(f"Loaded cellmask shape: {cellmask.shape}")
+
+            # Transpose if necessary
+            if timecourse.shape[0] != ncells:
+                # Transpose to orientation: ncells x time_points
+                timecourse = timecourse.T
+                self.logger_.info(f"Timecourse transposed: {timecourse.shape}")
+
+            # The FluoData constructor doesn't change the data shape, just wraps it
+            fluorescence = FluoData(timecourse, file_name="fluorescence")
+
+            # Process the cellmask similar to generate_cellmasks method
+            imx = imy = int(math.sqrt(imxx))
+            cellmask_reshaped = np.reshape(cellmask, (imx, imy, ncells), order="F")
+
+            self.logger_.info(
+                f"Loaded cellmask cellmask_reshaped: {cellmask_reshaped.shape}"
+            )
+
+            # Create a 2D image where each pixel value is the cell index (1-based)
+            cell_masks_binary = np.where(cellmask_reshaped == 0, 0, 1)
+            roi_image = np.zeros((imx, imy))
+            for i in range(ncells):
+                # Add 1 because cell indices should be 1-based in visualization code
+                roi_image = np.where(
+                    (roi_image == 0) & (cell_masks_binary[:, :, i] > 0),
+                    i + 1,
+                    roi_image,
+                )
+            # Make background NaN for visualization
+            roi_image = np.where(roi_image == 0, np.nan, roi_image)
+
+            # Create simple container with just the data attribute
+            class SimpleRoiContainer:
+                def __init__(self, data):
+                    self.data = data
+
+            cell_roi = SimpleRoiContainer(roi_image)
+
+            # Create minimal cnmf_info dictionary
+            cnmf_info = {
+                "fluorescence": fluorescence,
+                "cell_roi": cell_roi,
+                "iscell": None,  # Use None since we assume all cells are valid
+            }
+
+            self.logger_.info(
+                f"Created cnmf_info from existing files: {ncells} ROI found"
+            )
+            return cnmf_info
+
+        except Exception as e:
+            self.logger_.info(f"Error creating cnmf_info from existing files: {str(e)}")
+            return None
 
     @stopwatch(callback=__stopwatch_callback)
     def generate_plots(self, stat_data: StatData):

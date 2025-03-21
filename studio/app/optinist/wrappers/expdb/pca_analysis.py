@@ -61,6 +61,9 @@ def pca_analysis(
 
     # Get data shape
     n_cells = fluorescence.shape[0]
+    logger.info(
+        f"PCA: fluorescence shape is {fluorescence.shape}, so n_cells = {n_cells}"
+    )
 
     # Check if we have enough ROIs for PCA
     if n_cells < 2:
@@ -212,6 +215,8 @@ def pca_analysis(
             logger.warning("No stim_log data available in trial structure")
     except Exception as e:
         logger.error(f"Error computing trial-averaged PCA scores: {e}")
+    else:
+        logger.warning("No trial structure data available for PCA analysis")
 
     # Store results in StatData
     stat.pca_scores = scores
@@ -280,7 +285,8 @@ def generate_pca_visualization(
             unique_ids = np.unique(roi_masks[non_nan_mask])
             for val in unique_ids:
                 count = np.sum(np.isclose(roi_masks, val))
-                logger.info(f"  ROI ID {val}: {count} pixels")
+                _ = count
+                # logger.info(f"  ROI ID {val}: {count} pixels")
         else:
             logger.warning("WARNING: All values in ROI mask are NaN")
 
