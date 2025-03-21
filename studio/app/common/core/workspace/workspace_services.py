@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import yaml
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, delete, update
@@ -74,3 +76,28 @@ class WorkspaceService:
             )
         )
         db.commit()
+
+    @classmethod
+    def sync_workspace_experiment(cls, db: Session, workspace_id):
+        folder = join_filepath([DIRPATH.OUTPUT_DIR, workspace_id])
+        exp_records = []
+
+        for exp_folder in Path(folder).iterdir():
+            data_usage = get_folder_size(exp_folder.as_posix())
+            cls._update_exp_data_usage_yaml(
+                (exp_folder / DIRPATH.EXPERIMENT_YML).as_posix(), data_usage
+            )
+            exp_records.append(
+                ExperimentRecord(
+                    workspace_id=workspace_id,
+                    uid=exp_folder.name,
+                    data_usage=data_usage,
+                )
+            )
+
+        db.execute(
+            delete(ExperimentRecord).where(
+                ExperimentRecord.workspace_id == workspace_id
+            )
+        )
+        db.bulk_save_objects(exp_records)
