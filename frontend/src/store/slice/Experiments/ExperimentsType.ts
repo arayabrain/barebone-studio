@@ -35,6 +35,7 @@ export type ExperimentType = {
   finishedAt?: string
   hasNWB: boolean
   frameRate?: number
+  data_usage: number
 }
 
 export type ExperimentFunction = {

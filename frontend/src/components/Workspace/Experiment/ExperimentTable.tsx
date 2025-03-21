@@ -65,6 +65,7 @@ import {
   selectExperimentsErrorMessage,
   selectExperimentList,
   selectExperimentHasNWB,
+  selectExperimentDataUsage,
 } from "store/slice/Experiments/ExperimentsSelectors"
 import { ExperimentSortKeys } from "store/slice/Experiments/ExperimentsType"
 import {
@@ -77,6 +78,7 @@ import {
   selectIsWorkspaceOwner,
 } from "store/slice/Workspace/WorkspaceSelector"
 import { AppDispatch, RootState } from "store/store"
+import { convertBytes } from "utils"
 
 export const ExperimentUidContext = createContext<string>("")
 
@@ -87,7 +89,7 @@ export const ExperimentTable: FC = () => {
   const dispatch = useDispatch<AppDispatch>()
   useEffect(() => {
     if (isUninitialized) {
-      dispatch(getExperiments())
+      setTimeout(() => dispatch(getExperiments()), 100)
     }
   }, [dispatch, isUninitialized])
 
@@ -460,6 +462,15 @@ const HeadItem = memo(function HeadItem({
             Name
           </TableSortLabel>
         </TableCell>
+        <TableCell>
+          <TableSortLabel
+            active={sortTarget === "name"}
+            direction={order}
+            onClick={sortHandler("name")}
+          >
+            Data usage
+          </TableSortLabel>
+        </TableCell>
         <TableCell>Success</TableCell>
         <TableCell>Reproduce</TableCell>
         <TableCell>Workflow</TableCell>
@@ -486,6 +497,7 @@ const RowItem = memo(function RowItem({
   const uid = useContext(ExperimentUidContext)
   const startedAt = useSelector(selectExperimentStartedAt(uid))
   const finishedAt = useSelector(selectExperimentFinishedAt(uid))
+  const dataUsage = useSelector(selectExperimentDataUsage(uid))
   const status = useSelector(selectExperimentStatus(uid))
   const name = useSelector(selectExperimentName(uid))
   const hasNWB = useSelector(selectExperimentHasNWB(uid))
@@ -597,6 +609,7 @@ const RowItem = memo(function RowItem({
             </>
           )}
         </TableCell>
+        <TableCell>{convertBytes(dataUsage)}</TableCell>
         <TableCell>
           <ExperimentStatusIcon status={status} />
         </TableCell>

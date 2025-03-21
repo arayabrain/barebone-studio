@@ -42,6 +42,7 @@ export function convertToExperimentType(dto: ExperimentDTO): ExperimentType {
     status: dto.success,
     name: dto.name,
     hasNWB: dto.hasNWB,
+    data_usage: dto.data_usage,
     functions,
     frameRate: dto.nwb?.imaging_plane.imaging_rate,
   }
