@@ -215,8 +215,6 @@ def pca_analysis(
             logger.warning("No stim_log data available in trial structure")
     except Exception as e:
         logger.error(f"Error computing trial-averaged PCA scores: {e}")
-    else:
-        logger.warning("No trial structure data available for PCA analysis")
 
     # Store results in StatData
     stat.pca_scores = scores

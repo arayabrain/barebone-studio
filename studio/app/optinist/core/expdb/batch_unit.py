@@ -360,12 +360,14 @@ class ExpDbBatch:
                     self.data = data
 
             cell_roi = SimpleRoiContainer(roi_image)
+            all_roi = SimpleRoiContainer(roi_image)
 
             # Create minimal cnmf_info dictionary
             cnmf_info = {
                 "fluorescence": fluorescence,
                 "cell_roi": cell_roi,
-                "iscell": None,  # Use None since we assume all cells are valid
+                "all_roi": all_roi,
+                "iscell": np.ones(ncells, dtype=int),
             }
 
             self.logger_.info(
