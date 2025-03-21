@@ -3,6 +3,7 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from firebase_admin import auth as firebase_auth
 from firebase_admin.auth import UserRecord
 from sqlalchemy import func
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, select
 
 from studio.app.common.core.auth.auth import authenticate_user
@@ -69,6 +70,32 @@ async def list_user(
         return users
 
     try:
+        workspace_capacity_subq = (
+            select(
+                Workspace.user_id,
+                func.coalesce(func.sum(Workspace.input_data_usage), 0).label(
+                    "input_workspace_capacity"
+                ),
+            )
+            .where(Workspace.deleted.is_(False))
+            .group_by(Workspace.user_id)
+            .subquery()
+        )
+        experiment_capacity_subq = (
+            select(
+                Workspace.user_id,
+                func.coalesce(func.sum(ExperimentRecord.data_usage), 0).label(
+                    "experiment_capacity"
+                ),
+            )
+            .join(ExperimentRecord, ExperimentRecord.workspace_id == Workspace.id)
+            .group_by(Workspace.user_id)
+            .subquery()
+        )
+
+        WorkspaceCapacity = aliased(workspace_capacity_subq)
+        ExperimentCapacity = aliased(experiment_capacity_subq)
+
         sa_sort_list = sortOptions.get_sa_sort_list(
             sa_table=UserModel,
             mapping={"role_id": UserRoleModel.role_id, "role": RoleModel.role},
@@ -78,13 +105,13 @@ async def list_user(
             query=select(
                 UserModel,
                 func.min(UserRoleModel.role_id),
-                func.coalesce(func.sum(Workspace.input_data_usage), 0)
-                + func.coalesce(func.sum(ExperimentRecord.data_usage), 0).label(
+                func.coalesce(WorkspaceCapacity.c.input_workspace_capacity, 0)
+                + func.coalesce(ExperimentCapacity.c.experiment_capacity, 0).label(
                     "data_usage"
                 ),
             )
-            .outerjoin(Workspace, Workspace.user_id == UserModel.id)
-            .outerjoin(ExperimentRecord, ExperimentRecord.workspace_id == Workspace.id)
+            .outerjoin(WorkspaceCapacity, WorkspaceCapacity.c.user_id == UserModel.id)
+            .outerjoin(ExperimentCapacity, ExperimentCapacity.c.user_id == UserModel.id)
             .join(UserRoleModel, UserRoleModel.user_id == UserModel.id, isouter=True)
             .join(RoleModel, RoleModel.id == UserRoleModel.role_id, isouter=True)
             .filter(
