@@ -17,6 +17,7 @@ handlers:
     level: DEBUG
     formatter: default
     filename: logs/studio.log
+    encoding: utf-8
     when: midnight
     interval: 1
     backupCount: 365

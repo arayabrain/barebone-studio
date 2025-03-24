@@ -31,7 +31,6 @@ export const setImageItemClickedDataId = createAsyncThunk<
         item.filePath != null &&
         item.refImageItemId === itemId &&
         clickedDataId &&
-        !item.drawOrderList.includes(clickedDataId) &&
         !tempAdd?.includes(Number(clickedDataId))
       ) {
         thunkAPI.dispatch(

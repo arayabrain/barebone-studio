@@ -38,6 +38,7 @@ import Loading from "components/common/Loading"
 import PaginationCustom from "components/common/PaginationCustom"
 import PopupShare from "components/Workspace/PopupShare"
 import { selectCurrentUser } from "store/slice/User/UserSelector"
+import { resetVisualizeLayout } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import {
   delWorkspace,
   getListUserShareWorkSpaces,
@@ -373,6 +374,7 @@ const Workspaces = () => {
   }
 
   const handleNavWorkflow = (id: number) => {
+    dispatch(resetVisualizeLayout())
     navigate(`/console/workspaces/${id}`)
   }
 

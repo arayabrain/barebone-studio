@@ -423,6 +423,7 @@ const Content = styled(Box)`
   position: relative;
   white-space: pre-wrap;
   margin: auto;
+  padding: 12px 0 12px 0;
   outline: none;
 `
 

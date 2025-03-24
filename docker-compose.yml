@@ -21,7 +21,6 @@ services:
     volumes:
       # optinist data outputs directories
       - ../optinist-docker-volumes/.snakemake/:/app/.snakemake
-      - ../optinist-docker-volumes/logs/:/app/logs
       - ../optinist-docker-volumes/studio_data/:/app/studio_data
 
       # external datasets directories
