@@ -1,7 +1,7 @@
 import { EXPERIMENTS_STATUS } from "store/slice/Experiments/ExperimentsType"
 import { RootState } from "store/store"
 
-const selectExperiments = (state: RootState) => state.experiments
+export const selectExperiments = (state: RootState) => state.experiments
 
 export const selectExperimentsStatusIsUninitialized = (state: RootState) =>
   selectExperiments(state).status === "uninitialized"

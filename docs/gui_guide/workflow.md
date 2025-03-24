@@ -1,8 +1,9 @@
-Workflow
-=================
+# Workflow
+
 OptiNiSt makes it easy to create analysis pipelines using the GUI.
 
 In the workflow field, you can:
+
 - Select the data and the algorithms or analysis methods (node).
 - Connect these nodes to define the order of processing (workflow).
 
@@ -14,14 +15,18 @@ The analysis pipeline can be parallel or bifurcating.
 <br/>
 
 ## Data Nodes
+
 See [](data_nodes) for a description of which data types each node accepts.
+
 - Data shape is displayed in the file select dialog. Please check data shape if you have unexpected results.
 - If you replace the image file with the same file name, shape cannot be updated automatically. Please click reload icon besides the checkbox.
 
 ## Algorithm Nodes
+
 See [](algorithm_nodes) for a description of each data processing and analysis node.
 
 ## Create a Workflow
+
 You can create a new workflow by clicking the + button.
 
 <br>
@@ -38,6 +43,7 @@ You can create a new workflow by clicking the + button.
 ```
 
 ### Adding Nodes
+
 Select Data or Algorithm node from the treeview on the left.
 Clicking the + button adds the analysis nodes to the Workflow field.
 
@@ -50,8 +56,10 @@ Clicking the + button adds the analysis nodes to the Workflow field.
 The left side of the window displays all available analysis methods. ROI detection tools (currently Suite2P, CaImAn and LCCD) are in the "Algorithm" category, and all other pre-installed analyses are in the "optinist" category.
 
 (AddData)=
-### Input Data with Data Nodes 
-* Image (TIFF)
+
+### Input Data with Data Nodes
+
+- Image (TIFF)
 
   By default, an Image node is displayed. This node defines the path to the data to use.
 
@@ -61,6 +69,7 @@ The left side of the window displays all available analysis methods. ROI detecti
   <br/>
 
   To select the data, follow these steps:
+
   1. Click on the check list icon on the Image node.
   2. Select a file or a folder. Choosing a folder makes all the TIFF files in the shown sequence an input set of continuous frames.
 
@@ -72,7 +81,7 @@ The left side of the window displays all available analysis methods. ROI detecti
   </p>
   <br/>
 
-* CSV, FLUO, BEHAVIOR
+- CSV, FLUO, BEHAVIOR
 
   These nodes are for csv data.
   Once the file selected, you can preview and change settings for the data.
@@ -81,7 +90,7 @@ The left side of the window displays all available analysis methods. ROI detecti
   <img width="300px" src="../_static/workflow/csv_settings.png" alt="CSV settings" />
   </p>
 
-  * transpose
+  - transpose
 
     You can use transposed the data as the input by checking this box.
 
@@ -95,7 +104,7 @@ The left side of the window displays all available analysis methods. ROI detecti
     PCA and TSNE can be done in either direction depending on your purpose.
     The function assumes their input to be samples x features.
 
-  * set_header
+  - set_header
 
     If your CSV data has header, check this box.
     Set the header index to your data's header row. (**first row is 0**)
@@ -105,7 +114,7 @@ The left side of the window displays all available analysis methods. ROI detecti
     <img width="400px" src="../_static/workflow/csv_set_header.png" alt="CSV Set Header" />
     </p>
 
-  * set_index
+  - set_index
 
     You can add index column to the data by checking this box.
 
@@ -113,9 +122,9 @@ The left side of the window displays all available analysis methods. ROI detecti
     <img width="400px" src="../_static/workflow/csv_set_index.png" alt="CSV Set Index" />
     </p>
 
-* HDF5
+- HDF5
 
-  This node accepts ``.hdf5`` and ``.nwb`` file types. NWB is compatible with the HDF5 data format. You can use you OptiNiSt data analysis results, which save in NWB format, as the input.
+  This node accepts `.hdf5` and `.nwb` file types. NWB is compatible with the HDF5 data format. You can use you OptiNiSt data analysis results, which save in NWB format, as the input.
 
   <p align="center">
   <img width="300px" src="../_static/workflow/hdf5_node.png" alt="HDF5 node" />
@@ -127,16 +136,19 @@ The left side of the window displays all available analysis methods. ROI detecti
   <img width="400px" src="../_static/workflow/hdf5_structure.png" alt="HDF5 node" />
   </p>
 
-  There are some additional utility nodes for processing HDF5 data.
-  For example, fluo_from_hdf5 extracts fluorescence data from HDF5 data.
+There are some additional utility nodes for processing HDF5 data.
+For example, fluo_from_hdf5 extracts fluorescence data from HDF5 data or
+roi_fluo_from_hdf5 that extracts roi and fluorescence data from HDF5 data.
+
+For more details, refer to the [Algorithm Nodes Documentation](../specifications/algorithm_nodes.md#fluo-from-hdf5).
 
   <p align="center">
   <img width="650px" src="../_static/workflow/hdf5_to_fluo.png" alt="HDF5 to fluo" />
   </p>
 
-* Matlab
+- Matlab
 
-  This node accepts ``.mat`` files.
+  This node accepts `.mat` files.
   Once a file is selected, you can search through the data structure and select the data to use.
 
   ```{eval-rst}
@@ -146,13 +158,13 @@ The left side of the window displays all available analysis methods. ROI detecti
     Be careful; this means that it does not check the format correspondence between input and output.
   ```
 
-* Microsope
+- Microscope
 
-  See [](data_nodes) for more information Microsope nodes. Currently, the Microsope node can accept following data formats.
+  See [](data_nodes) for more information Microscope nodes. Currently, the Microscope node can accept following data formats.
 
-  * Inscopix(.isxd)
-  * NIKON(.nd2)
-  * Olympus(.oir)
+  - Inscopix(.isxd)
+  - NIKON(.nd2)
+  - Olympus(.oir)
 
     <p align="center">
   <img width="650px" src="../_static/workflow/microscope.png" alt="Microscope" />
@@ -195,7 +207,9 @@ Each algorithm node has PARAM button and OUTPUT button.
   <br/>
 
 (ConnectingNodes)=
+
 ### Connecting Nodes
+
 Connect colored connectors of the nodes by dragging your cursor from the output connector(right side of the nodes) to the next input connector(left side of the nodes) to create connecting edges.
 
 <br>
@@ -208,6 +222,7 @@ The color of the connector indicates the data type of the input and the output.
 You can only connect the input and output connectors of the same color.
 
 **DataType List**
+
 - <span style="color: red; ">ImageData</span>
 - <span style="color: green; ">Suite2pData</span>
 - <span style="color: orange; ">Fluorescence</span>
@@ -215,12 +230,14 @@ You can only connect the input and output connectors of the same color.
 - <span style="color: blue; ">Iscell</span>
 - <span style="color: black; ">Unspecified</span>
 
-
 ### Removing Nodes or Connects
+
 Clicking on the x mark on a node or on an edge removes it from the workflow field.
 
 (ImportWorkflowYaml)=
+
 ### Import existing workflow by yaml file
+
 You can create same workflow by importing workflow config yaml format file. This feature is useful to share workflow template.
 
 Workflow config file can be downloaded from RECORD tab's executed workflow.
@@ -241,11 +258,12 @@ Input file selection will not reproduced because it may not be in your device.
 </p>
 <br/>
 
-
 ## Running Pipelines
+
 Click the RUN button at the top right.
 
 Note that while the workflow running, you **cannot**
+
 - use [](Visualize) tab
 - delete current workflow from [](Record) tab
 - reproduce other workflow from [](Record) tab
@@ -259,13 +277,16 @@ There are 2 types of execution. You can select the type by clicking the dropdown
 <br/>
 
 ### RUN ALL
+
 - Runs the entire process.
 - Assigns a new folder for saving the results. This folder name is only for the user’s convenience. The actual folder name is long digit random letter+number.
 
 ### RUN
+
 - Available only when the pipeline has been executed.
 - Useful to re-run the workflow with different parameters.
 - By checking parameter changes and addition of new nodes, it would skip already executed processes.
+
   - e.g. Let's say you have executed following workflow.
 
     <br>
@@ -276,6 +297,7 @@ There are 2 types of execution. You can select the type by clicking the dropdown
 
     Then you have changed the parameter "block_size" of suite2p_registration from 128,128 to 256,256.
     With "RUN", only following nodes would be executed again.
+
     - suite2p_registration: because you have changed parameter for this node
     - suite2p_roi: because its upstream data (from suite2p_registration) would be changed.
 
@@ -296,8 +318,63 @@ There are 2 types of execution. You can select the type by clicking the dropdown
    With RUN, results will be overwritten. To avoid this, use RUN ALL.
 ```
 
-(DirectorySettings)=
+```{eval-rst}
+.. note::
+   If you want to set up the Conda Environment for each node first, check :ref:`Setup Conda Environment <setup_conda_environment>`
+```
+
+### Filtering Data
+
+#### Overview
+
+Filtering data is only available after executing the pipeline. This feature is particularly useful when you need to examine a specific range of the Region of Interest (ROI) or fluorescence time series.
+
+#### Step-by-Step Instructions
+
+##### 1. Ensure Pipeline Execution
+
+Before applying filters, make sure that you have executed the workflow. For example, if you followed **Tutorial 1**, your workflow might look like this:
+
+<br>
+<p align="left">
+<img src="../_static/workflow/filter_before.png" alt="Workflow before filtering" />
+</p>
+<br/>
+
+##### 2. Selecting the Filter Option
+
+If you want to filter ROI data within a specific range (e.g., 0 to 100), follow these steps:
+
+1. Locate the `suite2p_roi` node in your workflow.
+2. Click on the **Filter** button in the `suite2p_roi` node.
+
+<br>
+<p align="center">
+<img width="300px" src="../_static/workflow/filter_button.png" alt="Filter button" />
+</p>
+<br/>
+
+##### 3. Applying the Filter
+
+1. In the filter settings, set the **ROI Data Range** from **0 to 100**.
+2. Click the **Apply** button to confirm the filter settings.
+
+<br>
+<p align="center">
+<img width="400px" src="../_static/workflow/filter_box.png" alt="Filter settings" />
+</p>
+<br/>
+
+##### 4. Running the Workflow
+
+Once you apply the filter:
+
+- The `suite2p_roi` node will start **loading**.
+- When loading completes, the `eta` node will be highlighted in **yellow**.
+- Click the **RUN** button to execute the workflow and apply the filter changes.
+
 ## Directory Settings
+
 OptiNiSt uses `OPTINIST_DIR` for retrieving data and saving results. OptiNiSt searches for input data in the 'input' directory within `OPTINIST_DIR`. The default `OPTINIST_DIR` is `/tmp/studio` on your computer.
 
 Choosing a folder makes all the TIFF files in the shown sequence an input set of continuous frames.
@@ -306,63 +383,66 @@ You may not want to modify your original data folder, or you may want to make yo
 
 1. **Upload from GUI**
 
-    Click on the image icon on the node. The LOAD button copies the selected file to your `OPTINIST_DIR/input`.
+   Click on the image icon on the node. The LOAD button copies the selected file to your `OPTINIST_DIR/input`.
 
-    <p align="center">
-    <img width="300px" src="../_static/workflow/image_node_upload_from_gui.png" alt="upload file" />
-    </p>
+   <p align="center">
+   <img width="300px" src="../_static/workflow/image_node_upload_from_gui.png" alt="upload file" />
+   </p>
 
-    **By this method, you cannot upload multiple files or folder at once**.
-    - If you want to upload multiple files or folder at once, use the next method.
+   **By this method, you cannot upload multiple files or folder at once**.
+
+   - If you want to upload multiple files or folder at once, use the next method.
 
 2. **Copy Files to `OPTINIST_DIR`**
 
-    Copy your raw data to `OPTINIST_DIR/input/1/` by your OS's file manager or command lines.
-      ```{eval-rst}
-      .. warning::
-          Be sure to copy under ``input/1/``. ``1`` is the default workspace id for :ref:`standalone mode <about-multiuser-mode>`.
-          If you copy under ``input/`` directly, the file cannot be found from GUI.
-      ```
+   Copy your raw data to `OPTINIST_DIR/input/1/` by your OS's file manager or command lines.
 
-    You can copy folder into the input directory.
-    - If you put folder, you can see the folder from GUI, SELECT IMAGE dialog like this.
-      <br>
-      <p align="center">
-      <img width="400px" src="../_static/workflow/put_folder_to_input_dir.png" alt="Put folder to input dir" />
-      </p>
+   ```{eval-rst}
+   .. warning::
+       Be sure to copy under ``input/1/``. ``1`` is the default workspace id for :ref:`standalone mode <about-multiuser-mode>`.
+       If you copy under ``input/`` directly, the file cannot be found from GUI.
+   ```
+
+   You can copy folder into the input directory.
+
+   - If you put folder, you can see the folder from GUI, SELECT IMAGE dialog like this.
+     <br>
+     <p align="center">
+     <img width="400px" src="../_static/workflow/put_folder_to_input_dir.png" alt="Put folder to input dir" />
+     </p>
 
 3. **Get file via URL**
 
-    Click on the link icon on the node.
+   Click on the link icon on the node.
 
-    <p align="center">
-    <img width="300px" src="../_static/workflow/image_node_from_cloud.png" alt="Get File from Cloud" />
-    </p>
+   <p align="center">
+   <img width="300px" src="../_static/workflow/image_node_from_cloud.png" alt="Get File from Cloud" />
+   </p>
 
-    Then input dialog will be shown. You can input the URL of the file you want to use.
+   Then input dialog will be shown. You can input the URL of the file you want to use.
 
-    <p align="center">
-    <img width="450px" src="../_static/workflow/image_node_from_cloud_input.png" alt="Input FILE URL" />
-    </p>
+   <p align="center">
+   <img width="450px" src="../_static/workflow/image_node_from_cloud_input.png" alt="Input FILE URL" />
+   </p>
 
-    ```{eval-rst}
-    .. note::
-        The URL should be direct link to the one file.
-        It should be
+   ```{eval-rst}
+   .. note::
+       The URL should be direct link to the one file.
+       It should be
 
-          - started with ``http://`` or ``https://``.
-          - ended with the file name with extension.
+         - started with ``http://`` or ``https://``.
+         - ended with the file name with extension.
 
-        And more, download links require authentication are not supported.
-    ```
+       And more, download links require authentication are not supported.
+   ```
 
 4. **Change the Setting of `OPTINIST_DIR`**
 
-    This requires modifying source codes. See [](native_platforms_developer) installation guide section.
-    `OPTINIST_DIR` is defined in `optinist/studio/app/dir_path.py`. Change line for `OPTINIST_DIR`, `INPUT_DIR`, and `OUTPUT_DIR` according to your demand. Changing `dir_path.py` may also be necessary when running the pipeline on your cluster computers. Also, you can quickly change `OPTINIST_DIR` by changing the environment variable before launching. The change is effective after relaunching.
-
+   This requires modifying source codes. See [](native_platforms_developer) installation guide section.
+   `OPTINIST_DIR` is defined in `optinist/studio/app/dir_path.py`. Change line for `OPTINIST_DIR`, `INPUT_DIR`, and `OUTPUT_DIR` according to your demand. Changing `dir_path.py` may also be necessary when running the pipeline on your cluster computers. Also, you can quickly change `OPTINIST_DIR` by changing the environment variable before launching. The change is effective after relaunching.
 
 ## SNAKEMAKE Settings
+
 OptiNiSt's pipeline construction is based on [Snakemake](https://snakemake.readthedocs.io/en/stable/), a pipeline controlling tool for Python scripts.
 
 <br>
@@ -372,6 +452,7 @@ OptiNiSt's pipeline construction is based on [Snakemake](https://snakemake.readt
 <br/>
 
 The Snakemake parameter setting is following.
+
 - use_conda: If this is on, snakemake uses conda environment.
 - cores: Specifies the number of cores to use. If not specified, snakemake uses number of available cores in the machine.
 - forceall: Flag to indicate the execution of the target regardless of already created output.
@@ -380,8 +461,8 @@ The Snakemake parameter setting is following.
 
 For details about snakemake parameters please refer to [snakemake official page](https://snakemake.readthedocs.io/en/stable/executing/cli.html).
 
-
 ## NWB Settings
+
 Defines the metadata associated with the input data.
 By configuring this, the output NWB file includes the information set here.
 You can leave this setting as the default.
@@ -418,3 +499,44 @@ For general information about NWB, refer to [NWB official page](https://www.nwb.
       If True, raw image data will be saved to NWB file's acquisition.
       If not, only the path to the image data will be saved.
 ```
+
+## Viewing Logs with Log Viewer
+
+When running a workflow, logs are continuously generated to provide insights into the execution process. These logs can be monitored and analyzed using the **Log Viewer**.
+
+To access the logs, simply click on the **Log Button** in the interface.
+
+<br>
+<p align="center">
+<img width="300px" src="../_static/workflow/log_button.png" alt="Algo node buttons" />
+</p>
+<br/>
+
+### Key Features of Log Viewer
+
+The Log Viewer provides powerful capabilities for log analysis, including:
+
+- **Real-time Log Monitoring** – View logs as they are generated while the workflow runs.
+- **Highlight & Copy** – Easily highlight and copy log entries for further investigation or sharing.
+- **Keyword Search** – Search for specific words or phrases to quickly locate relevant log entries.
+- **Log Level Filtering** – Filter logs based on their severity level to focus on critical events.
+
+### Supported Log Levels
+
+Logs are categorized into different levels based on severity:
+
+| Log Level    | Description                                                           |
+| ------------ | --------------------------------------------------------------------- |
+| **Debug**    | Detailed information useful for troubleshooting.                      |
+| **Info**     | General information about the workflow execution.                     |
+| **Warning**  | Potential issues that may not immediately impact execution.           |
+| **Error**    | Issues that have affected the workflow but are not necessarily fatal. |
+| **Critical** | Severe errors that require immediate attention.                       |
+
+### Example Log Output
+
+  <br>
+  <p align="left">
+  <img src="../_static/workflow/log_viewer_sample.png" alt="Log Viewer Sample" />
+  </p>
+  <br/>

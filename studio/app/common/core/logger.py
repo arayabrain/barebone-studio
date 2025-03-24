@@ -16,8 +16,8 @@ class AppLogger:
 
     LOGGER_NAME = "optinist"
 
-    @staticmethod
-    def init_logger():
+    @classmethod
+    def init_logger(cls):
         """
         Note #1.
             At the time of starting to use this Logger,
@@ -28,31 +28,52 @@ class AppLogger:
             - logger initialization location
               - Web App ... studio.__main_unit__
               - Batch App ... studio.app.optinist.core.expdb.batch_runner
+                (optinist-for-server)
 
         Note #2.
             However, only in the case of the snakemake process,
             the initialization process is required because it is a separate process.
         """
 
-        log_config_file = (
+        # read logging config
+        logging_config = cls.get_logging_config()
+
+        # create log output directory (if none exists)
+        log_file = (
+            logging_config.get("handlers", {}).get("rotating_file", {}).get("filename")
+        )
+        if log_file:
+            log_dir = os.path.dirname(log_file)
+            if not os.path.isdir(log_dir):
+                os.makedirs(log_dir)
+
+        # set logging config
+        logging.config.dictConfig(logging_config)
+
+    @staticmethod
+    def get_logging_config() -> dict:
+        logging_config_file = (
             f"{DIRPATH.CONFIG_DIR}/logging.yaml"
             if MODE.IS_STANDALONE
             else f"{DIRPATH.CONFIG_DIR}/logging.multiuser.yaml"
         )
 
-        with open(log_config_file) as file:
-            log_config = yaml.load(file.read(), yaml.FullLoader)
+        logging_config = None
 
-            # create log output directory (if none exists)
+        with open(logging_config_file) as file:
+            logging_config = yaml.load(file.read(), yaml.FullLoader)
+
+            # Adjust log file path (if none exists)
             log_file = (
-                log_config.get("handlers", {}).get("rotating_file", {}).get("filename")
+                logging_config.get("handlers", {})
+                .get("rotating_file", {})
+                .get("filename")
             )
             if log_file:
-                log_dir = os.path.dirname(log_file)
-                if not os.path.isdir(log_dir):
-                    os.makedirs(log_dir)
+                log_file = f"{DIRPATH.DATA_DIR}/{log_file}"
+                logging_config["handlers"]["rotating_file"]["filename"] = log_file
 
-            logging.config.dictConfig(log_config)
+        return logging_config
 
     @staticmethod
     def get_logger() -> logging.Logger:

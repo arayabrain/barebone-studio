@@ -20,7 +20,7 @@ classifiers = [
   "Operating System :: Microsoft :: Windows",
   "Operating System :: MacOS :: MacOS X",
 ]
-packages = [{ include = "studio" }]
+packages = [{ include = "studio" }, { include = "frontend" }, { include = "sample_data" }]
 
 include = [
   "frontend/build/*",
@@ -34,13 +34,19 @@ include = [
   "studio/app/*/wrappers/**/*.yaml",
   "studio/app/Snakefile",
   "studio/config/*.yaml",
-  "sample_data/input/*",
-  "sample_data/output/**/*.yaml",
+  "sample_data/**/input/*",
+  "sample_data/**/output/**/*.yaml",
 ]
 exclude = [
+  "conda.env.*",
   "studio/tests/*",
   "studio/test_data/*",
-  "conda.env.*",
+  "studio/app/optinist/microscopes/libs.zip",
+  "frontend/node_modules/*",
+  "frontend/public/*",
+  "frontend/src/*",
+  "frontend/*.*",
+  "sample_data/*.*",
 ]
 
 [tool.poetry.dependencies]
