@@ -51,43 +51,50 @@ export const CondaNoticeButton = memo(function CondaNoticeButton({
   const runDisabled = useIsRunDisabled()
 
   const handleOk = async (condaName: string) => {
-    // Import create-conda-env workflow
-    await dispatch(importSampleData({ workspaceId, category }))
-      .unwrap()
-      .then(() => {
-        // *Here, success snackbar display is off.
-        dispatch(reset())
-        dispatch(getExperiments())
-      })
-      .catch(() => {
-        enqueueSnackbar("Failed to import import", { variant: "error" })
-        return // break on error
-      })
+    try {
+      // Import create-conda-env workflow
+      await dispatch(importSampleData({ workspaceId, category }))
+        .unwrap()
+        .then(() => {
+          // *Here, success snackbar display is off.
+          dispatch(reset())
+          dispatch(getExperiments())
+        })
+        .catch((e) => {
+          enqueueSnackbar("Failed to import import", { variant: "error" })
+          throw e
+        })
 
-    // Reproduce create-conda-env workflow
-    const uid = `setup_conda_${condaName}`
-    await dispatch(reproduceWorkflow({ workspaceId, uid }))
-      .unwrap()
-      .then(() => {
-        // *Here, success snackbar display is off.
-        dispatch(reset())
-      })
-      .catch(() => {
-        enqueueSnackbar("Failed to reproduce", { variant: "error" })
-        return // break on error
-      })
+      // Reproduce create-conda-env workflow
+      const uid = `setup_conda_${condaName}`
+      await dispatch(reproduceWorkflow({ workspaceId, uid }))
+        .unwrap()
+        .then(() => {
+          // *Here, success snackbar display is off.
+          dispatch(reset())
+        })
+        .catch((e) => {
+          enqueueSnackbar("Failed to reproduce", { variant: "error" })
+          throw e
+        })
 
-    // RUN reproduced workflow.
-    // * Simulate RunButtons.handleClick (call PipelineHook.useRunPipeline.handleRunPipeline)
-    const newName = `setup_conda_${condaName}`
-    const runPostData = selectRunPostData(store.getState())
-    await dispatch(
-      run({ runPostData: { name: newName, ...runPostData, forceRunList: [] } }),
-    )
-      .unwrap()
-      .catch(() => {
-        enqueueSnackbar("Failed to Run workflow", { variant: "error" })
-      })
+      // RUN reproduced workflow.
+      // * Simulate RunButtons.handleClick (call PipelineHook.useRunPipeline.handleRunPipeline)
+      const newName = `setup_conda_${condaName}`
+      const runPostData = selectRunPostData(store.getState())
+      await dispatch(
+        run({
+          runPostData: { name: newName, ...runPostData, forceRunList: [] },
+        }),
+      )
+        .unwrap()
+        .catch((e) => {
+          enqueueSnackbar("Failed to Run workflow", { variant: "error" })
+          throw e
+        })
+    } catch (e) {
+      // do nothing.
+    }
   }
 
   return (

@@ -283,7 +283,6 @@ class ExpDbBatchRunner:
             else:
                 stack = expdb_batch.preprocess()
                 expdb_batch.generate_orimaps(stack)
-                expdb_batch.cell_detection_cnmf(stack)
                 cnmf_info = expdb_batch.cell_detection_cnmf(stack)
                 del stack
 

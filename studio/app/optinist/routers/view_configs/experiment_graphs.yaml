@@ -37,12 +37,17 @@ orientation_selectivity:
   type: "single"
 
 best_responsivity:
-  title: "Peak Response"
+  title: "Best Responsivity"
   dir: "plots"
   type: "single"
 
 direction_tuning_width:
   title: "Direction Tuning Width"
+  dir: "plots"
+  type: "single"
+
+orientation_tuning_width:
+  title: "Orientation Tuning Width"
   dir: "plots"
   type: "single"
 

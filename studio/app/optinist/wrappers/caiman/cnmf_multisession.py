@@ -74,9 +74,20 @@ def caiman_cnmf_multisession(
     if "dview" in locals():
         stop_server(dview=dview)  # noqa: F821
 
-    c, dview, n_processes = setup_cluster(
-        backend="local", n_processes=None, single_thread=True
-    )
+    # TODO: Add parameters for node
+    n_processes = 1
+    dview = None
+    # This process launches another process to run the CNMF algorithm,
+    # so this node use at least 2 core.
+    if n_processes == 1:
+        c, dview, n_processes = setup_cluster(
+            backend="single", n_processes=n_processes, single_thread=True
+        )
+    else:
+        c, dview, n_processes = setup_cluster(
+            backend="multiprocessing", n_processes=n_processes
+        )
+    logger.info(f"n_processes: {n_processes}")
 
     cnm_list = []
     templates = []

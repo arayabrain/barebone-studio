@@ -402,8 +402,11 @@ export const selectTimeSeriesItemRefRoiUniqueList =
     if (isTimeSeriesItem(item)) {
       if (item.refImageItemId != null) {
         const imageItem = selectVisualizeItems(state)[item.refImageItemId]
-        if (isImageItem(imageItem) && imageItem.roiItem?.filePath != null) {
-          return selectRoiUniqueList(imageItem.roiItem.filePath)(state)
+        if (isImageItem(imageItem) && imageItem.roiItem?.filePath) {
+          return selectRoiUniqueList(imageItem.roiItem?.filePath)(state)
+        }
+        if (isRoiItem(imageItem) && imageItem.filePath) {
+          return selectRoiUniqueList(imageItem.filePath)(state)
         }
       }
       return null
@@ -618,6 +621,9 @@ export const selectImageItemRangeUnit =
       throw new Error("invalid VisualaizeItemType")
     }
   }
+
+export const selectClickedRoi = (itemId: number) => (state: RootState) =>
+  state.visualaizeItem.clickedRois[itemId] || null
 
 export const selectImageItemShowRoiLabels =
   (itemId: number) => (state: RootState) => {

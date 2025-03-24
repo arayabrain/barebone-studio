@@ -1,5 +1,5 @@
 import { FC, ReactNode } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 
 import { Box, Button, styled } from "@mui/material"
 
@@ -24,27 +24,34 @@ const PublicDatabaseWrapper: FC<{ children: ReactNode }> = ({ children }) => {
         }}
       >
         <Box>
-          <Button
+          <NavButton
             variant="text"
             onClick={handleClickExperiments}
             disabled={location.pathname === "/experiments"}
           >
             Experiments
-          </Button>
+          </NavButton>
           /
-          <Button
+          <NavButton
             variant="text"
             onClick={handleClickCells}
             disabled={location.pathname === "/cells"}
           >
             Cells
-          </Button>
+          </NavButton>
         </Box>
         <DataBaseContent>{children}</DataBaseContent>
       </Box>
     </PublicLayout>
   )
 }
+
+const NavButton = styled(Button)(({ theme }) => ({
+  "&.Mui-disabled": {
+    color: theme.palette.info.dark,
+    fontWeight: "bold",
+  },
+}))
 
 const DataBaseContent = styled(Box)(() => ({
   width: "94vw",

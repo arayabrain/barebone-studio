@@ -6,6 +6,7 @@ import { styled } from "@mui/material/styles"
 
 import { CurrentPipelineInfo } from "components/common/CurrentPipelineInfo"
 import { FlexItemList } from "components/Workspace/Visualize/FlexItemList"
+import { VisualizeProvider } from "components/Workspace/Visualize/VisualizeContext"
 import { VisualizeItemEditor } from "components/Workspace/Visualize/VisualizeItemEditor"
 import { CONTENT_HEIGHT, DRAWER_WIDTH } from "const/Layout"
 
@@ -25,7 +26,9 @@ const Visualize: FC = () => {
       </Box>
 
       <MainContents>
-        <FlexItemList />
+        <VisualizeProvider>
+          <FlexItemList />
+        </VisualizeProvider>
       </MainContents>
     </Box>
   )
