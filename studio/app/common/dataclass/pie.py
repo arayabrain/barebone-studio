@@ -38,7 +38,7 @@ class PieData(BaseData):
         return OutputPath(path=self.json_path, type=OutputType.PIE)
 
     def save_plot(self, output_dir):
-        plt.figure()
+        plt.figure(figsize=(6.4, 4.8))
         wedges, texts, autotexts = plt.pie(
             self.data[0],
             labels=self.columns,
@@ -50,7 +50,7 @@ class PieData(BaseData):
             wedges,
             self.columns,
             title="Categories",
-            loc="center left",
+            loc="center right",
             bbox_to_anchor=(1, 0, 0.5, 1),
         )
         plt.axis("equal")  # Equal aspect ratio ensures the pie chart is circular.
