@@ -109,14 +109,16 @@ def pca_analysis(
 
     # Set default parameters if none provided
     if params is None:
-        params = {"n_components": n_cells, "standard_norm": True}
+        params = {"n_components": min(n_cells, 50), "standard_norm": True}
     else:
         # Extract parameters from the nested structure if present
         pca_params = params.get("PCA", {})
 
-        # Use n_cells as the default when the key is missing from parameters
+        # Use min(n_cells, 50) as the default when the key is missing from parameters
         params = {
-            "n_components": min(pca_params.get("n_components", n_cells), n_cells),
+            "n_components": min(
+                pca_params.get("n_components", min(n_cells, 50)), n_cells
+            ),
             "standard_norm": params.get("standard_mean", True),
         }
     # Prepare data

@@ -138,7 +138,9 @@ def kmeans_analysis(
         kmeans_temp = KMeans(
             n_clusters=k,
             init="k-means++",
-            n_init=10,
+            n_init=5,
+            max_iter=100,
+            tol=1e-3,
             random_state=42,
             algorithm="elkan",
         )
