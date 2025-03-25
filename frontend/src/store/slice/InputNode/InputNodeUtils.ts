@@ -7,6 +7,7 @@ import {
   FILE_TYPE_SET,
   MatlabInputNode,
   MicroscopeInputNode,
+  MicroscopeExpdbInputNode,
 } from "store/slice/InputNode/InputNodeType"
 
 export function isImageInputNode(
@@ -37,6 +38,12 @@ export function isMicroscopeInputNode(
   inputNode: InputNodeType,
 ): inputNode is MicroscopeInputNode {
   return inputNode.fileType === FILE_TYPE_SET.MICROSCOPE
+}
+
+export function isMicroscopeExpDbInputNode(
+  inputNode: InputNodeType,
+): inputNode is MicroscopeExpdbInputNode {
+  return inputNode.fileType === FILE_TYPE_SET.MICROSCOPE_EXPDB
 }
 
 export function isExpDbInputNode(

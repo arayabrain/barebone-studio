@@ -19,7 +19,7 @@ from datetime import datetime
 project = "OptiNiSt"
 copyright = f"{datetime.today().year}, OIST"
 author = ""
-release = "1.3.1"
+release = "2.0.1"
 
 # -- readthedocs -------------------------------------------------------------
 on_rtd = os.environ.get("READTHEDOCS", None) == "True"

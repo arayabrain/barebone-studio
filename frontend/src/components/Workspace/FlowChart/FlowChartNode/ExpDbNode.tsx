@@ -16,7 +16,10 @@ import { GridEventListener, GridRowParams } from "@mui/x-data-grid"
 
 import DatabaseExperiments from "components/Database/DatabaseExperiments"
 import { DialogContext } from "components/Workspace/FlowChart/Dialog/DialogContext"
-import { isValidConnection, toHandleId } from "components/Workspace/FlowChart/FlowChartNode/FlowChartUtils"
+import {
+  isValidConnection,
+  toHandleId,
+} from "components/Workspace/FlowChart/FlowChartNode/FlowChartUtils"
 import { useHandleColor } from "components/Workspace/FlowChart/FlowChartNode/HandleColorHook"
 import { NodeContainer } from "components/Workspace/FlowChart/FlowChartNode/NodeContainer"
 import { HANDLE_STYLE } from "const/flowchart"
@@ -27,6 +30,7 @@ import {
   selectExpDbInputNodeSelectedFilePath,
   selectInputNodeDefined,
 } from "store/slice/InputNode/InputNodeSelectors"
+import { FILE_TYPE_NODE_NAME_ALIAS } from "store/slice/InputNode/InputNodeType"
 import { selectPipelineLatestUid } from "store/slice/Pipeline/PipelineSelectors"
 import { selectCurrentUser } from "store/slice/User/UserSelector"
 import { RootState } from "store/store"
@@ -80,7 +84,7 @@ const ExpDbSelect = memo(function ExpDbSelect({ nodeId }: { nodeId: string }) {
 
   return (
     <div>
-      <Typography>preprocessed_data</Typography>
+      <Typography>{FILE_TYPE_NODE_NAME_ALIAS.EXPDB}</Typography>
       <Button size="small" variant="outlined" onClick={() => setOpen(true)}>
         Select
       </Button>

@@ -21,7 +21,7 @@ export const selectCurrentPipelineName = (state: RootState) => {
   if (uid) {
     const experiments = state.experiments
     if (experiments.status === "fulfilled") {
-      return experiments.experimentList[uid].name
+      return experiments.experimentList?.[uid]?.name
     } else {
       return undefined
     }

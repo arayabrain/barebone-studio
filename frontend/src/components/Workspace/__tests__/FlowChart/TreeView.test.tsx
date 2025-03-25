@@ -64,6 +64,7 @@ describe.skip("AlgorithmTreeView", () => {
     expect(screen.getByText("behavior")).toBeInTheDocument()
     expect(screen.getByText("matlab")).toBeInTheDocument()
     expect(screen.getByText("microscope")).toBeInTheDocument()
+    expect(screen.getByText("microscope_database")).toBeInTheDocument()
   })
 
   it("renders the AlgorithmTree Algorithm TreeItems", async () => {

@@ -95,7 +95,7 @@ class ExpDbPath:
 
             # input_files
             microscope_files = []
-            for ext in ACCEPT_FILE_EXT.MICROSCOPE_EXT.value:
+            for ext in ACCEPT_FILE_EXT.MICROSCOPE_EXPDB_EXT.value:
                 microscope_files.extend(glob(join_filepath([self.exp_dir, f"*{ext}"])))
             self.microscope_file = (
                 microscope_files[0] if len(microscope_files) > 0 else None
@@ -208,7 +208,7 @@ class ExpDbBatch:
         create_directory(self.raw_path.preprocess_dir)
 
         preprocess_results = preprocessing(
-            microscope=MicroscopeData(self.raw_path.microscope_file),
+            microscope=MicroscopeExpdbData(self.raw_path.microscope_file),
             output_dir=self.raw_path.preprocess_dir,
             params=get_default_params("preprocessing"),
             nwbfile=self.nwb_input_config,

@@ -227,6 +227,9 @@ export const visualaizeItemSlice = createSlice({
       const newItemId = addInitialItemFn(state)
       state.layout.push([newItemId])
     },
+    resetVisualizeLayout: (state) => {
+      state.layout = []
+    },
     insertInitialItemToNextColumn: (state, action: PayloadAction<number>) => {
       const newItemId = addInitialItemFn(state)
       const targetItemId = action.payload
@@ -1063,6 +1066,7 @@ export const {
   setImageItemShowRoiLabels,
   resetAllOrderList,
   reset,
+  resetVisualizeLayout,
 } = visualaizeItemSlice.actions
 
 export default visualaizeItemSlice.reducer

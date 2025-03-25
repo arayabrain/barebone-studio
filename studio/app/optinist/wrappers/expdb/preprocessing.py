@@ -4,7 +4,7 @@ import numpy as np
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.dataclass.image import ImageData
-from studio.app.optinist.dataclass.microscope import MicroscopeData
+from studio.app.optinist.dataclass.microscope_expdb import MicroscopeExpdbData
 from studio.app.optinist.microscopes.MicroscopeDataReaderUtils import (
     MicroscopeDataReaderUtils,
 )
@@ -19,7 +19,7 @@ logger = AppLogger.get_logger()
 
 
 def preprocessing(
-    microscope: MicroscopeData, output_dir: str, params: dict = None, **kwargs
+    microscope: MicroscopeExpdbData, output_dir: str, params: dict = None, **kwargs
 ) -> dict(stack=ImageData):
     logger.info("start preprocessing.")
 
