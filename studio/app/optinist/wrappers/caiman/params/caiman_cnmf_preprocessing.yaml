@@ -47,12 +47,6 @@ patch_params:
 merge_params:
   merge_thr: 0.80
 
-quality_params:
-  min_SNR: 2.0
-
-temporal_params:
-  rval_thr: 0.5
-  min_cnn_thr: 0.2
 
 # ----------------------------------------
 # Advanced Parameters
@@ -135,7 +129,10 @@ advanced:
     SNR_lowest: 0.5
     cnn_lowest: 0.1
     gSig_range: null
+    min_SNR: 2.0
+    min_cnn_thr: 0.2
     rval_lowest: -1
+    rval_thr: 0.5
     use_cnn: True
     use_ecc: False
     max_ecc: 3

@@ -15,6 +15,7 @@ from studio.app.const import CELLMASK_SUFFIX, TC_SUFFIX, TS_SUFFIX
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass import EditRoiData, FluoData, IscellData, RoiData
 from studio.app.optinist.dataclass.expdb import ExpDbData
+from studio.app.optinist.wrappers.optinist.utils import recursive_flatten_params
 
 logger = AppLogger.get_logger()
 
@@ -102,21 +103,6 @@ def util_get_memmap(images: np.ndarray, file_path: str):
     mmap_images = np.reshape(mmap_images.T, [T] + list(dims), order="F")
     mmap_images[:] = images[:]
     return mmap_images, dims, mmap_path
-
-
-def util_recursive_flatten_params(params, result_params: dict, nest_counter=0):
-    """
-    Recursively flatten node parameters (operation for CaImAn CNMFParams)
-    """
-    # avoid infinite loops
-    assert nest_counter <= 2, f"Nest depth overflow. [{nest_counter}]"
-    nest_counter += 1
-
-    for key, nested_param in params.items():
-        if type(nested_param) is dict:
-            util_recursive_flatten_params(nested_param, result_params, nest_counter)
-        else:
-            result_params[key] = nested_param
 
 
 def util_download_model_files():
@@ -222,13 +208,14 @@ def caiman_cnmf_preprocessing(
     util_download_model_files()
 
     # flatten cmnf params segments.
-    reshaped_params = {}
-    util_recursive_flatten_params(params, reshaped_params)
+    flattened_params = {}
+    recursive_flatten_params(params, flattened_params)
+    params = flattened_params
 
-    Ain = reshaped_params.pop("Ain", None)
-    do_refit = reshaped_params.pop("do_refit", None)
-    roi_thr = reshaped_params.pop("roi_thr", None)
-    use_online = reshaped_params.pop("use_online", False)
+    Ain = params.pop("Ain", None)
+    do_refit = params.pop("do_refit", None)
+    roi_thr = params.pop("roi_thr", None)
+    use_online = params.pop("use_online", False)
 
     file_path = images.path
     if isinstance(file_path, list):
@@ -259,12 +246,12 @@ def caiman_cnmf_preprocessing(
         ]
         logger.info(f"physical_size: {physical_size_x}, {physical_size_y}")
         logger.info(f"use {gSig} as gSig")
-        reshaped_params["gSig"] = gSig
+        params["gSig"] = gSig
 
-    if reshaped_params is None:
+    if params is None:
         ops = CNMFParams()
     else:
-        ops = CNMFParams(params_dict={**reshaped_params, "fr": fr})
+        ops = CNMFParams(params_dict={**params, "fr": fr})
 
     if "dview" in locals():
         stop_server(dview=dview)  # noqa: F821
@@ -279,9 +266,8 @@ def caiman_cnmf_preprocessing(
                 "fnames": [mmap_path],
                 # NOTE: These params uses np.inf as default in CaImAn.
                 # Yaml cannot serialize np.inf, so default value in yaml is None.
-                "max_comp_update_shape": reshaped_params["max_comp_update_shape"]
-                or np.inf,
-                "num_times_comp_updated": reshaped_params["update_num_comps"] or np.inf,
+                "max_comp_update_shape": params["max_comp_update_shape"] or np.inf,
+                "num_times_comp_updated": params["update_num_comps"] or np.inf,
             }
         )
         cnm = online_cnmf.OnACID(dview=dview, Ain=Ain, params=ops)
