@@ -44,7 +44,7 @@ from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.core.nwb.nwb_creater import save_nwb
 from studio.app.optinist.dataclass import ExpDbData, StatData
 from studio.app.optinist.dataclass.fluo import FluoData
-from studio.app.optinist.dataclass.microscope import MicroscopeData
+from studio.app.optinist.dataclass.microscope_expdb import MicroscopeExpdbData
 from studio.app.optinist.wrappers.caiman.cnmf_preprocessing import (
     caiman_cnmf_preprocessing,
 )
