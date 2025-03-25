@@ -52,6 +52,21 @@ class PolarData(BaseData):
                 ["0°", "45°", "90°", "135°", "180°", "225°", "270°", "315°"]
             )
 
+            # Control number of radial tick labels
+            data_min = np.min(self.data[i])
+            data_max = np.max(self.data[i])
+            max_radial_labels = 5
+            r_ticks = np.linspace(data_min, data_max, max_radial_labels)
+            ax.set_yticks(r_ticks)
+
+            # Format radial tick labels with appropriate precision
+            value_range = data_max - data_min
+            if value_range < 0.1:
+                # Use 2 decimal places for small ranges
+                ax.set_yticklabels([f"{tick:.2f}" for tick in r_ticks])
+            else:
+                # Use 1 decimal place for larger ranges
+                ax.set_yticklabels([f"{tick:.1f}" for tick in r_ticks])
             # Close the line
             if len(theta_rad) > 0:
                 ax.plot(

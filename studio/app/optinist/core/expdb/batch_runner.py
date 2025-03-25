@@ -275,8 +275,11 @@ class ExpDbBatchRunner:
 
             # Analyze & Plotting
             if expdb_batch.raw_path.microscope_file is None:
-                # 顕微鏡データがない場合、以下の処理をスキップ
-                self.logger_.warn("No microscope data found. Skip preprocessing.")
+                # If no microscope data, create cnmf_info from existing mat files
+                self.logger_.warning(
+                    "No microscope data found. Will use existing processed data."
+                )
+                cnmf_info = expdb_batch.create_cnmf_info_from_mat_files()
             else:
                 stack = expdb_batch.preprocess()
                 expdb_batch.generate_orimaps(stack)

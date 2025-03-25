@@ -168,14 +168,14 @@ class StatData(BaseData):
             data=self.sf_si[self.index_sf_responsive_cell]
             if np.any(self.index_sf_responsive_cell)
             else np.array([0]),
-            file_name="sf_selectivity",
+            file_name="selectivity",
         )
 
         self.stim_responsivity = HistogramData(
             data=self.r_best_sf[self.index_sf_responsive_cell] * 100
             if np.any(self.index_sf_responsive_cell)
             else np.array([0]),
-            file_name="sf_responsivity",
+            file_name="best_responsivity",
         )
 
         self.sf_responsivity_ratio = PieData(
@@ -187,8 +187,8 @@ class StatData(BaseData):
                 ),
                 dtype=np.float64,
             ),
-            labels=["SF Selective", "SF Responsive", "Non-responsive"],
-            file_name="sf_responsivity_ratio",
+            labels=["Spatial freq selective", "Non-selective", "Non-responsive"],
+            file_name="responsivity_ratio",
         )
 
         # Use spatial frequency parameters for scaling if provided
@@ -203,7 +203,7 @@ class StatData(BaseData):
         self.sf_tuning_curve = LineData(
             data=self.dir_ratio_change,
             columns=np.linspace(sf_min, sf_max, num_sf_points),
-            file_name="spatial_frequency_tuning",
+            file_name="tuning_curve",
         )
 
     # --- anova ---
@@ -246,8 +246,8 @@ class StatData(BaseData):
                     self.ncells - self.ncells_visually_responsive_cell,
                 )
             ),
-            labels=["DS", "non-DS", "non-responsive"],
-            file_name="direction_responsivity_ratio",
+            labels=["Direction Selective", "Non-selective", "Non-responsive"],
+            file_name="responsivity_ratio",
         )
 
         self.orientation_responsivity_ratio = PieData(
@@ -259,13 +259,13 @@ class StatData(BaseData):
                     self.ncells - self.ncells_visually_responsive_cell,
                 )
             ),
-            labels=["OS", "non-OS", "non-responsive"],
+            labels=["Orientation Selective", "Non-selective", "Non-responsive"],
             file_name="orientation_responsivity_ratio",
         )
 
         self.direction_selectivity = HistogramData(
             data=self.dsi[self.index_direction_selective_cell],
-            file_name="direction_selectivity",
+            file_name="selectivity",
         )
 
         self.orientation_selectivity = HistogramData(

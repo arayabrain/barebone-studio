@@ -14,6 +14,3 @@ tuning_curve:
 tuning_curve_polar:
   title: "Tuning Curve Polar"
   dir: "plots"
-spatial_frequency_tuning:
-  title: "Spatial Freq Tuning"
-  dir: "plots"

@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import os
+import shutil
 from dataclasses import dataclass
 from glob import glob
 from typing import Optional, Tuple
@@ -27,6 +28,7 @@ from studio.app.const import (
     EXP_METADATA_SUFFIX,
     FOV_CONTRAST,
     FOV_SUFFIX,
+    TC_FIELDNAME,
     TC_SUFFIX,
     THUMBNAIL_HEIGHT,
     TS_SUFFIX,
@@ -41,6 +43,7 @@ from studio.app.optinist.core.expdb.crud_expdb import (
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.core.nwb.nwb_creater import save_nwb
 from studio.app.optinist.dataclass import ExpDbData, StatData
+from studio.app.optinist.dataclass.fluo import FluoData
 from studio.app.optinist.dataclass.microscope_expdb import MicroscopeExpdbData
 from studio.app.optinist.wrappers.caiman.cnmf_preprocessing import (
     caiman_cnmf_preprocessing,
@@ -77,7 +80,7 @@ def save_image_with_thumb(img_path: str, img):
     img.save(img_path)
     w, h = img.size
     new_width = int(w * (THUMBNAIL_HEIGHT / h))
-    thumb_img = img.resize((new_width, THUMBNAIL_HEIGHT), Image.Resampling.LANCZOS)
+    thumb_img = img.resize((new_width, THUMBNAIL_HEIGHT), Image.Resampling.BILINEAR)
     thumb_img.save(img_path.replace(".png", ".thumb.png"))
 
 
@@ -142,9 +145,9 @@ class ExpDbBatch:
 
         self.raw_path = ExpDbPath(self.exp_id, is_raw=True)
         self.pub_path = ExpDbPath(self.exp_id)
-        self.expdb_paths = [self.raw_path, self.pub_path]
         self.nwb_input_config = ConfigReader.read(filepath=find_param_filepath("nwb"))
         self.nwbfile = {}
+        self._configure_matplotlib()
 
     def __stopwatch_callback(watch, function=None):
         logging.getLogger(__class__.LOGGER_NAME).info(
@@ -168,8 +171,12 @@ class ExpDbBatch:
         except AssertionError:
             pass
 
-        for expdb_path in self.expdb_paths:
-            create_directory(expdb_path.output_dir, delete_dir=True)
+        # Clean up raw path
+        create_directory(self.raw_path.output_dir, delete_dir=True)
+
+        # Clean up public path if different
+        if self.raw_path.output_dir != self.pub_path.output_dir:
+            create_directory(self.pub_path.output_dir, delete_dir=True)
 
     @stopwatch(callback=__stopwatch_callback)
     def load_raw_cellmask_data(self) -> int:
@@ -180,6 +187,20 @@ class ExpDbBatch:
 
         imxx, ncells = cellmask.shape
         return (cellmask, imxx, ncells)
+
+    @stopwatch(callback=__stopwatch_callback)
+    def load_raw_timecourse_data(self):
+        """
+        Load timecourse data from .mat file
+        Returns the timecourse data array
+        """
+        from scipy.io import loadmat
+
+        timecourse = loadmat(self.raw_path.tc_file).get(TC_FIELDNAME)
+        if timecourse is None:
+            self.logger_.info(f"Failed to load timecourse from {self.raw_path.tc_file}")
+
+        return timecourse
 
     @stopwatch(callback=__stopwatch_callback)
     def preprocess(self) -> ImageData:
@@ -248,8 +269,8 @@ class ExpDbBatch:
     def generate_cellmasks(self) -> int:
         self.logger_.info("process 'generate_cellmasks' start.")
 
-        for expdb_path in self.expdb_paths:
-            create_directory(expdb_path.cellmask_dir)
+        # Create directory for raw path only
+        create_directory(self.raw_path.cellmask_dir)
 
         # csr_matrix to numpy array
         cellmask, imxx, ncells = self.load_raw_cellmask_data()
@@ -268,25 +289,105 @@ class ExpDbBatch:
             fov_cell_merge[:, :, 1] = fov_cell_merge[:, :, 2] * (1 - cell_mask / 2)
             fov_cell_merge = np.round(fov_cell_merge * 255).astype(np.uint8)
 
-            for expdb_path in self.expdb_paths:
-                save_image_with_thumb(
-                    join_filepath([expdb_path.cellmask_dir, f"fov_cell_merge_{i}.png"]),
-                    fov_cell_merge,
-                )
+            # Save image only for raw path
+            save_image_with_thumb(
+                join_filepath([self.raw_path.cellmask_dir, f"fov_cell_merge_{i}.png"]),
+                fov_cell_merge,
+            )
 
-        for expdb_path in self.expdb_paths:
-            assert (
-                len(
-                    glob(
-                        join_filepath(
-                            [expdb_path.cellmask_dir, "fov_cell_merge_*.thumb.png"]
-                        )
+        # Verify generation was successful
+        assert (
+            len(
+                glob(
+                    join_filepath(
+                        [self.raw_path.cellmask_dir, "fov_cell_merge_*.thumb.png"]
                     )
                 )
-                == ncells
-            ), f"generate cellmasks failed in {expdb_path.cellmask_dir}"
+            )
+            == ncells
+        ), f"generate cellmasks failed in {self.raw_path.cellmask_dir}"
+
+        # Copy to pub path if different
+        if self.raw_path.cellmask_dir != self.pub_path.cellmask_dir:
+            create_directory(self.pub_path.cellmask_dir)
+            self._copy_plots(self.raw_path.cellmask_dir, self.pub_path.cellmask_dir)
 
         return ncells
+
+    @stopwatch(callback=__stopwatch_callback)
+    def create_cnmf_info_from_mat_files(self):
+        """
+        Create a minimal cnmf_info dictionary from existing mat files
+        when microscope data is not available
+
+        Returns:
+            dict: cnmf_info dictionary with fluorescence and cell_roi data
+        """
+        try:
+            # Load existing data
+            timecourse = self.load_raw_timecourse_data()
+
+            cellmask, imxx, ncells = self.load_raw_cellmask_data()
+
+            self.logger_.info(
+                f"Loaded timecourse shape: {timecourse.shape}, ncells: {ncells}"
+            )
+            self.logger_.info(f"Loaded cellmask shape: {cellmask.shape}")
+
+            # Transpose if necessary
+            if timecourse.shape[0] != ncells:
+                # Transpose to orientation: ncells x time_points
+                timecourse = timecourse.T
+                self.logger_.info(f"Timecourse transposed: {timecourse.shape}")
+
+            # The FluoData constructor doesn't change the data shape, just wraps it
+            fluorescence = FluoData(timecourse, file_name="fluorescence")
+
+            # Process the cellmask similar to generate_cellmasks method
+            imx = imy = int(math.sqrt(imxx))
+            cellmask_reshaped = np.reshape(cellmask, (imx, imy, ncells), order="F")
+
+            self.logger_.info(
+                f"Loaded cellmask cellmask_reshaped: {cellmask_reshaped.shape}"
+            )
+
+            # Create a 2D image where each pixel value is the cell index (1-based)
+            cell_masks_binary = np.where(cellmask_reshaped == 0, 0, 1)
+            roi_image = np.zeros((imx, imy))
+            for i in range(ncells):
+                # Add 1 because cell indices should be 1-based in visualization code
+                roi_image = np.where(
+                    (roi_image == 0) & (cell_masks_binary[:, :, i] > 0),
+                    i + 1,
+                    roi_image,
+                )
+            # Make background NaN for visualization
+            roi_image = np.where(roi_image == 0, np.nan, roi_image)
+
+            # Create simple container with just the data attribute
+            class SimpleRoiContainer:
+                def __init__(self, data):
+                    self.data = data
+
+            cell_roi = SimpleRoiContainer(roi_image)
+            all_roi = SimpleRoiContainer(roi_image)
+
+            # Create minimal cnmf_info dictionary
+            cnmf_info = {
+                "fluorescence": fluorescence,
+                "cell_roi": cell_roi,
+                "all_roi": all_roi,
+                "iscell": np.ones(ncells, dtype=int),
+            }
+
+            self.logger_.info(
+                f"Created cnmf_info from existing files: {ncells} ROI found"
+            )
+            return cnmf_info
+
+        except Exception as e:
+            self.logger_.info(f"Error creating cnmf_info from existing files: {str(e)}")
+            return None
 
     @stopwatch(callback=__stopwatch_callback)
     def generate_plots(self, stat_data: StatData):
@@ -295,38 +396,43 @@ class ExpDbBatch:
         is_circular = self.check_is_circular_data(self.exp_id)
         self.logger_.info(f"Data is {'circular' if is_circular else 'non-circular'}")
 
-        for expdb_path in self.expdb_paths:
-            dir_path = expdb_path.plot_dir
-            create_directory(dir_path)
+        dir_path = self.raw_path.plot_dir
+        create_directory(dir_path)
 
-            if is_circular:
-                stat_data.tuning_curve.save_plot(dir_path)
-                stat_data.tuning_curve_polar.save_plot(dir_path)
-                stat_data.sf_tuning_curve.save_plot(dir_path)
+        if is_circular:
+            stat_data.tuning_curve.save_plot(dir_path)
+            stat_data.tuning_curve_polar.save_plot(dir_path)
 
-                stat_data.direction_responsivity_ratio.save_plot(dir_path)
-                stat_data.orientation_responsivity_ratio.save_plot(dir_path)
-                stat_data.direction_selectivity.save_plot(dir_path)
-                stat_data.orientation_selectivity.save_plot(dir_path)
-                stat_data.best_responsivity.save_plot(dir_path)
+            stat_data.direction_responsivity_ratio.save_plot(dir_path)
+            stat_data.orientation_responsivity_ratio.save_plot(dir_path)
+            stat_data.direction_selectivity.save_plot(dir_path)
+            stat_data.orientation_selectivity.save_plot(dir_path)
+            stat_data.best_responsivity.save_plot(dir_path)
 
-                stat_data.preferred_direction.save_plot(dir_path)
-                stat_data.preferred_orientation.save_plot(dir_path)
+            stat_data.preferred_direction.save_plot(dir_path)
+            stat_data.preferred_orientation.save_plot(dir_path)
 
-                stat_data.direction_tuning_width.save_plot(dir_path)
-                stat_data.orientation_tuning_width.save_plot(dir_path)
-            else:
-                stat_data.stim_selectivity.save_plot(dir_path)
-                stat_data.stim_responsivity.save_plot(dir_path)
-                stat_data.sf_responsivity_ratio.save_plot(dir_path)
+            stat_data.direction_tuning_width.save_plot(dir_path)
+            stat_data.orientation_tuning_width.save_plot(dir_path)
+        else:
+            stat_data.sf_tuning_curve.save_plot(dir_path)
+            stat_data.stim_selectivity.save_plot(dir_path)
+            stat_data.stim_responsivity.save_plot(dir_path)
+            stat_data.sf_responsivity_ratio.save_plot(dir_path)
+
+        # Copy all plots to pub path
+        if self.raw_path.plot_dir != self.pub_path.plot_dir:
+            create_directory(self.pub_path.plot_dir)
+            self._copy_plots(self.raw_path.plot_dir, self.pub_path.plot_dir)
 
     @stopwatch(callback=__stopwatch_callback)
     def generate_pixelmaps(self):
         self.logger_.info("process 'generate_pixelmaps' start.")
 
-        for expdb_path in self.expdb_paths:
-            create_directory(expdb_path.pixelmap_dir)
+        # Create directories
+        create_directory(self.raw_path.pixelmap_dir)
 
+        # Process only for raw path
         pixelmaps = glob(join_filepath([self.raw_path.orimaps_dir, "*_hc.tif"]))
         pixlemaps_with_num = glob(
             join_filepath([self.raw_path.orimaps_dir, "*_hc_*.tif"])
@@ -334,21 +440,28 @@ class ExpDbBatch:
         for pixelmap in [*pixelmaps, *pixlemaps_with_num]:
             img = tifffile.imread(pixelmap)
             file_name = os.path.splitext(os.path.basename(pixelmap))[0]
+            save_image_with_thumb(
+                join_filepath([self.raw_path.pixelmap_dir, f"{file_name}.png"]), img
+            )
 
-            for expdb_path in self.expdb_paths:
-                save_image_with_thumb(
-                    join_filepath([expdb_path.pixelmap_dir, f"{file_name}.png"]), img
-                )
+        # Verify generation was successful
+        assert len(
+            glob(join_filepath([self.raw_path.pixelmap_dir, "*.thumb.png"]))
+        ) == len(pixelmaps) + len(
+            pixlemaps_with_num
+        ), f"generate pixelmaps failed in {self.raw_path.pixelmap_dir}"
 
-        for expdb_path in self.expdb_paths:
-            assert len(
-                glob(join_filepath([expdb_path.pixelmap_dir, "*.thumb.png"]))
-            ) == len(pixelmaps) + len(
-                pixlemaps_with_num
-            ), f"generate pixelmaps failed in {expdb_path.pixelmap_dir}"
+        # Copy to pub path if different
+        if self.raw_path.pixelmap_dir != self.pub_path.pixelmap_dir:
+            create_directory(self.pub_path.pixelmap_dir)
+            self._copy_plots(self.raw_path.pixelmap_dir, self.pub_path.pixelmap_dir)
 
+    @stopwatch(callback=__stopwatch_callback)
     def generate_plots_using_cnmf_info(self, stat_data: StatData, cnmf_info: dict):
         self.logger_.info("process 'generate_pca_analysis_plots' start.")
+
+        dir_path = self.raw_path.plot_dir
+        create_directory(dir_path)
 
         # Perform PCA analysis
         pca_results = pca_analysis(
@@ -363,23 +476,19 @@ class ExpDbBatch:
         # Update nwbfile with PCA results
         self.nwbfile = pca_results["nwbfile"]
 
-        # Save plots for each path
-        for expdb_path in self.expdb_paths:
-            create_directory(expdb_path.plot_dir)
+        # Save visualization objects with correct names
+        stat_data.pca_analysis_variance.save_plot(dir_path)
+        stat_data.pca_contribution.save_plot(dir_path)
 
-            # Save visualization objects with correct names
-            stat_data.pca_analysis_variance.save_plot(expdb_path.plot_dir)
-            stat_data.pca_contribution.save_plot(expdb_path.plot_dir)
-
-            # Generate additional detailed visualization
-            generate_pca_visualization(
-                scores=stat_data.pca_scores,
-                explained_variance=stat_data.pca_explained_variance,
-                components=stat_data.pca_components,
-                roi_masks=cnmf_info["cell_roi"].data,
-                scores_ave=stat_data.pca_scores_ave,
-                output_dir=expdb_path.plot_dir,
-            )
+        # Generate additional detailed visualization
+        generate_pca_visualization(
+            scores=stat_data.pca_scores,
+            explained_variance=stat_data.pca_explained_variance,
+            components=stat_data.pca_components,
+            roi_masks=cnmf_info["cell_roi"].data,
+            scores_ave=stat_data.pca_scores_ave,
+            output_dir=dir_path,
+        )
 
         self.logger_.info("process 'generate_kmeans_analysis_plots' start.")
 
@@ -389,30 +498,30 @@ class ExpDbBatch:
             cnmf_info=cnmf_info,
             output_dir=self.raw_path.output_dir,
             params=get_default_params("kmeans_analysis"),
+            ts_file=self.raw_path.ts_file,
             nwbfile=self.nwbfile,
         )
 
         # Update nwbfile with clustering results
         self.nwbfile = kmeans_results["nwbfile"]
 
-        # Save plots for each path
-        for expdb_path in self.expdb_paths:
-            dir_path = expdb_path.plot_dir
-            create_directory(dir_path)
+        # Save visualization object
+        stat_data.cluster_corr_matrix.save_plot(dir_path)
 
-            # Save visualization object
-            stat_data.cluster_corr_matrix.save_plot(dir_path)
-
-            # Generate additional visualizations
-            generate_kmeans_visualization(
-                all_labels=stat_data.all_labels,
-                all_sorted_matrices=stat_data.all_sorted_matrices,
-                fluorescence=stat_data.fluorescence,
-                roi_masks=cnmf_info["cell_roi"].data,
-                silhouette_scores=stat_data.silhouette_scores,
-                optimal_clusters=stat_data.optimal_clusters,
-                output_dir=dir_path,
-            )
+        # Generate additional visualizations
+        generate_kmeans_visualization(
+            all_labels=stat_data.all_labels,
+            all_sorted_matrices=stat_data.all_sorted_matrices,
+            fluorescence=stat_data.fluorescence,
+            roi_masks=cnmf_info["cell_roi"].data,
+            silhouette_scores=stat_data.silhouette_scores,
+            optimal_clusters=stat_data.optimal_clusters,
+            fluorescence_ave=stat_data.fluorescence_ave,
+            output_dir=dir_path,
+        )
+        # Copy all plots to pub path
+        if self.raw_path.plot_dir != self.pub_path.plot_dir:
+            self._copy_plots(self.raw_path.plot_dir, self.pub_path.plot_dir)
 
     @stopwatch(callback=__stopwatch_callback)
     def load_exp_metadata(self) -> Tuple[dict, dict]:
@@ -436,5 +545,37 @@ class ExpDbBatch:
             ] = self.raw_path.microscope_file
         self.nwb_input_config[NWBDATASET.LAB_METADATA] = metadata
 
-        for expdb_path in self.expdb_paths:
-            save_nwb(expdb_path.nwb_file, self.nwb_input_config, self.nwbfile)
+        # Save NWB file to raw path only
+        save_nwb(self.raw_path.nwb_file, self.nwb_input_config, self.nwbfile)
+
+        # Copy to public path if different
+        nwb_public = self.pub_path.nwb_file
+        if self.raw_path.nwb_file != self.pub_path.nwb_file:
+            self.logger_.info(
+                f"Copying NWB file from {self.raw_path.nwb_file} to {nwb_public}"
+            )
+            # Make sure the destination directory exists
+            create_directory(os.path.dirname(self.pub_path.nwb_file))
+            shutil.copy2(self.raw_path.nwb_file, self.pub_path.nwb_file)
+
+    def _copy_plots(self, source_dir, dest_dir):
+        """Copy all PNG files from source directory to destination directory."""
+
+        self.logger_.info(f"Copying plots from {source_dir} to {dest_dir}")
+
+        # Copy both regular PNGs and thumbnails
+        for pattern in ["*.png", "*.thumb.png"]:
+            for file_path in glob(join_filepath([source_dir, pattern])):
+                dest_path = join_filepath([dest_dir, os.path.basename(file_path)])
+                shutil.copy2(file_path, dest_path)
+
+    def _configure_matplotlib(self):
+        """Configure matplotlib for better performance."""
+        import matplotlib
+
+        matplotlib.use("Agg")  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+
+        # Disable interactive mode
+        plt.ioff()
+        plt.style.use("fast")

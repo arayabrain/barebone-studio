@@ -26,5 +26,6 @@ def save_thumbnail(plot_file):
         w, h = img.size
         new_width = int(w * (THUMBNAIL_HEIGHT / h))
         # LANCZOS is high-quality downsampling filter
-        thumb_img = img.resize((new_width, THUMBNAIL_HEIGHT), Image.Resampling.LANCZOS)
+        # BILINEAR is faster
+        thumb_img = img.resize((new_width, THUMBNAIL_HEIGHT), Image.Resampling.BILINEAR)
         thumb_img.save(plot_file.replace(".png", ".thumb.png"))
