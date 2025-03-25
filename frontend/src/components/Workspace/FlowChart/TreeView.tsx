@@ -37,7 +37,11 @@ import {
   NODE_TYPE,
   NODE_TYPE_SET,
 } from "store/slice/FlowElement/FlowElementType"
-import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
+import {
+  FILE_TYPE,
+  FILE_TYPE_NODE_NAME_ALIAS,
+  FILE_TYPE_SET,
+} from "store/slice/InputNode/InputNodeType"
 import { selectPipelineLatestUid } from "store/slice/Pipeline/PipelineSelectors"
 import { AppDispatch } from "store/store"
 import { getNanoId } from "utils/nanoid/NanoIdUtils"
@@ -126,10 +130,16 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
           fileType={FILE_TYPE_SET.MICROSCOPE}
         />
         <InputNodeComponent
+          fileName={"microscopeExpdb"}
+          nodeName={"MicroscopeExpdbData"}
+          fileType={FILE_TYPE_SET.MICROSCOPE_EXPDB}
+          displayName={FILE_TYPE_NODE_NAME_ALIAS.MICROSCOPE_EXPDB}
+        />
+        <InputNodeComponent
           fileName={"expdbPreprocessed"}
           nodeName={"expdbPreprocessedData"}
           fileType={FILE_TYPE_SET.EXPDB}
-          displayName="preprocessed_data"
+          displayName={FILE_TYPE_NODE_NAME_ALIAS.EXPDB}
         />
       </TreeItem>
       <TreeItem nodeId="Algorithm" label="Algorithm">
@@ -196,6 +206,10 @@ const InputNodeComponent = memo(function InputNodeComponent({
         case FILE_TYPE_SET.MICROSCOPE:
           reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.MicroscopeFileNode
           fileType = FILE_TYPE_SET.MICROSCOPE
+          break
+        case FILE_TYPE_SET.MICROSCOPE_EXPDB:
+          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.MicroscopeExpdbFileNode
+          fileType = FILE_TYPE_SET.MICROSCOPE_EXPDB
           break
         case FILE_TYPE_SET.EXPDB:
           reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.ExpDbNode

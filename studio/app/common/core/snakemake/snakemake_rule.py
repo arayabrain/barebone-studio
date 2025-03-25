@@ -64,9 +64,12 @@ class SmkRule:
         )
 
     def microscope(self) -> Rule:
+        return self.builder.set_type(FILETYPE.MICROSCOPE).build()
+
+    def microscope_expdb(self) -> Rule:
         return (
             self.builder.set_input(self._node.data.path)
-            .set_type(FILETYPE.MICROSCOPE)
+            .set_type(FILETYPE.MICROSCOPE_EXPDB)
             .build()
         )
 

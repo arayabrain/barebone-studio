@@ -41,7 +41,7 @@ from studio.app.optinist.core.expdb.crud_expdb import (
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.core.nwb.nwb_creater import save_nwb
 from studio.app.optinist.dataclass import ExpDbData, StatData
-from studio.app.optinist.dataclass.microscope import MicroscopeData
+from studio.app.optinist.dataclass.microscope_expdb import MicroscopeExpdbData
 from studio.app.optinist.wrappers.caiman.cnmf_preprocessing import (
     caiman_cnmf_preprocessing,
 )
@@ -92,7 +92,7 @@ class ExpDbPath:
 
             # input_files
             microscope_files = []
-            for ext in ACCEPT_FILE_EXT.MICROSCOPE_EXT.value:
+            for ext in ACCEPT_FILE_EXT.MICROSCOPE_EXPDB_EXT.value:
                 microscope_files.extend(glob(join_filepath([self.exp_dir, f"*{ext}"])))
             self.microscope_file = (
                 microscope_files[0] if len(microscope_files) > 0 else None
@@ -187,7 +187,7 @@ class ExpDbBatch:
         create_directory(self.raw_path.preprocess_dir)
 
         preprocess_results = preprocessing(
-            microscope=MicroscopeData(self.raw_path.microscope_file),
+            microscope=MicroscopeExpdbData(self.raw_path.microscope_file),
             output_dir=self.raw_path.preprocess_dir,
             params=get_default_params("preprocessing"),
             nwbfile=self.nwb_input_config,

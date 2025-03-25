@@ -18,9 +18,10 @@ const initialState: HandleTypeColor = {
     FluoData: MuiColors.orange[500],
     SpikingActivityData: MuiColors.orange[500],
     BehaviorData: MuiColors.yellow[500],
+    MicroscopeData: MuiColors.purple[500],
+    MicroscopeExpdbData: MuiColors.purple[200],
     ExpDbData: MuiColors.blue[300],
     StatData: MuiColors.blue[800],
-    MicroscopeData: MuiColors.purple[500],
   },
   nextKey: 0,
 }

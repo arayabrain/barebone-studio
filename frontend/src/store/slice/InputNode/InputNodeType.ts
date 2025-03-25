@@ -8,7 +8,13 @@ export const FILE_TYPE_SET = {
   BEHAVIOR: "behavior",
   MATLAB: "matlab",
   MICROSCOPE: "microscope",
+  MICROSCOPE_EXPDB: "microscope_expdb",
   EXPDB: "expdb",
+} as const
+
+export const FILE_TYPE_NODE_NAME_ALIAS = {
+  MICROSCOPE_EXPDB: "microscope_database",
+  EXPDB: "preprocessed_data",
 } as const
 
 export type FILE_TYPE = (typeof FILE_TYPE_SET)[keyof typeof FILE_TYPE_SET]
@@ -23,8 +29,8 @@ export type InputNodeType =
   | HDF5InputNode
   | MatlabInputNode
   | MicroscopeInputNode
+  | MicroscopeExpdbInputNode
   | ExpDbInputNode
-  | MicroscopeInputNode
 
 interface InputNodeBaseType<
   T extends FILE_TYPE,
@@ -65,6 +71,11 @@ export interface HDF5InputNode
 
 export interface MicroscopeInputNode
   extends InputNodeBaseType<"microscope", Record<never, never>> {
+  selectedFilePath?: string
+}
+
+export interface MicroscopeExpdbInputNode
+  extends InputNodeBaseType<"microscope_expdb", Record<never, never>> {
   selectedFilePath?: string
 }
 

@@ -58,6 +58,7 @@ class NodeType:
     HDF5: str = "HDF5FileNode"
     MATLAB: str = "MatlabFileNode"
     MICROSCOPE: str = "MicroscopeFileNode"
+    MICROSCOPE_EXPDB: str = "MicroscopeExpdbFileNode"
     EXPDB: str = "ExpDbNode"
 
     # Data Type (Includes above DataType Nodes)
@@ -81,6 +82,7 @@ class NodeTypeUtil:
             NodeType.HDF5,
             NodeType.MATLAB,
             NodeType.MICROSCOPE,
+            NodeType.MICROSCOPE_EXPDB,
             NodeType.EXPDB,
         ]:
             return NodeType.DATA
@@ -101,6 +103,7 @@ class NodeTypeUtil:
             FILETYPE.HDF5,
             FILETYPE.MATLAB,
             FILETYPE.MICROSCOPE,
+            FILETYPE.MICROSCOPE_EXPDB,
             FILETYPE.EXPDB,
         ]:
             return NodeType.DATA
