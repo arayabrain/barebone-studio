@@ -50,7 +50,7 @@ class PieData(BaseData):
             wedges,
             self.columns,
             title="Categories",
-            loc="center right",
+            loc="upper right",
             bbox_to_anchor=(1, 0, 0.5, 1),
         )
         plt.axis("equal")  # Equal aspect ratio ensures the pie chart is circular.

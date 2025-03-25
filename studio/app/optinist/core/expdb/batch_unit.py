@@ -456,6 +456,7 @@ class ExpDbBatch:
             create_directory(self.pub_path.pixelmap_dir)
             self._copy_plots(self.raw_path.pixelmap_dir, self.pub_path.pixelmap_dir)
 
+    @stopwatch(callback=__stopwatch_callback)
     def generate_plots_using_cnmf_info(self, stat_data: StatData, cnmf_info: dict):
         self.logger_.info("process 'generate_pca_analysis_plots' start.")
 
