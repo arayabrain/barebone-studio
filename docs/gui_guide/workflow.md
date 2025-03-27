@@ -356,8 +356,12 @@ If you want to filter ROI data within a specific range (e.g., 0 to 100), follow 
 
 ##### 3. Applying the Filter
 
-1. In the filter settings, set the **ROI Data Range** from **0 to 100**.
-2. Click the **Apply** button to confirm the filter settings.
+1. In the **Filter Settings**, set the **ROI Data Range** to a desired range.
+
+   - For example, you can enter a full range like `0 to 100`.
+   - To specify multiple individual segments, use a format like: `3:4`, `6:7`, `12:13`.
+
+2. Click the **Apply** button to confirm and activate the filter settings.
 
 <br>
 <p align="center">
