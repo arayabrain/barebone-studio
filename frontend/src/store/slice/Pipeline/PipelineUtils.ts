@@ -1,3 +1,15 @@
+import { createElement, MouseEvent } from "react"
+
+import { OptionsObject, SnackbarKey } from "notistack"
+
+interface ApiError {
+  response?: {
+    status?: number
+    data?: unknown
+  }
+  message?: string
+}
+
 import { RunPostData, RunResultDTO, OutputPathsDTO } from "api/run/Run"
 import { toDataType } from "store/slice/DisplayData/DisplayDataUtils"
 import { NODE_TYPE_SET } from "store/slice/FlowElement/FlowElementType"
@@ -92,4 +104,42 @@ function convertToOutputPath(dto: OutputPathsDTO) {
     }
   })
   return result
+}
+
+// Handle workflow yaml error occurring when using v1.0 yaml in v2.0
+export function handleWorkflowYamlError(
+  error: ApiError,
+  enqueueSnackbar: (message: string, options?: OptionsObject) => SnackbarKey,
+): void {
+  // Catch workflow yaml parameter errors
+  if (error?.response?.status === 422) {
+    const snackbarOptions: OptionsObject = {
+      variant: "warning",
+      autoHideDuration: 30000,
+      action: function (_key: SnackbarKey) {
+        return createElement(
+          "span",
+          {
+            role: "button",
+            onMouseDown: (e: MouseEvent<HTMLSpanElement>) => {
+              e.stopPropagation()
+              window.open(
+                "https://github.com/oist/optinist/wiki/FAQ#error-yaml-file-error",
+                "_blank",
+              )
+            },
+            style: {
+              cursor: "pointer",
+              textDecoration: "underline",
+            },
+            className: "text-inherit",
+          },
+          "Click here",
+        )
+      },
+    }
+    enqueueSnackbar("Workflow yaml error, see FAQ\n", snackbarOptions)
+  } else {
+    enqueueSnackbar("Failed to Run workflow", { variant: "error" })
+  }
 }
