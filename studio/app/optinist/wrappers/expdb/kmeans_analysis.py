@@ -30,7 +30,8 @@ def kmeans_analysis(
     ----------
     stat : StatData
         StatData object to store analysis results
-    roi_masks data: np.ndarray
+    roi_masks : ndarray
+        ROI masks data
     output_dir : str
         Directory for saving output files
     params : dict, optional
@@ -353,8 +354,8 @@ def generate_kmeans_visualization(
         Dictionary of sorted correlation matrices for each k value
     fluorescence : ndarray
         Temporal components/fluorescence traces (n_rois x time)
-    roi_masks : ndarray or None
-        ROI masks data in any format
+    roi_masks : ndarray
+        ROI masks data
     silhouette_scores : ndarray, optional
         Silhouette scores for different numbers of clusters
     optimal_clusters : int, optional

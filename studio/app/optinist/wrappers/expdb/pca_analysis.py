@@ -28,7 +28,8 @@ def pca_analysis(
     ----------
     stat : StatData
         StatData object to store analysis results
-    roi_masks data: np.ndarray
+    roi_masks : ndarray
+        ROI masks data
     fluorescence data: np.ndarray
         Fluorescence data matrix (rois x time)
     output_dir : str
