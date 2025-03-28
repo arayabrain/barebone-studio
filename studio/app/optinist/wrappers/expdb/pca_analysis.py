@@ -14,7 +14,8 @@ logger = AppLogger.get_logger()
 
 def pca_analysis(
     stat: StatData,
-    cnmf_info: dict,
+    roi_masks: np.ndarray,
+    fluorescence: np.ndarray,
     output_dir: str,
     params: dict = None,
     ts_file=None,
@@ -27,8 +28,9 @@ def pca_analysis(
     ----------
     stat : StatData
         StatData object to store analysis results
-    cnmf_info : dict
-        Dictionary containing CNMF results including fluorescence data
+    roi_masks data: np.ndarray
+    fluorescence data: np.ndarray
+        Fluorescence data matrix (cells x time)
     output_dir : str
         Directory for saving output files
     params : dict, optional
@@ -45,7 +47,6 @@ def pca_analysis(
     """
 
     # Get the fluorescence data
-    fluorescence = cnmf_info["fluorescence"].data
     n_cells = fluorescence.shape[0]
 
     # # If iscell data is available, use it to filter fluorescence
@@ -81,7 +82,7 @@ def pca_analysis(
         stat.pca_explained_variance = dummy_explained_variance
 
         # Store ROI masks for visualization
-        stat.roi_masks = cnmf_info["all_roi"].data
+        stat.roi_masks = roi_masks
 
         # Still create visualization objects for proper UI display
         stat.set_pca_props()
@@ -226,7 +227,7 @@ def pca_analysis(
 
     # Store ROI masks for visualization
     # Request from client to use data not filtered by iscell
-    stat.roi_masks = cnmf_info["all_roi"].data
+    stat.roi_masks = roi_masks
 
     # Create visualization objects within the function
     stat.set_pca_props()

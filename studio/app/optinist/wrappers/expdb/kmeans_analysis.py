@@ -16,7 +16,8 @@ logger = AppLogger.get_logger()
 
 def kmeans_analysis(
     stat: StatData,
-    cnmf_info: dict,
+    roi_masks: np.ndarray,
+    fluorescence: np.ndarray,
     output_dir: str,
     params: dict = None,
     ts_file=None,
@@ -29,8 +30,7 @@ def kmeans_analysis(
     ----------
     stat : StatData
         StatData object to store analysis results
-    cnmf_info : dict
-        Dictionary containing CNMF results including fluorescence data
+    roi_masks data: np.ndarray
     output_dir : str
         Directory for saving output files
     params : dict, optional
@@ -47,7 +47,6 @@ def kmeans_analysis(
     """
 
     # Get the fluorescence data
-    fluorescence = cnmf_info["fluorescence"].data
     n_cells = fluorescence.shape[0]
 
     # # If iscell data is available, use it to filter fluorescence
@@ -97,7 +96,7 @@ def kmeans_analysis(
         # Store data needed for visualization
         stat.fluorescence = fluorescence
         stat.fluorescence_ave = np.zeros((1, 1))
-        stat.roi_masks = cnmf_info["all_roi"].data
+        stat.roi_masks = roi_masks
 
         # Create visualization objects within the function
         stat.set_kmeans_props()
@@ -309,7 +308,7 @@ def kmeans_analysis(
     stat.fluorescence = fluorescence
     stat.fluorescence_ave = fluorescence_ave
     # Request from client to use data not filtered by iscell
-    stat.roi_masks = cnmf_info["all_roi"].data
+    stat.roi_masks = roi_masks
 
     # Create visualization objects within the function
     stat.set_kmeans_props()
@@ -599,6 +598,8 @@ def generate_kmeans_visualization(
             n_clusters = len(unique_clusters)
             colors = plt.cm.jet(np.linspace(0, 1, n_clusters))
 
+            logger.info(f"Unique clusters: {unique_clusters}")
+
             # Create individual plots for each cluster
             for i, cluster_id in enumerate(unique_clusters):
                 plt.figure()
@@ -606,6 +607,9 @@ def generate_kmeans_visualization(
                 # Count cells in this cluster
                 cluster_indices = np.where(labels == cluster_id)[0]
                 cells_in_cluster = len(cluster_indices)
+                logger.info(f"cluster_indices : {cluster_indices}")
+                logger.info(f"Cluster {i+1} contains {cells_in_cluster} cells")
+                logger.info(f"roi_masks.shape: {roi_masks.shape}")
 
                 # Create a binary mask of all ROIs for background
                 roi_binary_mask = (
@@ -629,13 +633,33 @@ def generate_kmeans_visualization(
                 )
                 unique_ids = np.unique(roi_masks[valid_mask])
 
-                # Only include cells from current cluster
-                for idx, cell_id in zip(range(len(unique_ids)), unique_ids):
-                    if (
-                        idx in cluster_indices
-                    ):  # If this cell belongs to current cluster
-                        cell_mask = np.isclose(roi_masks, cell_id)
-                        cluster_mask = cluster_mask | cell_mask
+                # Check if we have any overlap between cluster indices and cell IDs
+                cell_id_matching = any(
+                    cell_id in cluster_indices for cell_id in unique_ids
+                )
+
+                # Try direct matching first if it seems valid
+                if cell_id_matching:
+                    # The cell IDs themselves match cluster indices
+                    for cell_id in unique_ids:
+                        if cell_id in cluster_indices:
+                            cell_mask = np.isclose(roi_masks, cell_id)
+                            cluster_mask = cluster_mask | cell_mask
+
+                    # Check if any cells - if not, fall back to position mapping
+                    if not np.any(cluster_mask):
+                        cell_id_matching = False
+
+                # If direct matching failed or found no cells, use position mapping
+                if not cell_id_matching:
+                    index_to_cell_id = {
+                        idx: cell_id for idx, cell_id in enumerate(unique_ids)
+                    }
+                    for idx in cluster_indices:
+                        if idx < len(unique_ids):
+                            cell_id = index_to_cell_id[idx]
+                            cell_mask = np.isclose(roi_masks, cell_id)
+                            cluster_mask = cluster_mask | cell_mask
 
                 # Create colored overlay for this cluster's cells only
                 colored_overlay = np.zeros((*roi_masks.shape, 4))  # RGBA
