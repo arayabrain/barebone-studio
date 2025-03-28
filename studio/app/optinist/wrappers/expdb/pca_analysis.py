@@ -30,7 +30,7 @@ def pca_analysis(
         StatData object to store analysis results
     roi_masks data: np.ndarray
     fluorescence data: np.ndarray
-        Fluorescence data matrix (cells x time)
+        Fluorescence data matrix (rois x time)
     output_dir : str
         Directory for saving output files
     params : dict, optional
@@ -46,9 +46,6 @@ def pca_analysis(
         Dictionary containing analysis results
     """
 
-    # Get the fluorescence data
-    n_cells = fluorescence.shape[0]
-
     # # If iscell data is available, use it to filter fluorescence
     # if "iscell" in cnmf_info and cnmf_info["iscell"] is not None:
     #     iscell = cnmf_info["iscell"].data
@@ -61,14 +58,14 @@ def pca_analysis(
     #             fluorescence = fluorescence[good_indices]
 
     # Get data shape
-    n_cells = fluorescence.shape[0]
+    n_rois = fluorescence.shape[0]
     logger.info(
-        f"PCA: fluorescence shape is {fluorescence.shape}, so n_cells = {n_cells}"
+        f"PCA: fluorescence shape is {fluorescence.shape}, so n_rois = {n_rois}"
     )
 
     # Check if we have enough ROIs for PCA
-    if n_cells < 2:
-        logger.warning("Not enough cells for PCA analysis (minimum 2 required)")
+    if n_rois < 2:
+        logger.warning("Not enough ROIs for PCA analysis (minimum 2 required)")
         # Create dummy placeholders
         dummy_scores = np.zeros((1, 1))
         dummy_scores_ave = np.zeros((1, 1))
@@ -106,19 +103,19 @@ def pca_analysis(
             "pca_contribution": stat.pca_contribution,
             "nwbfile": nwbfile,
         }
-    logger.info(f"PCA will use {n_cells} cells")
+    logger.info(f"PCA will use {n_rois} ROIs")
 
     # Set default parameters if none provided
     if params is None:
-        params = {"n_components": min(n_cells, 50), "standard_norm": True}
+        params = {"n_components": min(n_rois, 50), "standard_norm": True}
     else:
         # Extract parameters from the nested structure if present
         pca_params = params.get("PCA", {})
 
-        # Use min(n_cells, 50) as the default when the key is missing from parameters
+        # Use min(n_rois, 50) as the default when the key is missing from parameters
         params = {
             "n_components": min(
-                pca_params.get("n_components", min(n_cells, 50)), n_cells
+                pca_params.get("n_components", min(n_rois, 50)), n_rois
             ),
             "standard_norm": params.get("standard_mean", True),
         }
@@ -137,7 +134,7 @@ def pca_analysis(
     # Perform PCA
     pca = PCA(n_components=params["n_components"], svd_solver="randomized")
     scores = pca.fit_transform(data.T)  # time x components
-    components = pca.components_  # components x cells
+    components = pca.components_  # components x ROIs
     explained_variance = pca.explained_variance_ratio_ * 100
 
     if len(explained_variance) > 1:
@@ -225,7 +222,6 @@ def pca_analysis(
     stat.pca_components = components
     stat.pca_explained_variance = explained_variance
 
-    # Store ROI masks for visualization
     # Request from client to use data not filtered by iscell
     stat.roi_masks = roi_masks
 
@@ -268,7 +264,7 @@ def generate_pca_visualization(
     explained_variance : ndarray
         Explained variance percentages
     components : ndarray
-        PCA components matrix (components x cells)
+        PCA components matrix (components x ROIs)
     roi_masks : ndarray
         2D ROI mask where each non-NaN value identifies a cell
     output_dir : str
@@ -422,7 +418,7 @@ def generate_pca_visualization(
         # Create spatial component maps
         if roi_masks is not None and hasattr(roi_masks, "shape"):
             try:
-                # Extract valid cell IDs (non-NaN values) from roi_masks
+                # Extract valid ROI IDs (non-NaN values) from roi_masks
                 non_nan_mask = (
                     ~np.isnan(roi_masks)
                     if np.any(np.isnan(roi_masks))
@@ -433,17 +429,17 @@ def generate_pca_visualization(
                     # Create component map
                     component_map = np.full_like(roi_masks, np.nan)
 
-                    # Get unique cell IDs
+                    # Get unique ROI IDs
                     valid_ids = np.unique(roi_masks[non_nan_mask])
                     valid_ids = np.sort(valid_ids)
 
-                    # Map each cell's weight to its spatial location
-                    for idx, cell_id in enumerate(valid_ids):
+                    # Map each ROI's weight to its spatial location
+                    for idx, roi_id in enumerate(valid_ids):
                         if idx < len(component_weights):
-                            # Find pixels for this cell and assign component weight
-                            cell_mask = np.isclose(roi_masks, cell_id)
-                            if np.any(cell_mask):
-                                component_map[cell_mask] = component_weights[idx]
+                            # Find pixels for this ROI and assign component weight
+                            roi_mask = np.isclose(roi_masks, roi_id)
+                            if np.any(roi_mask):
+                                component_map[roi_mask] = component_weights[idx]
 
                     # Check if map has valid data
                     if not np.all(np.isnan(component_map)):
@@ -476,7 +472,7 @@ def generate_pca_visualization(
                 plt.figure()
                 plt.bar(range(len(component_weights)), component_weights)
                 plt.title(f"PC {i+1} Component Weights")
-                plt.xlabel("Cell Index")
+                plt.xlabel("ROI Index")
                 plt.ylabel("Weight")
                 plt.grid(True, alpha=0.3)
 
@@ -493,7 +489,7 @@ def generate_pca_visualization(
             plt.figure()
             plt.bar(range(len(component_weights)), component_weights)
             plt.title(f"PC {i+1} Component Weights")
-            plt.xlabel("Cell Index")
+            plt.xlabel("ROI Index")
             plt.ylabel("Weight")
             plt.grid(True, alpha=0.3)
 
@@ -505,7 +501,7 @@ def generate_pca_visualization(
             save_thumbnail(spatial_path)
 
     # 4. Save the contribution weights with PCA components
-    # Calculate how many plots we need based on the number of cells
+    # Calculate how many plots we need based on the number of ROIs
     logger.info(f"Components shape: {components.shape}")
     logger.info(f"Number of scores dimensions: {scores.shape[1]}")
     logger.info(f"Explained variance values: {len(explained_variance)}")
@@ -515,8 +511,8 @@ def generate_pca_visualization(
     n_plots = int(np.ceil(n_components / components_per_plot))
     logger.info(f"Number of plots: {n_plots}")
 
-    # Extract actual cell IDs from roi_masks
-    cell_ids = []
+    # Extract actual ROI IDs from roi_masks
+    roi_ids = []
     if roi_masks is not None and hasattr(roi_masks, "shape"):
         try:
             # Extract non-NaN values from roi_masks
@@ -527,19 +523,19 @@ def generate_pca_visualization(
             )
 
             if np.any(non_nan_mask):
-                # Get unique cell IDs
+                # Get unique ROI IDs
                 valid_ids = np.unique(roi_masks[non_nan_mask])
-                cell_ids = list(np.sort(valid_ids))
-                logger.info(f"Found {len(cell_ids)} unique cell IDs in ROI masks")
+                roi_ids = list(np.sort(valid_ids))
+                logger.info(f"Found {len(roi_ids)} unique IDs in ROI masks")
             else:
-                logger.warning("No valid values in ROI masks for cell ID extraction")
+                logger.warning("No valid values in ROI masks for ROI ID extraction")
         except Exception as e:
-            logger.error(f"Error extracting cell IDs from ROI masks: {str(e)}")
+            logger.error(f"Error extracting ROI IDs from ROI masks: {str(e)}")
 
-    # If we couldn't extract cell IDs, use sequential numbering
-    if not cell_ids:
-        cell_ids = list(range(components.shape[1]))
-        logger.info("Using sequential numbering for cell IDs")
+    # If we couldn't extract ROI IDs, use sequential numbering
+    if not roi_ids:
+        roi_ids = list(range(components.shape[1]))
+        logger.info("Using sequential numbering for ROI IDs")
 
     # Sort components by explained variance (descending)
     if explained_variance is not None and len(explained_variance) == n_components:
@@ -574,7 +570,7 @@ def generate_pca_visualization(
 
         # Get the components for this plot
         plot_components = sorted_components[start_idx:end_idx]
-        n_cells = len(plot_components[0])
+        n_rois = len(plot_components[0])
 
         # Create x-axis labels for the PCA components
         x_labels = [
@@ -583,40 +579,38 @@ def generate_pca_visualization(
         ]
         x_positions = np.arange(len(x_labels))
 
-        # Calculate the total contribution magnitude for each cell
-        cell_total_contributions = []
-        for cell_idx in range(n_cells):
-            # Get this cell's contribution to each component in this plot
-            cell_contributions = [comp[cell_idx] for comp in plot_components]
+        # Calculate the total contribution magnitude for each ROI
+        rois_total_contributions = []
+        for roi_idx in range(n_rois):
+            # Get this ROIs contribution to each component in this plot
+            roi_contributions = [comp[roi_idx] for comp in plot_components]
             # Use sum of absolute values to measure total contribution
-            total_contribution = sum(abs(c) for c in cell_contributions)
-            cell_total_contributions.append((cell_idx, total_contribution))
+            total_contribution = sum(abs(c) for c in roi_contributions)
+            rois_total_contributions.append((roi_idx, total_contribution))
 
-        # Sort cells by their total contribution (descending)
-        sorted_cells = sorted(
-            cell_total_contributions, key=lambda x: x[1], reverse=True
-        )
+        # Sort ROIs by their total contribution (descending)
+        sorted_rois = sorted(rois_total_contributions, key=lambda x: x[1], reverse=True)
 
-        # Limit to top 20 contributing cells for readability
-        top_cells = sorted_cells[:20]
+        # Limit to top 20 contributing ROIs for readability
+        top_rois = sorted_rois[:20]
 
-        # For each of the top contributing cells, plot its contribution
-        for rank, (cell_idx, _) in enumerate(top_cells):
-            # Get this cell's contribution to each component in this plot
-            cell_contributions = [comp[cell_idx] for comp in plot_components]
+        # For each of the top contributing ROIs, plot its contribution
+        for rank, (roi_idx, _) in enumerate(top_rois):
+            # Get this ROI's contribution to each component in this plot
+            roi_contributions = [comp[roi_idx] for comp in plot_components]
 
-            # Get the actual cell ID
-            cell_id = cell_ids[cell_idx] if cell_idx < len(cell_ids) else cell_idx
-            if isinstance(cell_id, (int, float)) and not np.isnan(cell_id):
-                cell_id_label = f"ROI {int(cell_id)}"
+            # Get the actual ROI ID
+            roi_id = roi_ids[roi_idx] if roi_idx < len(roi_ids) else roi_idx
+            if isinstance(roi_id, (int, float)) and not np.isnan(roi_id):
+                roi_id_label = f"ROI {int(roi_id)}"
             else:
-                cell_id_label = f"ROI {cell_id}"
+                roi_id_label = f"ROI {roi_id}"
 
             # Plot the bar for this cell
             plt.bar(
                 x_positions,
-                cell_contributions,
-                label=cell_id_label,  # Use actual cell ID in legend
+                roi_contributions,
+                label=roi_id_label,  # Use actual ROI ID in legend
                 width=0.8,
                 alpha=0.7,
             )
@@ -626,9 +620,9 @@ def generate_pca_visualization(
 
         # Add labels and title
         plt.xlabel("PCA Components (Sorted by Explained Variance)")
-        plt.ylabel("Cell Contribution")
+        plt.ylabel("ROI Contribution")
 
-        plt.title(f"PCA Components {start_idx+1} to {end_idx} and Cell Contributions")
+        plt.title(f"PCA Components {start_idx+1} to {end_idx} and ROI Contributions")
 
         plt.xticks(x_positions, x_labels, rotation=45)
         plt.tight_layout()

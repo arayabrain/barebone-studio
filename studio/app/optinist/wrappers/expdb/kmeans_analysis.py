@@ -47,7 +47,7 @@ def kmeans_analysis(
     """
 
     # Get the fluorescence data
-    n_cells = fluorescence.shape[0]
+    n_rois = fluorescence.shape[0]
 
     # # If iscell data is available, use it to filter fluorescence
     # if "iscell" in cnmf_info and cnmf_info["iscell"] is not None:
@@ -62,24 +62,24 @@ def kmeans_analysis(
 
     # Set default parameters if none provided
     if params is None:
-        params = {"n_clusters": min(10, n_cells)}
+        params = {"n_clusters": min(10, n_rois)}
     else:
         # Extract parameters from the nested structure if present
         kmeans_params = params.get("kmeans", {})
 
-        # Use min(10, n_cells) as the default when the key is missing
-        n_clusters = kmeans_params.get("n_clusters", min(10, n_cells))
+        # Use min(10, n_rois) as the default when the key is missing
+        n_clusters = kmeans_params.get("n_clusters", min(10, n_rois))
 
         # Ensure n_clusters is valid
         params = {
-            "n_clusters": min(n_clusters, n_cells),
+            "n_clusters": min(n_clusters, n_rois),
         }
 
-    # Handle case when there are insufficient cells for clustering
-    if n_cells < 2:
+    # Handle case when there are insufficient ROIs for clustering
+    if n_rois < 2:
         # Set dummy values
-        cluster_labels = np.zeros(max(1, n_cells), dtype=int)
-        corr_matrix = np.ones((max(1, n_cells), max(1, n_cells)), dtype=float)
+        cluster_labels = np.zeros(max(1, n_rois), dtype=int)
+        corr_matrix = np.ones((max(1, n_rois), max(1, n_rois)), dtype=float)
 
         # Initialize dictionaries with dummy values
         all_labels = {"optimal": cluster_labels, "minus_1": None, "plus_1": None}
@@ -121,14 +121,14 @@ def kmeans_analysis(
             # "cluster_corr_matrix": stat.cluster_corr_matrix,
             "nwbfile": nwbfile,
         }
-    logger.info(f"KMeans will use {n_cells} cells")
+    logger.info(f"KMeans will use {n_rois} ROIs")
 
     # Perform Kmeans clustering
     # Compute correlation matrix
     corr_matrix = np.corrcoef(fluorescence)
 
-    # Test clusters from 2 to 30 (or maximum cells if less)
-    k_range = range(2, min(31, n_cells))
+    # Test clusters from 2 to 30 (or maximum ROIs if less)
+    k_range = range(2, min(31, n_rois))
     silhouette_values = []
     cluster_labels_list = []
 
@@ -146,7 +146,7 @@ def kmeans_analysis(
         labels_temp = kmeans_temp.fit_predict(corr_matrix)
         cluster_labels_list.append(labels_temp)
         # Only calculate silhouette if we have at least 2 clusters and enough samples
-        if k >= 2 and n_cells > k:
+        if k >= 2 and n_rois > k:
             try:
                 sil_score = silhouette_score(corr_matrix, labels_temp)
                 silhouette_values.append(sil_score)
@@ -163,7 +163,7 @@ def kmeans_analysis(
         cluster_labels = cluster_labels_list[best_k_idx]
     else:
         # Fallback to default if silhouette calculation failed
-        k_optimal = min(params.get("n_clusters", 3), n_cells)
+        k_optimal = min(params.get("n_clusters", 3), n_rois)
         kmeans = KMeans(
             n_clusters=k_optimal, init="k-means++", n_init=10, algorithm="elkan"
         )
@@ -195,7 +195,7 @@ def kmeans_analysis(
         ]
 
     # Create sorted correlation matrix for k+1 (if k < max_k)
-    if k_optimal < n_cells - 1:
+    if k_optimal < n_rois - 1:
         kmeans_plus1 = KMeans(
             n_clusters=k_optimal + 1,
             init="k-means++",
@@ -256,36 +256,36 @@ def kmeans_analysis(
                     )
 
                     # Initialize trial-averaged fluorescence array
-                    fluorescence_ave = np.zeros((n_cells, n_frames_epoch * n_stims))
+                    fluorescence_ave = np.zeros((n_rois, n_frames_epoch * n_stims))
 
-                    # Process each cell
-                    for cell_idx in range(n_cells):
-                        # Get the cell's fluorescence data (usable frames)
+                    # Process each ROI
+                    for roi_idx in range(n_rois):
+                        # Get the ROI's fluorescence data (usable frames)
                         usable_frames = n_frames_epoch * n_stims * n_trials
-                        cell_fluo = fluorescence[cell_idx, :usable_frames]
+                        roi_fluo = fluorescence[roi_idx, :usable_frames]
 
                         # Reshape to (n_frames_epoch, n_stims * n_trials)
-                        cell_fluo_reshape = np.reshape(
-                            cell_fluo, (n_frames_epoch, n_stims * n_trials)
+                        roi_fluo_reshape = np.reshape(
+                            roi_fluo, (n_frames_epoch, n_stims * n_trials)
                         )
 
                         # Sort according to stim_matrix sort_idx_log
-                        cell_fluo_sort = cell_fluo_reshape[:, sort_idx_log]
+                        roi_fluo_sort = roi_fluo_reshape[:, sort_idx_log]
 
                         # Reshape for trial averaging
-                        cell_fluo_3d = np.reshape(
-                            cell_fluo_sort, (n_frames_epoch, n_stims, n_trials)
+                        roi_fluo_3d = np.reshape(
+                            roi_fluo_sort, (n_frames_epoch, n_stims, n_trials)
                         )
 
                         # Average across trials
                         # (keeping n_frames_epoch and n_stims dimensions)
-                        cell_fluo_avg = np.mean(
-                            cell_fluo_3d, axis=2
+                        roi_fluo_avg = np.mean(
+                            roi_fluo_3d, axis=2
                         )  # (n_frames_epoch, n_stims)
 
                         # Reshape to flatten time dimension
                         # (n_frames_epoch * n_stims)
-                        fluorescence_ave[cell_idx] = np.reshape(cell_fluo_avg, -1)
+                        fluorescence_ave[roi_idx] = np.reshape(roi_fluo_avg, -1)
 
                     logger.info(f"Trial-averaged fluo shape: {fluorescence_ave.shape}")
                 else:
@@ -352,7 +352,7 @@ def generate_kmeans_visualization(
     all_sorted_matrices : dict
         Dictionary of sorted correlation matrices for each k value
     fluorescence : ndarray
-        Temporal components/fluorescence traces (n_cells x time)
+        Temporal components/fluorescence traces (n_rois x time)
     roi_masks : ndarray or None
         ROI masks data in any format
     silhouette_scores : ndarray, optional
@@ -360,7 +360,7 @@ def generate_kmeans_visualization(
     optimal_clusters : int, optional
         Optimal number of clusters based on silhouette analysis
     fluorescence_ave : ndarray, optional
-        Trial-averaged fluorescence data (n_cells x time)
+        Trial-averaged fluorescence data (n_rois x time)
     output_dir : str
         Directory for saving output files
     """
@@ -573,9 +573,9 @@ def generate_kmeans_visualization(
                 cluster_avg = np.mean(fluo_data[cluster_mask], axis=0)
                 plt.plot(cluster_avg, linewidth=2, color=colors[i])
 
-                # Add individual cell traces with lower alpha
-                for cell_idx in np.where(cluster_mask)[0]:
-                    plt.plot(fluo_data[cell_idx], alpha=0.2, linewidth=0.5)
+                # Add individual ROI traces with lower alpha
+                for roi_idx in np.where(cluster_mask)[0]:
+                    plt.plot(fluo_data[roi_idx], alpha=0.2, linewidth=0.5)
 
                 plt.title(f"Cluster {i+1} {time_course_type} Time Course")
                 plt.xlabel("Time")
@@ -604,11 +604,11 @@ def generate_kmeans_visualization(
             for i, cluster_id in enumerate(unique_clusters):
                 plt.figure()
 
-                # Count cells in this cluster
+                # Count ROIs in this cluster
                 cluster_indices = np.where(labels == cluster_id)[0]
-                cells_in_cluster = len(cluster_indices)
+                rois_in_cluster = len(cluster_indices)
                 logger.info(f"cluster_indices : {cluster_indices}")
-                logger.info(f"Cluster {i+1} contains {cells_in_cluster} cells")
+                logger.info(f"Cluster {i+1} contains {rois_in_cluster} ROIs")
                 logger.info(f"roi_masks.shape: {roi_masks.shape}")
 
                 # Create a binary mask of all ROIs for background
@@ -622,10 +622,10 @@ def generate_kmeans_visualization(
                 white_cmap = ListedColormap(["white"])
                 plt.imshow(roi_binary_mask, cmap=white_cmap, alpha=0.2)
 
-                # Create a mask for only the cells in this cluster
+                # Create a mask for only the ROIs in this cluster
                 cluster_mask = np.zeros_like(roi_masks, dtype=bool)
 
-                # Find unique cell IDs in roi_masks
+                # Find unique ROI IDs in roi_masks
                 valid_mask = (
                     ~np.isnan(roi_masks)
                     if np.any(np.isnan(roi_masks))
@@ -633,35 +633,13 @@ def generate_kmeans_visualization(
                 )
                 unique_ids = np.unique(roi_masks[valid_mask])
 
-                # Check if we have any overlap between cluster indices and cell IDs
-                cell_id_matching = any(
-                    cell_id in cluster_indices for cell_id in unique_ids
-                )
+                # Only include ROIs from current cluster
+                for idx, roi_id in zip(range(len(unique_ids)), unique_ids):
+                    if idx in cluster_indices:  # If this ROI belongs to current cluster
+                        roi_mask = np.isclose(roi_masks, roi_id)
+                        cluster_mask = cluster_mask | roi_mask
 
-                # Try direct matching first if it seems valid
-                if cell_id_matching:
-                    # The cell IDs themselves match cluster indices
-                    for cell_id in unique_ids:
-                        if cell_id in cluster_indices:
-                            cell_mask = np.isclose(roi_masks, cell_id)
-                            cluster_mask = cluster_mask | cell_mask
-
-                    # Check if any cells - if not, fall back to position mapping
-                    if not np.any(cluster_mask):
-                        cell_id_matching = False
-
-                # If direct matching failed or found no cells, use position mapping
-                if not cell_id_matching:
-                    index_to_cell_id = {
-                        idx: cell_id for idx, cell_id in enumerate(unique_ids)
-                    }
-                    for idx in cluster_indices:
-                        if idx < len(unique_ids):
-                            cell_id = index_to_cell_id[idx]
-                            cell_mask = np.isclose(roi_masks, cell_id)
-                            cluster_mask = cluster_mask | cell_mask
-
-                # Create colored overlay for this cluster's cells only
+                # Create colored overlay for this cluster's ROIs only
                 colored_overlay = np.zeros((*roi_masks.shape, 4))  # RGBA
                 colored_overlay[cluster_mask, :3] = colors[
                     i, :3
@@ -669,7 +647,7 @@ def generate_kmeans_visualization(
                 colored_overlay[cluster_mask, 3] = 0.7  # Alpha for transparency
                 plt.imshow(colored_overlay)
 
-                plt.title(f"Cluster {i+1} ({cells_in_cluster} cells)")
+                plt.title(f"Cluster {i+1} ({rois_in_cluster} ROIs)")
                 plt.grid(True, alpha=0.3)
 
                 # Save individual cluster map
