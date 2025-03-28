@@ -14,13 +14,12 @@ import {
   Popover,
   Tooltip,
 } from "@mui/material"
-import { grey } from "@mui/material/colors"
 import { styled } from "@mui/material/styles"
 
 import { CurrentPipelineInfo } from "components/common/CurrentPipelineInfo"
 import { DevelopmentInformation } from "components/common/DevelopmentInformation"
+import { LeftSidebarContainer } from "components/common/LeftSidebarContainer"
 import { SectionTitle } from "components/common/ParamSection"
-import { ResizableSidebar } from "components/common/ResizebleSidebar"
 import { AlgorithmOutputDialog } from "components/Workspace/FlowChart/Dialog/AlgorithmOutputDialog"
 import { ClearWorkflowIdDialog } from "components/Workspace/FlowChart/Dialog/ClearWorkflowIdDialog"
 import {
@@ -37,7 +36,7 @@ import { ReactFlowComponent } from "components/Workspace/FlowChart/ReactFlowComp
 import RightDrawer from "components/Workspace/FlowChart/RightDrawer"
 import { AlgorithmTreeView } from "components/Workspace/FlowChart/TreeView"
 import PopupInputUrl from "components/Workspace/PopupInputUrl"
-import { CONTENT_HEIGHT, DRAWER_WIDTH, RIGHT_DRAWER_WIDTH } from "const/Layout"
+import { CONTENT_HEIGHT, RIGHT_DRAWER_WIDTH } from "const/Layout"
 import { getAlgoList } from "store/slice/AlgorithmList/AlgorithmListActions"
 import {
   getStatusLoadViaUrl,
@@ -182,41 +181,39 @@ const FlowChart = memo(function FlowChart(props: UseRunPipelineReturnType) {
         }}
       >
         <DndProvider backend={HTML5Backend}>
-          <Box minWidth={DRAWER_WIDTH} borderRight={1} borderColor={grey[300]}>
-            <ResizableSidebar>
+          <LeftSidebarContainer>
+            <Box overflow="auto" marginRight={2}>
+              <CurrentPipelineInfo />
+            </Box>
+            {isDevelopment && (
               <Box overflow="auto" marginRight={2}>
-                <CurrentPipelineInfo />
+                <DevelopmentInformation />
               </Box>
-              {isDevelopment && (
-                <Box overflow="auto" marginRight={2}>
-                  <DevelopmentInformation />
-                </Box>
-              )}
-              <Box overflow="auto">
-                <SectionTitle
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  Nodes
-                  <Tooltip title="Refresh Node">
-                    <span>
-                      <IconButton
-                        onClick={handleRefreshAlgoList}
-                        color="primary"
-                        disabled={nodeRefresh || !!isPending} // Disable while loading
-                      >
-                        {nodeRefresh ? (
-                          <CircularProgress size={24} />
-                        ) : (
-                          <CachedIcon />
-                        )}
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </SectionTitle>
-                <AlgorithmTreeView />
-              </Box>
-            </ResizableSidebar>
-          </Box>
+            )}
+            <Box overflow="auto">
+              <SectionTitle
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                Nodes
+                <Tooltip title="Refresh Node">
+                  <span>
+                    <IconButton
+                      onClick={handleRefreshAlgoList}
+                      color="primary"
+                      disabled={nodeRefresh || !!isPending} // Disable while loading
+                    >
+                      {nodeRefresh ? (
+                        <CircularProgress size={24} />
+                      ) : (
+                        <CachedIcon />
+                      )}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </SectionTitle>
+              <AlgorithmTreeView />
+            </Box>
+          </LeftSidebarContainer>
           <MainContents open={open}>
             <ReactFlowComponent {...props} />
             {dialogNodeId && (

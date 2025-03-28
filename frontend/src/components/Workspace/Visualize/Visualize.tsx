@@ -1,29 +1,24 @@
 import { FC } from "react"
 
 import { Box } from "@mui/material"
-import { grey } from "@mui/material/colors"
 import { styled } from "@mui/material/styles"
 
 import { CurrentPipelineInfo } from "components/common/CurrentPipelineInfo"
+import { LeftSidebarContainer } from "components/common/LeftSidebarContainer"
 import { FlexItemList } from "components/Workspace/Visualize/FlexItemList"
 import { VisualizeProvider } from "components/Workspace/Visualize/VisualizeContext"
 import { VisualizeItemEditor } from "components/Workspace/Visualize/VisualizeItemEditor"
-import { CONTENT_HEIGHT, DRAWER_WIDTH } from "const/Layout"
+import { CONTENT_HEIGHT } from "const/Layout"
 
 const Visualize: FC = () => {
   return (
     <Box display="flex">
-      <Box
-        width={DRAWER_WIDTH}
-        marginRight={3}
-        borderRight={1}
-        borderColor={grey[300]}
-      >
+      <LeftSidebarContainer>
         <Box overflow="auto" marginRight={2}>
           <CurrentPipelineInfo />
           <VisualizeItemEditor />
         </Box>
-      </Box>
+      </LeftSidebarContainer>
 
       <MainContents>
         <VisualizeProvider>
