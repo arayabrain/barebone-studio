@@ -58,11 +58,23 @@ def search_workspaces(
         list_ws = []
         for item in items:
             item[0].__dict__["shared_count"] = item.shared_count
+            item[0].__dict__["data_usage"] = item.data_usage
             list_ws.append(item[0])
         return list_ws
 
     query = (
-        select(common_model.Workspace, shared_count_subquery.label("shared_count"))
+        select(
+            common_model.Workspace,
+            shared_count_subquery.label("shared_count"),
+            (
+                common_model.Workspace.input_data_usage
+                + func.coalesce(func.sum(common_model.ExperimentRecord.data_usage), 0)
+            ).label("data_usage"),
+        )
+        .outerjoin(
+            common_model.ExperimentRecord,
+            common_model.ExperimentRecord.workspace_id == common_model.Workspace.id,
+        )
         .join(
             common_model.WorkspacesShareUser,
             common_model.Workspace.id == common_model.WorkspacesShareUser.workspace_id,

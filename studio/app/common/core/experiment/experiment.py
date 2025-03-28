@@ -32,6 +32,7 @@ class ExptConfig:
     function: Dict[str, ExptFunction]
     nwb: NWBParams
     snakemake: SmkParam
+    data_usage: Optional[int]
 
 
 @dataclass

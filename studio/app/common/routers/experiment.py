@@ -4,17 +4,21 @@ from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from sqlmodel import Session
 
 from studio.app.common.core.experiment.experiment import ExptConfig
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
 from studio.app.common.core.experiment.experiment_writer import ExptDataWriter
 from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.mode import MODE
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.workflow.workflow_runner import WorkflowRunner
 from studio.app.common.core.workspace.workspace_dependencies import (
     is_workspace_available,
     is_workspace_owner,
 )
+from studio.app.common.core.workspace.workspace_services import WorkspaceService
+from studio.app.common.db.database import get_db
 from studio.app.common.schemas.experiment import CopyItem, DeleteItem, RenameItem
 from studio.app.dir_path import DIRPATH
 
@@ -73,12 +77,16 @@ async def rename_experiment(workspace_id: str, unique_id: str, item: RenameItem)
     response_model=bool,
     dependencies=[Depends(is_workspace_owner)],
 )
-async def delete_experiment(workspace_id: str, unique_id: str):
+async def delete_experiment(
+    workspace_id: str, unique_id: str, db: Session = Depends(get_db)
+):
     try:
         ExptDataWriter(
             workspace_id,
             unique_id,
         ).delete_data()
+        if not MODE.IS_STANDALONE:
+            WorkspaceService.delete_workspace_experiment(db, workspace_id, unique_id)
         return True
     except Exception as e:
         logger.error(e, exc_info=True)

@@ -13,6 +13,7 @@ class ExptConfigBuilder:
         self._function = {}
         self._nwbfile = None
         self._snakemake = None
+        self._data_usage = None
 
     def set_config(self, config: ExptConfig) -> "ExptConfigBuilder":
         self._workspace_id = config.workspace_id
@@ -25,6 +26,7 @@ class ExptConfigBuilder:
         self._function = config.function
         self._nwbfile = config.nwb
         self._snakemake = config.snakemake
+        self._data_usage = config.data_usage
         return self
 
     def set_workspace_id(self, workspace_id) -> "ExptConfigBuilder":
@@ -63,6 +65,10 @@ class ExptConfigBuilder:
         self._snakemake = snakemake
         return self
 
+    def set_data_usage(self, data_usage) -> "ExptConfigBuilder":
+        self._data_usage = data_usage
+        return self
+
     def build(self) -> ExptConfig:
         return ExptConfig(
             workspace_id=self._workspace_id,
@@ -75,4 +81,5 @@ class ExptConfigBuilder:
             function=self._function,
             nwb=self._nwbfile,
             snakemake=self._snakemake,
+            data_usage=self._data_usage,
         )

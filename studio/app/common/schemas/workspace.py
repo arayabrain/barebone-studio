@@ -13,6 +13,7 @@ class Workspace(BaseModel):
     shared_count: int
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    data_usage: Optional[int]
 
     class Config:
         orm_mode = True

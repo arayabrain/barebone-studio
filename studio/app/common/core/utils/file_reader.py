@@ -3,6 +3,7 @@ import mmap
 import os
 from abc import ABC, abstractmethod
 from io import BufferedReader
+from pathlib import Path
 
 from typing_extensions import Optional
 
@@ -13,6 +14,10 @@ from studio.app.common.schemas.outputs import (
     PlotMetaData,
     TextPosition,
 )
+
+
+def get_folder_size(folder: str):
+    return sum(file.stat().st_size for file in Path(folder).rglob("*"))
 
 
 class Reader:

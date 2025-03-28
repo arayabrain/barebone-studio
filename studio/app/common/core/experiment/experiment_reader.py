@@ -23,6 +23,7 @@ class ExptConfigReader:
             function=cls.read_function(config["function"]),
             nwb=config.get("nwb"),
             snakemake=config.get("snakemake"),
+            data_usage=config.get("data_usage"),
         )
 
     @classmethod
