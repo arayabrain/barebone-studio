@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux"
 import { enqueueSnackbar } from "notistack"
 
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined"
-import Launch from "@mui/icons-material/Launch"
 import { Typography } from "@mui/material"
 import IconButton from "@mui/material/IconButton"
 import Tooltip from "@mui/material/Tooltip"
@@ -181,12 +180,14 @@ export const CondaNoticeButton = memo(function CondaNoticeButton({
             <p style={{ display: "flex", alignItems: "center" }}>
               <InfoOutlinedIcon
                 style={{
+                  color: "orange",
                   marginRight: 8,
                 }}
                 color="info"
                 fontSize="small"
               />
-              Creating now will clear the current workflow.
+              Conda environment verification clears the current workflow. Skip
+              to avoid losing your workflow.
             </p>
           </>
         }

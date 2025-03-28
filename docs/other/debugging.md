@@ -22,6 +22,7 @@ By using this function, you can separate the normal Node processing from the Con
 
 - Clicking the **"i"** button will open a pop-up window asking if you want to automatically set up the environment for the selected node.
 - To proceed with the setup, click **"CREATE ENV"** to reproduce and configure the Conda environment automatically.
+- **Note:** Using **"CREATE ENV"** will load test data during conda environment creation. After creation, you will need to recreate your workflow manually.
 - If you do not wish to set up the environment, click **"SKIP"** to bypass this step. When performing RUN or RUN ALL, any required environments that have not been setup, will be setup automatically.
 
 <p align="left">
