@@ -45,6 +45,9 @@ export const selectExperiment = (uid: string) => (state: RootState) =>
 export const selectExperimentStartedAt = (uid: string) => (state: RootState) =>
   selectExperiment(uid)(state).startedAt
 
+export const selectExperimentDataUsage = (uid: string) => (state: RootState) =>
+  selectExperiment(uid)(state).data_usage
+
 export const selectExperimentFinishedAt = (uid: string) => (state: RootState) =>
   selectExperiment(uid)(state).finishedAt
 

@@ -2,6 +2,7 @@ export type UserDTO = {
   uid?: string
   email: string
   id?: number
+  data_usage: number
   name?: string
   organization?: {
     id: number
