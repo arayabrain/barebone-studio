@@ -105,7 +105,7 @@ custom_wrapper_dict = {                       # (*1)
     'custom_node': {                          # (*2)
         'template': {                         # (*3)
             'function': my_function,          # (*4)
-            'conda_name': 'custom_env',       # (*5)
+            'conda_name': 'custom',       # (*5)
         },
     }
 }
@@ -125,7 +125,7 @@ After the registration process up to this point, restart the application browser
 If your function requires specific packages, you can set them using a conda env for your custom node. If nothing is set, a default optinist conda env will be used. See /studio/app/optinist/wrappers/optinist/conda/optinist.yaml for specifics of the default conda env.
 
 - Target file
-  - {OPTINIST_SRC_DIR}/studio/app/optinist/wrappers/custom/conda/`custom_env`.yaml
+  - {OPTINIST_SRC_DIR}/studio/app/optinist/wrappers/custom/conda/`custom`.yaml
 
 ```yaml
 dependencies:
