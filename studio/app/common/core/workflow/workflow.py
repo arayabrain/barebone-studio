@@ -142,7 +142,7 @@ class Message:
 @dataclass
 class DataFilterRangeParam:
     start: int
-    end: int
+    end: Optional[int]
 
 
 @dataclass
@@ -162,10 +162,15 @@ class DataFilterParam:
 
         mask = np.zeros(max_size, dtype=bool)
         for range in dim_range:
-            if isinstance(range, dict):
-                mask[range["start"] : range["end"]] = True
-            else:
-                mask[range.start : range.end] = True
+            start, end = (
+                (range["start"], range["end"])
+                if isinstance(range, dict)
+                else (range.start, range.end)
+            )
+
+            end = end or start + 1
+
+            mask[start:end] = True
         return mask
 
     def dim1_mask(self, max_size):
