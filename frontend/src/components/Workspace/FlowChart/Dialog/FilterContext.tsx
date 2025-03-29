@@ -52,7 +52,7 @@ export const BoxFilterProvider = ({
 
   useEffect(() => {
     if (isOutput && path && isExistFilterRoi && workspaceId) {
-      dispatch(getRoiData({ workspaceId, path }))
+      dispatch(getRoiData({ workspaceId, path, isFull: true }))
     }
   }, [dispatch, path, isExistFilterRoi, isOutput, workspaceId])
 

@@ -6,7 +6,7 @@ export type AlgorithmNode = {
   [nodeId: string]: AlgorithmNodeType
 }
 
-export type TDim = { start?: number; end?: number }
+export type TDim = { start?: number; end?: number | null }
 
 export type TDataFilterParam = {
   dim1?: TDim[]

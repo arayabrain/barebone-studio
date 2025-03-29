@@ -159,9 +159,10 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
     (num: number) => {
       return (
         !isExistFilterRoi ||
-        filterParam?.roi?.some(
-          (roi) => num >= (roi.start || 0) && (!roi.end || num < roi.end),
-        )
+        filterParam?.roi?.some((roi) => {
+          const roiStart = roi.start || 0
+          return num >= roiStart && num < (roi.end || roiStart + 1)
+        })
       )
     },
     [filterParam?.roi, isExistFilterRoi],
@@ -340,7 +341,7 @@ const TimeSeriesPlotImple = memo(function TimeSeriesPlotImple() {
                   ? xrange.left / frameRate
                   : -2.5,
                 typeof xrange.right !== "undefined"
-                  ? xrange.right / frameRate
+                  ? (xrange.right || 0) / frameRate
                   : dataXrange.length / frameRate + 6.8,
               ],
         showgrid: showgrid,
