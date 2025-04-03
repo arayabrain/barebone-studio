@@ -37,6 +37,12 @@ class Workspace(Base, TimestampMixin, table=True):
         ),
     )
     deleted: bool = Field(nullable=False)
+    input_data_usage: int = Field(
+        sa_column=Column(
+            BIGINT(unsigned=True), nullable=False, comment="data usage in bytes"
+        ),
+        default=0,
+    )
 
     user: Optional["User"] = Relationship(back_populates="workspace")  # noqa: F821
     user_share: List["User"] = Relationship(  # noqa: F821

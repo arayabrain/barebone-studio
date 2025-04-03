@@ -169,6 +169,7 @@ class ExptDataWriter:
             function=ExptConfigReader.read_function(config["function"]),
             nwb=config.get("nwb"),
             snakemake=config.get("snakemake"),
+            data_usage=config.get("data_usage"),
         )
 
     def copy_data(self, new_unique_id: str) -> bool:
