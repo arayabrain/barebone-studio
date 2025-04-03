@@ -36,6 +36,7 @@ export type ExperimentDTO = {
   unique_id: string
   hasNWB: boolean
   nwb: NWBType
+  data_usage: number
 }
 
 export async function getExperimentsApi(
