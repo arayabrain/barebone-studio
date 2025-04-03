@@ -10,6 +10,7 @@ import numpy as np
 
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
 from studio.app.common.core.experiment.experiment_writer import ExptConfigWriter
+from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.rules.runner import Runner
 from studio.app.common.core.snakemake.smk import FlowConfig, Rule, SmkParam
 from studio.app.common.core.snakemake.snakemake_executor import (
@@ -302,11 +303,13 @@ class WorkflowNodeDataFilter:
         type: str,
         output_dir,
     ) -> dict:
+        logger = AppLogger.get_logger()
         im = output_info["edit_roi_data"].im
         fluorescence = output_info["fluorescence"].data
         dff = output_info["dff"].data if output_info.get("dff") else None
         iscell = output_info["iscell"].data
 
+        # Apply filters
         if data_filter_param.dim1:
             dim1_filter_mask = data_filter_param.dim1_mask(
                 max_size=fluorescence.shape[1]
@@ -321,11 +324,76 @@ class WorkflowNodeDataFilter:
 
         nwbfile = output_info["nwbfile"]
         function_id = list(nwbfile[type][NWBDATASET.POSTPROCESS].keys())[0]
-        nwbfile[type][NWBDATASET.COLUMN][function_id]["data"] = iscell
-        nwbfile[type][NWBDATASET.FLUORESCENCE][function_id]["Fluorescence"][
-            "data"
-        ] = fluorescence.T
+        filtered_function_id = f"filtered_{function_id}"
 
+        # 1. Create ROI section with filtered_function_id
+        if NWBDATASET.ROI in nwbfile[type]:
+            nwbfile[type][NWBDATASET.ROI][filtered_function_id] = nwbfile[type][
+                NWBDATASET.ROI
+            ][function_id]
+
+        # 2. Create COLUMN section with filtered_function_id
+        if NWBDATASET.COLUMN in nwbfile[type]:
+            # Copy structure first if it doesn't exist
+            if filtered_function_id not in nwbfile[type][NWBDATASET.COLUMN]:
+                nwbfile[type][NWBDATASET.COLUMN][filtered_function_id] = dict(
+                    nwbfile[type][NWBDATASET.COLUMN][function_id]
+                )
+            # Update with filtered data
+            nwbfile[type][NWBDATASET.COLUMN][filtered_function_id]["data"] = iscell
+
+        # 3. Create FLUORESCENCE section with filtered_function_id
+        if NWBDATASET.FLUORESCENCE in nwbfile[type]:
+            # Copy structure first if it doesn't exist
+            if filtered_function_id not in nwbfile[type][NWBDATASET.FLUORESCENCE]:
+                nwbfile[type][NWBDATASET.FLUORESCENCE][filtered_function_id] = dict(
+                    nwbfile[type][NWBDATASET.FLUORESCENCE][function_id]
+                )
+            # Update with filtered data
+            nwbfile[type][NWBDATASET.FLUORESCENCE][filtered_function_id][
+                "Fluorescence"
+            ]["data"] = fluorescence.T
+
+        # 4. Add filter parameters to optinist section
+        logger.info(
+            f"Saving filter ROI {data_filter_param.roi}, Time {data_filter_param.dim1}"
+        )
+        if filtered_function_id not in nwbfile[type][NWBDATASET.POSTPROCESS]:
+            nwbfile[type][NWBDATASET.POSTPROCESS][filtered_function_id] = {}
+
+            # Process ROI filter indices if they exist
+            if data_filter_param.roi:
+                filtered_roi_indices = []
+                for range_param in data_filter_param.roi:
+                    if range_param.end:  # Check if end is defined
+                        filtered_roi_indices.extend(
+                            range(range_param.start, range_param.end)
+                        )
+                    else:
+                        filtered_roi_indices.append(
+                            range_param.start
+                        )  # Just add the start if no end
+                filtered_roi_indices = np.array(filtered_roi_indices, dtype="float")
+                nwbfile[type][NWBDATASET.POSTPROCESS][filtered_function_id][
+                    "filter_roi_ind"
+                ] = filtered_roi_indices
+
+            # Process dimension 1 filter indices if they exist
+            if data_filter_param.dim1:
+                filtered_dim1_indices = []
+                for range_param in data_filter_param.dim1:
+                    if range_param.end:  # Check if end is defined
+                        filtered_dim1_indices.extend(
+                            range(range_param.start, range_param.end)
+                        )
+                    else:
+                        filtered_dim1_indices.append(range_param.start)
+                filtered_dim1_indices = np.array(filtered_dim1_indices, dtype="float")
+                nwbfile[type][NWBDATASET.POSTPROCESS][filtered_function_id][
+                    "filter_time_ind"
+                ] = filtered_dim1_indices
+
+        # Build return info
         info = {
             **output_info,
             "cell_roi": RoiData(
