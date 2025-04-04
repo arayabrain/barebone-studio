@@ -150,4 +150,5 @@ def __move_file_safely(src: str, dest: str) -> None:
         elif os.path.isdir(dest):
             shutil.rmtree(dest)
 
-    shutil.move(src, dest)
+    if os.path.exists(src):
+        shutil.move(src, dest)
