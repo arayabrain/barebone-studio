@@ -31,6 +31,7 @@ class DIRPATH:
     CONDAENV_DIR = (
         f"{os.path.dirname(os.path.dirname(os.path.dirname(__file__)))}/conda"
     )
+    SNAKEMAKE_CONDA_ENV_DIR = f"{ROOT_DIR}/.snakemake/conda"
 
     SNAKEMAKE_FILEPATH = f"{APP_DIR}/Snakefile"
     EXPERIMENT_YML = "experiment.yaml"

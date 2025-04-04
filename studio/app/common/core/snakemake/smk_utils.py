@@ -138,12 +138,6 @@ class SmkInternalUtils:
         - snakemake v7.30
     """
 
-    """
-    NOTE: This path is defined below:
-      - snakemake.persistence.Persistence.__init__
-    """
-    SMK_CONDA_ENV_ROOT_PATH = ".snakemake/conda"
-
     @classmethod
     def verify_conda_env_exists(
         cls,
@@ -163,9 +157,7 @@ class SmkInternalUtils:
           Persistence is not used directly here.
         """
         if conda_env_rootpath is None:
-            conda_env_rootpath = os.path.join(
-                DIRPATH.ROOT_DIR, cls.SMK_CONDA_ENV_ROOT_PATH
-            )
+            conda_env_rootpath = DIRPATH.SNAKEMAKE_CONDA_ENV_DIR
 
         # Get the path of the conda env configuration file
         if conda_env_filepath is None:

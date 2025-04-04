@@ -1,7 +1,7 @@
 rules:
   input_0:
     input:
-    - test.tif
+    - 1/test.tif
     return_arg: input_0
     params: {}
     output: default/smk_exec_lccd/input_0/data_endoscope.pkl

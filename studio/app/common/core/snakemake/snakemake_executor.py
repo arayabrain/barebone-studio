@@ -16,19 +16,25 @@ logger = AppLogger.get_logger()
 
 def snakemake_execute(workspace_id: str, unique_id: str, params: SmkParam):
     smk_logger = SmkStatusLogger(workspace_id, unique_id)
+    smk_workdir = join_filepath(
+        [
+            DIRPATH.OUTPUT_DIR,
+            workspace_id,
+            unique_id,
+        ]
+    )
 
     result = snakemake(
         DIRPATH.SNAKEMAKE_FILEPATH,
         forceall=params.forceall,
         cores=params.cores,
         use_conda=params.use_conda,
-        workdir=f"{os.path.dirname(DIRPATH.STUDIO_DIR)}",
+        conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
+        workdir=smk_workdir,
         configfiles=[
             join_filepath(
                 [
-                    DIRPATH.OUTPUT_DIR,
-                    workspace_id,
-                    unique_id,
+                    smk_workdir,
                     DIRPATH.SNAKEMAKE_CONFIG_YML,
                 ]
             )

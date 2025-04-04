@@ -125,8 +125,8 @@ profile = "black"
 
 [tool.pytest.ini_options]
 pythonpath = "."
-testpaths = "studio/tests"
-env = ["OPTINIST_DIR=studio/test_data"]
+testpaths = "/app/studio/tests"
+env = ["OPTINIST_DIR=/app/studio/test_data"]
 filterwarnings = [
     "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
     "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning",
