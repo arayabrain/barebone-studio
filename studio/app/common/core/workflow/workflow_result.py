@@ -141,7 +141,7 @@ class WorkflowResult:
         is_running = len(nodeIdList) != len(messages.keys())
 
         logger.debug(
-            "check wornflow running status "
+            "check workflow running status "
             f"[{self.workspace_id}/{self.unique_id}] [is_running: {is_running}]"
         )
 

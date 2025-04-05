@@ -10,6 +10,7 @@ import numpy as np
 
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
 from studio.app.common.core.experiment.experiment_writer import ExptConfigWriter
+from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.rules.runner import Runner
 from studio.app.common.core.snakemake.smk import FlowConfig, Rule, SmkParam
 from studio.app.common.core.snakemake.snakemake_executor import (
@@ -263,8 +264,16 @@ class WorkflowNodeDataFilter:
             self.original_fluorescence_dirpath,
             dirs_exist_ok=True,
         )
+        whole_nwb_path = join_filepath([self.workflow_dirpath, "whole.nwb"])
+        if os.path.exists(whole_nwb_path):
+            original_nwb_filepath = join_filepath(
+                [self.workflow_dirpath, "original_data.nwb"]
+            )
+            shutil.copyfile(whole_nwb_path, original_nwb_filepath)
 
     def _recover_original_data(self):
+        logger = AppLogger.get_logger()
+        logger.debug("Restore original data")
         os.remove(self.pkl_filepath)
         shutil.move(self.original_pkl_filepath, self.pkl_filepath)
 
@@ -282,6 +291,13 @@ class WorkflowNodeDataFilter:
 
         shutil.rmtree(self.fluorescence_dirpath)
         os.rename(self.original_fluorescence_dirpath, self.fluorescence_dirpath)
+
+        original_nwb_filepath = join_filepath(
+            [self.workflow_dirpath, "original_data.nwb"]
+        )
+        if os.path.exists(original_nwb_filepath):
+            os.remove(original_nwb_filepath)
+            logger.debug(f"Removed backup workflow NWB: {original_nwb_filepath}")
 
     def _save_json(self, output_info, node_dirpath):
         for k, v in output_info.items():
