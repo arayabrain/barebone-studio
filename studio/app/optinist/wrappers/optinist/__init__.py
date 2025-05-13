@@ -13,11 +13,11 @@ from studio.app.optinist.wrappers.optinist.neural_population_analysis import (
 from studio.app.optinist.wrappers.optinist.visualize_utils import utils_wrapper_dict
 
 optinist_wrapper_dict = {
-    "optinist": {
-        "basic_neural_analysis": basic_neural_analysis_wrapper_dict,
-        "dimension_reduction": dimension_reduction_wrapper_dict,
-        "neural_decoding": neural_decoding_wrapper_dict,
-        "neural_population_analysis": neural_population_analysis_wrapper_dict,
-        "utils": utils_wrapper_dict,
+    "OptiNiSt": {
+        "Basic neural analysis": basic_neural_analysis_wrapper_dict,
+        "Dimension reduction": dimension_reduction_wrapper_dict,
+        "Neural decoding": neural_decoding_wrapper_dict,
+        "Neural population analysis": neural_population_analysis_wrapper_dict,
+        "Utils": utils_wrapper_dict,
     }
 }

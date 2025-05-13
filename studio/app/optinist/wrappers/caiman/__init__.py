@@ -6,7 +6,7 @@ from studio.app.optinist.wrappers.caiman.cnmfe import caiman_cnmfe
 from studio.app.optinist.wrappers.caiman.motion_correction import caiman_mc
 
 caiman_wrapper_dict = {
-    "caiman": {
+    "CaImAn": {
         "caiman_mc": {
             "function": caiman_mc,
             "conda_name": "caiman",
