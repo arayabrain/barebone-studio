@@ -15,7 +15,7 @@ export function isValidConnection(connection: Connection) {
     // NOTE: SpikingActivityData is the same as FluoData. Just renamed for suite2p_spike_deconv.
     if (source === "SpikingActivityData") {
       return target === "FluoData" || target === "SpikingActivityData"
-    } else if (target === "BaseData") {
+    } else if (target === "BaseData" || source === "BaseData") {
       return true
     } else {
       return source === target
