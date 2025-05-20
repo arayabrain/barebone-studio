@@ -2,11 +2,7 @@ import numpy as np
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.dataclass.base import BaseData
-from studio.app.common.dataclass.csv import CsvData
-from studio.app.common.dataclass.image import ImageData
-from studio.app.optinist.dataclass.behavior import BehaviorData
-from studio.app.optinist.dataclass.fluo import FluoData
-from studio.app.optinist.dataclass.roi import RoiData
+from studio.app.optinist.wrappers.data_utils.data_utils_utils import return_as_data_type
 
 
 def data_transpose(
@@ -25,8 +21,8 @@ def data_transpose(
         params (dict, optional): 'transpose_dims': List of indices specifying the new
                                 dimension order.
     Returns:
-        dict: A dictionary containing the transposed data with a key that corresponds to
-              appropriate data type.
+        transposed_data: A dictionary containing the transposed data with a key
+        that corresponds to appropriate data type.
     """
     logger = AppLogger.get_logger()
     logger.info("Starting data transposition")
@@ -77,82 +73,13 @@ def data_transpose(
             if hasattr(data, "file_name")
             else "transposed_data"
         )
-        # Set output based on data type
-        if isinstance(data, BehaviorData):
-            transposed_data = BehaviorData(
-                data=tp_data,
-                std=data.std if hasattr(data, "std") else None,
-                index=data.index if hasattr(data, "index") else None,
-                params=params,
-                file_name=file_name,
-            )
-            logger.info(f"Transposed behavior data to dims: {dims}")
-            return {"behaviors_data": transposed_data}
 
-        elif isinstance(data, CsvData):
-            transposed_data = CsvData(
-                data=tp_data,
-                params=params or {},
-                file_name=file_name,
-                meta=data.meta if hasattr(data, "meta") else None,
-            )
-            logger.info(f"Transposed csv data to dims: {dims}")
-            return {"behaviors_data": transposed_data}
+        # Use utility function to return the correct data type
+        info = {}
+        typed_data_dict = return_as_data_type(data, tp_data, output_dir, file_name)
+        info.update(typed_data_dict)
 
-        elif isinstance(data, FluoData):
-            transposed_data = FluoData(
-                data=tp_data,
-                std=data.std if hasattr(data, "std") else None,
-                index=data.index if hasattr(data, "index") else None,
-                params=params,
-                cell_numbers=data.cell_numbers
-                if hasattr(data, "cell_numbers")
-                else None,
-                file_name=file_name,
-                meta=data.meta if hasattr(data, "meta") else None,
-            )
-            logger.info(f"Transposed neural data to dims: {dims}")
-            return {"neural_data": transposed_data}
-
-        elif isinstance(data, ImageData):
-            transposed_data = ImageData(
-                data=tp_data,
-                output_dir=output_dir,
-                file_name=file_name,
-                meta=data.meta if hasattr(data, "meta") else None,
-            )
-            logger.info(f"Transposed image data to dims: {dims}")
-            return {"image": transposed_data}
-
-        elif isinstance(data, RoiData):
-            transposed_data = RoiData(
-                data=tp_data,
-                output_dir=output_dir,
-                file_name=file_name,
-                meta=data.meta if hasattr(data, "meta") else None,
-            )
-            logger.info(f"Transposed roi data to dims: {dims}")
-            return {"roi": transposed_data}
-
-        else:
-            # Generic approach for other data types
-            logger.warning(
-                f"Using generic approach for data type: {type(data).__name__}"
-            )
-            try:
-                if hasattr(data, "meta"):
-                    transposed_data = type(data)(
-                        data=tp_data, file_name=file_name, meta=data.meta
-                    )
-                else:
-                    transposed_data = type(data)(data=tp_data, file_name=file_name)
-                return {"transposed_data": transposed_data}
-
-            except TypeError as e:
-                logger.error(f"Unable to create transposed data object: {str(e)}")
-                raise ValueError(
-                    f"Cannot transpose object of type {type(data).__name__}: {str(e)}"
-                )
+        return info
 
     except Exception as e:
         logger.error(f"Error during data transposition: {str(e)}")
