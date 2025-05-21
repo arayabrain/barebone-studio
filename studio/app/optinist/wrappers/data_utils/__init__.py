@@ -10,7 +10,7 @@ from studio.app.optinist.wrappers.data_utils.roi_from_hdf5 import roi_from_hdf5
 from studio.app.optinist.wrappers.data_utils.vacant_roi import vacant_roi
 
 utils_wrapper_dict = {
-    "Utils": {
+    "utils": {
         "microscope_to_img": {
             "function": microscope_to_img,
             "conda_name": "microscope",
