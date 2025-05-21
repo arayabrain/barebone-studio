@@ -73,7 +73,7 @@ def get_roi(A, roi_thr, thr_method, swap_dim, dims):
     return ims
 
 
-def util_get_memmap(images: np.ndarray, file_path: str):
+def util_get_image_memmap(function_id: str, images: np.ndarray, file_path: str):
     """
     convert np.ndarray to mmap
     """
@@ -86,8 +86,9 @@ def util_get_memmap(images: np.ndarray, file_path: str):
     shape_mov = (np.prod(dims), T)
 
     dir_path = join_filepath(file_path.split("/")[:-1])
-    basename = file_path.split("/")[-1]
-    fname_tot = memmap_frames_filename(basename, dims, T, order)
+    file_basename = file_path.split("/")[-1]
+    mmap_basename = f"{file_basename}.{function_id}"
+    fname_tot = memmap_frames_filename(mmap_basename, dims, T, order)
     mmap_path = join_filepath([dir_path, fname_tot])
 
     mmap_images = np.memmap(
@@ -101,6 +102,12 @@ def util_get_memmap(images: np.ndarray, file_path: str):
     mmap_images = np.reshape(mmap_images.T, [T] + list(dims), order="F")
     mmap_images[:] = images[:]
     return mmap_images, dims, mmap_path
+
+
+def util_cleanup_image_memmap(mmap_paths: list):
+    for mmap_path in mmap_paths:
+        if mmap_path.endswith(".mmap") and os.path.isfile(mmap_path):
+            os.remove(mmap_path)
 
 
 def util_download_model_files():
@@ -165,7 +172,9 @@ def caiman_cnmf(
         file_path = file_path[0]
 
     images = images.data
-    mmap_images, dims, mmap_path = util_get_memmap(images, file_path)
+    mmap_paths = []
+    mmap_images, dims, mmap_path = util_get_image_memmap(function_id, images, file_path)
+    mmap_paths.append(mmap_path)
 
     del images
     gc.collect()
@@ -305,7 +314,7 @@ def caiman_cnmf(
                 kargs["rejected"] = i in rejected_list
             roi_list.append(kargs)
 
-    nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
+    nwbfile[NWBDATASET.ROI] = {function_id: {"roi_list": roi_list}}
     nwbfile[NWBDATASET.POSTPROCESS] = {function_id: {"all_roi_img": im}}
 
     # Add iscell to NWB
@@ -369,5 +378,12 @@ def caiman_cnmf(
         "edit_roi_data": EditRoiData(mmap_images, im),
         "nwbfile": nwbfile,
     }
+
+    # Clean up temporary files
+    try:
+        util_cleanup_image_memmap(mmap_paths)
+    except Exception as e:
+        logger.error("Failed to cleanup memmap files.")
+        logger.error(e)
 
     return info

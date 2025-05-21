@@ -1,12 +1,7 @@
 import os
-import shutil
 
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
-from studio.app.common.core.utils.filepath_creater import (
-    create_directory,
-    join_filepath,
-)
 from studio.app.common.dataclass import ImageData
 from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass import RoiData
@@ -64,13 +59,13 @@ def caiman_mc(
     border_to_0 = 0 if mc.border_nan == "copy" else mc.border_to_0
 
     # memory mapping
-    fname_new = save_memmap(
+    mmap_file_new = save_memmap(
         mc.mmap_file, base_name=function_id, order="C", border_to_0=border_to_0
     )
     stop_server(dview=dview)
 
     # now load the file
-    Yr, dims, T = load_memmap(fname_new)
+    Yr, dims, T = load_memmap(mmap_file_new)
 
     images = np.array(Yr.T.reshape((T,) + dims, order="F"))
 
@@ -105,7 +100,7 @@ def caiman_mc(
 
     # Clean up temporary files
     try:
-        __handle_mmap_cleanup(mc, fname_new, output_dir)
+        __handle_mmap_cleanup(mc, mmap_file_new)
     except Exception as e:
         logger.error("caiman_mc: Failed to cleanup memmap files.")
         logger.error(e)
@@ -143,10 +138,7 @@ def __process_images(images):
     return meanImg, rois
 
 
-def __handle_mmap_cleanup(mc, fname_new, output_dir):
-    mmap_output_dir = join_filepath([output_dir, "mmap"])
-    create_directory(mmap_output_dir)
-
+def __handle_mmap_cleanup(mc, mmap_file_new):
     # Explicitly gc before deleting memmap file
     # *Avoid lock errors when cleaning memmap files.
     import gc
@@ -154,23 +146,8 @@ def __handle_mmap_cleanup(mc, fname_new, output_dir):
     gc.collect()
 
     for mmap_file in mc.mmap_file:
-        dest_file = os.path.join(mmap_output_dir, os.path.basename(mmap_file))
-        __move_file_safely(mmap_file, dest_file)
+        if os.path.isfile(mmap_file):
+            os.remove(mmap_file)
 
-    dest_fname_new = os.path.join(mmap_output_dir, os.path.basename(fname_new))
-    __move_file_safely(fname_new, dest_fname_new)
-
-
-def __move_file_safely(src: str, dest: str) -> None:
-    if os.path.exists(dest):
-        # Remove the existing file
-        if os.path.isfile(dest):
-            os.remove(dest)
-        elif os.path.isdir(dest):
-            shutil.rmtree(dest)
-
-    if os.path.exists(src):
-        try:
-            shutil.move(src, dest)
-        except FileNotFoundError:
-            logger.warning("caiman_mc: Failed to cleanup move files.")
+    if os.path.isfile(mmap_file_new):
+        os.remove(mmap_file_new)

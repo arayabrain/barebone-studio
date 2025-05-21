@@ -1,4 +1,5 @@
 I/O:
+  target_index: [0, 1]
   transpose_x: True
   transpose_y: False
   standard_x_mean: True
@@ -7,7 +8,6 @@ I/O:
   standard_y_std: True
 
 CCA:
-  target_index: [0, 1]
   n_components: 2
   scale: True
   max_iter: 500

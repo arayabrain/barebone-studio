@@ -15,7 +15,7 @@ def test():
     SmkConfigWriter.write_raw(
         workspace_id,
         unique_id,
-        {"test"},
+        {"test": "value", "nwb_template": {}, "rules": {}},
     )
 
     assert os.path.exists(output_fileapth)

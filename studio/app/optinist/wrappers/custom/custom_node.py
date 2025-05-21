@@ -100,7 +100,7 @@ def my_function(
     # Add ROIs if your analysis creates them
     roi_list = [{"accepted": i} for i in range(1, 5)]  # List of accepted ROIs
     roi_list.extend({"rejected": i} for i in range(6, 11))  # And rejected ROIs
-    nwb_output[NWBDATASET.ROI] = {function_id: roi_list}
+    nwb_output[NWBDATASET.ROI] = {function_id: {"roi_list": roi_list}}
 
     # Example of adding processing results
     nwb_output[NWBDATASET.POSTPROCESS] = {

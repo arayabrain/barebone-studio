@@ -10,8 +10,9 @@ from studio.app.optinist.core.nwb.nwb import NWBDATASET
 from studio.app.optinist.dataclass import EditRoiData, FluoData, IscellData, RoiData
 from studio.app.optinist.wrappers.caiman.cnmf import (
     get_roi,
+    util_cleanup_image_memmap,
     util_download_model_files,
-    util_get_memmap,
+    util_get_image_memmap,
 )
 from studio.app.optinist.wrappers.optinist.utils import recursive_flatten_params
 
@@ -91,9 +92,13 @@ def caiman_cnmf_multisession(
 
     cnm_list = []
     templates = []
+    mmap_paths = []
     for split_image_path in split_image_paths:
         split_image = imageio.volread(split_image_path)
-        split_image_mmap, _, _ = util_get_memmap(split_image, split_image_path)
+        split_image_mmap, _, mmap_path = util_get_image_memmap(
+            function_id, split_image, split_image_path
+        )
+        mmap_paths.append(mmap_path)
         del split_image
         gc.collect()
 
@@ -173,7 +178,7 @@ def caiman_cnmf_multisession(
         kargs["image_mask"] = spatial_filtered.T[i].T.toarray().reshape(dims)
         roi_list.append(kargs)
 
-    nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
+    nwbfile[NWBDATASET.ROI] = {function_id: {"roi_list": roi_list}}
     nwbfile[NWBDATASET.POSTPROCESS] = {function_id: {"all_roi_img": cell_ims}}
 
     # iscellを追加
@@ -204,7 +209,10 @@ def caiman_cnmf_multisession(
     if isinstance(file_path, list):
         file_path = file_path[0]
     images = images.data
-    mmap_images, dims, _ = util_get_memmap(images.data, file_path)
+    mmap_images, dims, mmap_path = util_get_image_memmap(
+        function_id, images.data, file_path
+    )
+    mmap_paths.append(mmap_path)
 
     Cn = local_correlations(mmap_images.transpose(1, 2, 0))
     Cn[np.isnan(Cn)] = 0
@@ -225,5 +233,12 @@ def caiman_cnmf_multisession(
         "edit_roi_data": EditRoiData(mmap_images, cell_ims),
         "nwbfile": nwbfile,
     }
+
+    # Clean up temporary files
+    try:
+        util_cleanup_image_memmap(mmap_paths)
+    except Exception as e:
+        logger.error("Failed to cleanup memmap files.")
+        logger.error(e)
 
     return info

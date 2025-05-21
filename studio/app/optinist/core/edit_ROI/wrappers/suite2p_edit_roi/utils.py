@@ -144,7 +144,7 @@ def set_nwbfile(ops, iscell, edit_roi_data: EditRoiData, function_id):
             roi_list.append(kargs)
     nwbfile = {}
 
-    nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
+    nwbfile[NWBDATASET.ROI] = {function_id: {"roi_list": roi_list}}
 
     # iscellを追加
     nwbfile[NWBDATASET.COLUMN] = {

@@ -21,6 +21,7 @@ class Rule:
 class FlowConfig:
     rules: Dict[str, Rule]
     last_output: list
+    nwb_template: dict
 
 
 class ForceRun(BaseModel):

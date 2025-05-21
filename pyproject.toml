@@ -83,6 +83,8 @@ pymatreader = "^0.0.32"
 xmltodict = "*"
 matplotlib = "3.7.*"
 concurrent-log-handler = "^0.9.25"
+numpydoc = "*"
+yapf = "*"
 
 [tool.poetry.group.dev]
 optional = true

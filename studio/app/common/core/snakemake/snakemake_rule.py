@@ -81,11 +81,12 @@ class SmkRule:
                     return_name = edge.sourceHandle.split("--")[0]
                     funcname = sourceNode.data.label.split(".")[0]
 
-                algo_input.append(
-                    get_pickle_file(
-                        self._workspace_id, self._unique_id, sourceNode.id, funcname
-                    )
+                input_file = get_pickle_file(
+                    self._workspace_id, self._unique_id, sourceNode.id, funcname
                 )
+
+                if input_file not in algo_input:
+                    algo_input.append(input_file)
 
                 return_arg_names[return_name] = arg_name
 
@@ -101,6 +102,7 @@ class SmkRule:
             .set_output(algo_output)
             .set_path(self._node.data.path)
             .set_type(self._node.data.label)
+            .set_nwbfile(self._nwbfile)
             .build()
         )
 

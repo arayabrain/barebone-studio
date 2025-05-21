@@ -109,7 +109,7 @@ def suite2p_roi(
 
     # Prepare NWB output
     nwbfile = {}
-    nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
+    nwbfile[NWBDATASET.ROI] = {function_id: {"roi_list": roi_list}}
     nwbfile[NWBDATASET.POSTPROCESS] = {function_id: {"all_roi_img": im}}
     nwbfile[NWBDATASET.COLUMN] = {
         function_id: {

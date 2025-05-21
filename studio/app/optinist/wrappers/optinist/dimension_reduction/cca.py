@@ -49,7 +49,7 @@ def CCA(
         X = X[:, ind]
 
     # Handle target_index as either a list, slice notation, or single index
-    target_idx = params["target_index"]
+    target_idx = IOparams["target_index"]
     if isinstance(target_idx, str):
         target_idx = target_idx.strip("[] ")
         if ":" in target_idx:

@@ -80,7 +80,7 @@ def lccd_detect(
     roi_list = [{"image_mask": roi[:, i].reshape(D.shape[:2])} for i in range(num_cell)]
 
     nwbfile = {}
-    nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
+    nwbfile[NWBDATASET.ROI] = {function_id: {"roi_list": roi_list}}
     nwbfile[NWBDATASET.POSTPROCESS] = {function_id: {"all_roi_img": im}}
 
     nwbfile[NWBDATASET.COLUMN] = {

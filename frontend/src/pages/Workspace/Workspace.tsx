@@ -1,4 +1,4 @@
-import { FC, ReactNode, useEffect } from "react"
+import { FC, ReactNode, useEffect, useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 
 import { Box } from "@mui/material"
@@ -23,12 +23,19 @@ const Workspace: FC = () => {
 
   const workspaceId = useSelector(selectCurrentWorkspaceId)
   const experiments = useSelector(selectExperiments)
+  const [hasFetched, setHasFetched] = useState(false)
 
   useEffect(() => {
-    if (!activeTab && workspaceId && experiments?.status !== "fulfilled") {
+    if (
+      !hasFetched &&
+      !activeTab &&
+      workspaceId &&
+      experiments?.status !== "fulfilled"
+    ) {
       dispatch(getExperiments())
+      setHasFetched(true)
     }
-  }, [dispatch, activeTab, workspaceId, experiments?.status])
+  }, [dispatch, activeTab, workspaceId, experiments?.status, hasFetched])
 
   return (
     <RootDiv>

@@ -17,6 +17,7 @@ logger = AppLogger.get_logger()
 def main():
     try:
         from studio.app.common.core.rules.file_writer import FileWriter
+        from studio.app.common.core.snakemake.smk_utils import SmkUtils
         from studio.app.common.core.snakemake.snakemake_reader import RuleConfigReader
         from studio.app.common.core.utils.pickle_handler import PickleWriter
         from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil
@@ -25,6 +26,8 @@ def main():
         last_output = snakemake.config["last_output"]
 
         rule_config = RuleConfigReader.read(snakemake.params.name)
+
+        rule_config = SmkUtils.resolve_nwbfile_reference(rule_config)
 
         if NodeTypeUtil.check_nodetype_from_filetype(rule_config.type) == NodeType.DATA:
             if rule_config.type in [FILETYPE.IMAGE]:

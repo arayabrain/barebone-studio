@@ -21,7 +21,7 @@ def set_nwbfile(edit_roi_data: EditRoiData, iscell, function_id, fluorescence=No
             kargs["image_mask"] = edit_roi_data.im[i, :]
             roi_list.append(kargs)
 
-    nwbfile[NWBDATASET.ROI] = {function_id: roi_list}
+    nwbfile[NWBDATASET.ROI] = {function_id: {"roi_list": roi_list}}
 
     nwbfile[NWBDATASET.COLUMN] = {
         function_id: {

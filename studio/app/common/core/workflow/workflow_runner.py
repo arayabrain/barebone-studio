@@ -71,9 +71,12 @@ class WorkflowRunner:
     def set_smk_config(self):
         rules, last_output = self.rulefile()
 
+        nwb_template = get_typecheck_params(self.runItem.nwbParam, "nwb")
+
         flow_config = FlowConfig(
             rules=rules,
             last_output=last_output,
+            nwb_template=nwb_template,
         )
 
         SmkConfigWriter.write_raw(

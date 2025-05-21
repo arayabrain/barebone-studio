@@ -317,7 +317,7 @@ class NWBCreater:
                     nwbfile.processing["config"].add_container(config_container)
                 except ValueError:
                     # Remove existing container if it exists
-                    nwbfile.processing["config"].data_interfaces.pop(config_name, None)
+                    nwbfile.processing["config"].data_interfaces.pop(config_name)
                     nwbfile.processing["config"].add_container(config_container)
 
             except Exception as e:
@@ -426,7 +426,7 @@ def set_nwbconfig(nwbfile, config):
     if NWBDATASET.ROI in config:
         for function_key in config[NWBDATASET.ROI]:
             nwbfile = NWBCreater.roi(
-                nwbfile, function_key, config[NWBDATASET.ROI][function_key]
+                nwbfile, function_key, config[NWBDATASET.ROI][function_key]["roi_list"]
             )
 
     if NWBDATASET.COLUMN in config:
