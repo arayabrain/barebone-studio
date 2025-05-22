@@ -1,3 +1,4 @@
+from studio.app.common.core.logger import AppLogger
 from studio.app.common.dataclass.csv import CsvData
 from studio.app.common.dataclass.image import ImageData
 from studio.app.optinist.dataclass.behavior import BehaviorData
@@ -7,6 +8,9 @@ from studio.app.optinist.dataclass.roi import RoiData
 
 def return_as_data_type(data, processed_data, output_dir, file_name):
     """Helper function to return the correct data type with processed data."""
+    logger = AppLogger.get_logger()
+    logger.debug(f"Data as type: {type(data).__name__}")
+    logger.debug(f"Processed data as type: {type(processed_data).__name__}")
     if isinstance(data, BehaviorData):
         result = BehaviorData(
             data=processed_data,
@@ -32,7 +36,6 @@ def return_as_data_type(data, processed_data, output_dir, file_name):
             std=data.std if hasattr(data, "std") else None,
             index=data.index if hasattr(data, "index") else None,
             params={},
-            cell_numbers=data.cell_numbers if hasattr(data, "cell_numbers") else None,
             file_name=file_name,
             meta=data.meta if hasattr(data, "meta") else None,
         )

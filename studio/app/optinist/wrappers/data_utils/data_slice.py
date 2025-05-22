@@ -38,7 +38,8 @@ def data_slice(
     # Get slice specifications from parameters
     slice_specs = params.get("slice_dims", None) if params else None
 
-    logger.debug(f"User input specs: {slice_specs}")
+    logger.debug(f"Data slice - User input specs: {slice_specs}")
+    logger.debug(f"Data shape: {data.data.shape}")
 
     try:
         raw_data = data.data
@@ -95,7 +96,9 @@ def data_slice(
             idx = int(spec.strip() if isinstance(spec, str) else spec)
             if 0 <= idx < raw_data.shape[i]:
                 # Make sure we're adding an actual integer, not a slice
-                logger.debug(f"Adding integer index {idx} for dimension {i}")
+                logger.debug(
+                    f"Data slice - Adding integer index {idx} for dimension {i}"
+                )
                 index_specs.append(int(idx))  # Force conversion to int
             else:
                 maxshape = raw_data.shape[i] - 1
@@ -137,7 +140,7 @@ def data_slice(
         logger.warning(f"Unrecognized slice spec: {spec}")
         index_specs.append(slice(None))
 
-    logger.debug(f"Applying indexing: {index_specs}")
+    logger.debug(f"Data slice - Applying indexing: {index_specs}")
 
     try:
         # Apply slices
@@ -172,7 +175,7 @@ def data_slice(
         if sliced_data.ndim == 3:
             # Average over time dimension (axis=0)
             mean_image = np.mean(sliced_data, axis=0)
-            logger.debug(f"Mean image shape: {mean_image.shape}")
+            logger.debug(f"Data slice - Mean image shape: {mean_image.shape}")
             mean_img_data = ImageData(
                 data=mean_image, output_dir=output_dir, file_name="mean_image"
             )
@@ -180,7 +183,22 @@ def data_slice(
 
         # Get the properly typed data
         typed_data_dict = return_as_data_type(data, sliced_data, output_dir, file_name)
+        logger.debug(
+            f"Data slice - Returned data type: {type(typed_data_dict).__name__}"
+        )
         info.update(typed_data_dict)
+        logger.debug(f"Data slice - Info dictionary: {info}")
+
+        if info.get("neural_data") is not None:
+            Type = type(info["neural_data"]).__name__
+            logger.debug(f"Data slice - info neural_data type:{Type}")
+            Shape = info["neural_data"].data.shape
+            logger.debug(f"Data slice - info neural_data shape: {Shape}")
+        elif info.get("behaviors_data") is not None:
+            Type = type(info["behaviors_data"]).__name__
+            logger.debug(f"Data slice - info behaviors_data type: {Type}")
+            Shape = info["behaviors_data"].data.shape
+            logger.debug(f"Data slice - info behaviors_data shape: {Shape}")
 
         return info
 
