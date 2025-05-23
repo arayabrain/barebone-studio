@@ -34,6 +34,7 @@ import { isRejectedWithValue } from "@reduxjs/toolkit"
 
 import { UserDTO } from "api/users/UsersApiDTO"
 import { ConfirmDialog } from "components/common/ConfirmDialog"
+import DeleteConfirmModal from "components/common/DeleteConfirmModal"
 import Loading from "components/common/Loading"
 import PaginationCustom from "components/common/PaginationCustom"
 import PopupShare from "components/Workspace/PopupShare"
@@ -234,17 +235,36 @@ const columns = (
     headerName: "",
     flex: 1,
     minWidth: 70,
-    filterable: false, // todo enable when api complete
-    sortable: false, // todo enable when api complete
-    renderCell: (params: GridRenderCellParams<GridValidRowModel>) =>
-      isMine(user, params.row?.user?.id) ? (
-        <IconButton
-          onClick={() => handleOpenPopupDel(params.row.id, params.row.name)}
-          color="error"
+    filterable: false,
+    sortable: false,
+    renderCell: (params: GridRenderCellParams<GridValidRowModel>) => {
+      const isOwner = isMine(user, params.row?.user?.id)
+      const canDelete = params.row?.canDelete
+
+      if (!isOwner) return null
+
+      return (
+        <Tooltip
+          title={
+            canDelete
+              ? "Delete workspace"
+              : "Cannot delete while experiment is running"
+          }
         >
-          <DeleteIcon />
-        </IconButton>
-      ) : null,
+          <span>
+            <IconButton
+              onClick={() =>
+                canDelete && handleOpenPopupDel(params.row.id, params.row.name)
+              }
+              color="error"
+              disabled={!canDelete}
+            >
+              <DeleteIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      )
+    },
   },
 ]
 
@@ -553,20 +573,19 @@ const Workspaces = () => {
           id={open.shareId}
         />
       ) : null}
-      <ConfirmDialog
+      <DeleteConfirmModal
         open={open.del}
-        onCancel={handleClosePopupDel}
-        onConfirm={handleOkDel}
-        title={"Delete Workspace?"}
-        content={
-          <>
-            <Typography>ID: {workspaceDel?.id}</Typography>
-            <Typography>Name: {workspaceDel?.name}</Typography>
-          </>
+        onClose={handleClosePopupDel}
+        onSubmit={handleOkDel}
+        titleSubmit={"Delete Workspace"}
+        description={
+          "Delete ID: " +
+          workspaceDel?.id +
+          " Name: " +
+          workspaceDel?.name +
+          " ? \n"
         }
         iconType="warning"
-        confirmLabel="delete"
-        confirmButtonColor="error"
       />
       <PopupNew
         open={open.new}

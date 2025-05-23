@@ -216,9 +216,8 @@ async def delete_user(db: Session, user_id: int, organization_id: int) -> bool:
         )
         assert user_db is not None, "User not found"
         user_db.active = False
-        db.commit()
-        firebase_auth.delete_user(user_db.uid)
-        return True
+        return user_db.uid
+
     except AssertionError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

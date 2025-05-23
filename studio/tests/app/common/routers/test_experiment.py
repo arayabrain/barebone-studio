@@ -29,6 +29,11 @@ def test_delete(client):
     dirname = "delete_dir"
     dirpath = join_filepath([f"{DIRPATH.DATA_DIR}/output/{workspace_id}", dirname])
     os.makedirs(dirpath, exist_ok=True)
+
+    # Add dummy experiment.yaml
+    with open(os.path.join(dirpath, DIRPATH.EXPERIMENT_YML), "w") as f:
+        f.write("name: Dummy Experiment\nsuccess: success")
+
     assert os.path.exists(dirpath)
     response = client.delete(f"/experiments/{workspace_id}/{dirname}")
     assert response.status_code == 200
@@ -40,6 +45,11 @@ def test_delete_list(client):
     for name in uidList:
         dirpath = join_filepath([DIRPATH.OUTPUT_DIR, workspace_id, name])
         os.makedirs(dirpath, exist_ok=True)
+
+        # Add dummy experiment.yaml
+        with open(os.path.join(dirpath, DIRPATH.EXPERIMENT_YML), "w") as f:
+            f.write("name: Dummy Experiment\nsuccess: success")
+
         assert os.path.exists(dirpath)
 
     response = client.post(

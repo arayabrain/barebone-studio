@@ -101,7 +101,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
   )
 }
 
-const DialogContentWithIcon: FC<
+export const DialogContentWithIcon: FC<
   Pick<ConfirmDialogProps, "content" | "iconType">
 > = ({ content, iconType }) => {
   return (

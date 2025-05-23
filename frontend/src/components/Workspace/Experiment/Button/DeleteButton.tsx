@@ -34,6 +34,7 @@ export const DeleteButton = memo(function DeleteButton() {
     setOpen(true)
   }
   const handleDelete = () => {
+    setOpen(false)
     dispatch(deleteExperimentByUid(uid))
       .unwrap()
       .then(() => {

@@ -80,20 +80,17 @@ async def delete_experiment(
     workspace_id: str, unique_id: str, db: Session = Depends(get_db)
 ):
     try:
-        ExptDataWriter(
-            workspace_id,
-            unique_id,
-        ).delete_data()
-
-        if WorkspaceService.is_data_usage_available():
-            WorkspaceService.delete_workspace_experiment(db, workspace_id, unique_id)
+        WorkspaceService.delete_workspace_experiment(
+            db, workspace_id, unique_id, auto_commit=True
+        )
 
         return True
+
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logger.error("Deletion failed: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="can not delete record.",
+            detail="Failed to delete experiment and its associated data.",
         )
 
 
@@ -102,13 +99,15 @@ async def delete_experiment(
     response_model=bool,
     dependencies=[Depends(is_workspace_owner)],
 )
-async def delete_experiment_list(workspace_id: str, deleteItem: DeleteItem):
+async def delete_experiment_list(
+    workspace_id: str, deleteItem: DeleteItem, db: Session = Depends(get_db)
+):
     try:
         for unique_id in deleteItem.uidList:
-            ExptDataWriter(
-                workspace_id,
-                unique_id,
-            ).delete_data()
+            WorkspaceService.delete_workspace_experiment(
+                db, workspace_id, unique_id, auto_commit=True
+            )
+
         return True
     except Exception as e:
         logger.error(e, exc_info=True)

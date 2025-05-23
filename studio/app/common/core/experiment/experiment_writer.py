@@ -20,6 +20,8 @@ from studio.app.common.core.workflow.workflow_reader import WorkflowConfigReader
 from studio.app.const import DATE_FORMAT
 from studio.app.dir_path import DIRPATH
 
+logger = AppLogger.get_logger()
+
 
 class ExptConfigWriter:
     def __init__(
@@ -128,11 +130,36 @@ class ExptDataWriter:
         self.unique_id = unique_id
 
     def delete_data(self) -> bool:
-        result = True
-
-        shutil.rmtree(
-            join_filepath([DIRPATH.OUTPUT_DIR, self.workspace_id, self.unique_id])
+        experiment_path = join_filepath(
+            [DIRPATH.OUTPUT_DIR, self.workspace_id, self.unique_id]
         )
+
+        try:
+            # Check the expt is running or if don't have status it will return None
+            status = ExptConfigReader.load_experiment_success_status(
+                self.workspace_id, self.unique_id
+            )
+            # If the experiment is running or has no status, skip deletion
+            # no status means the experiemnt yaml is not created yet
+            if status is None:
+                pass
+            elif status == WorkflowRunStatus.RUNNING:
+                logger.warning(
+                    f"Skipping deletion of running experiment '{self.unique_id}'"
+                )
+                return False
+
+            shutil.rmtree(experiment_path)
+            logger.info(f"Deleted experiment data at: {experiment_path}")
+
+            result = True
+
+        except Exception as e:
+            logger.error(
+                f"Failed to delete experiment '{self.unique_id}': {e}",
+                exc_info=True,
+            )
+            result = False
 
         return result
 

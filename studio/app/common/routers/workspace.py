@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import LimitOffsetPage
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -6,10 +8,15 @@ from sqlmodel import Session, or_, select
 
 from studio.app.common import models as common_model
 from studio.app.common.core.auth.auth_dependencies import get_current_user
+from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
+from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.utils.filepath_creater import join_filepath
+from studio.app.common.core.workflow.workflow import WorkflowRunStatus
 from studio.app.common.core.workspace.workspace_dependencies import (
     is_workspace_available,
     is_workspace_owner,
 )
+from studio.app.common.core.workspace.workspace_services import WorkspaceService
 from studio.app.common.db.database import get_db
 from studio.app.common.schemas.base import SortOptions
 from studio.app.common.schemas.users import User
@@ -20,8 +27,10 @@ from studio.app.common.schemas.workspace import (
     WorkspaceShareStatus,
     WorkspaceUpdate,
 )
+from studio.app.dir_path import DIRPATH
 
 router = APIRouter(tags=["Workspace"])
+logger = AppLogger.get_logger()
 
 
 shared_count_subquery = (
@@ -56,10 +65,34 @@ def search_workspaces(
 
     def workspace_transformer(items):
         list_ws = []
+
         for item in items:
-            item[0].__dict__["shared_count"] = item.shared_count
-            item[0].__dict__["data_usage"] = item.data_usage
-            list_ws.append(item[0])
+            ws = item[0]
+            ws_dict = ws.__dict__
+            ws_dict["shared_count"] = item.shared_count
+            ws_dict["data_usage"] = item.data_usage
+
+            workspace_dir = join_filepath([DIRPATH.OUTPUT_DIR, str(ws.id)])
+            can_delete = True
+
+            if os.path.exists(workspace_dir):
+                for experiment_id in os.listdir(workspace_dir):
+                    experiment_path = join_filepath([workspace_dir, experiment_id])
+                    if not os.path.isdir(experiment_path):
+                        continue
+                    status = ExptConfigReader.load_experiment_success_status(
+                        str(ws.id), experiment_id
+                    )
+                    if status is None:
+                        pass
+                    elif status == WorkflowRunStatus.RUNNING:
+                        can_delete = False
+                        break
+
+            ws_dict["canDelete"] = can_delete
+
+            list_ws.append(ws)
+
         return list_ws
 
     data_capacity_subq = (
@@ -220,19 +253,10 @@ def delete_workspace(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ws = (
-        db.query(common_model.Workspace)
-        .filter(
-            common_model.Workspace.id == workspace_id,
-            common_model.Workspace.user_id == current_user.id,
-            common_model.Workspace.deleted.is_(False),
-        )
-        .first()
+    WorkspaceService.process_workspace_deletion(
+        db=db, workspace_id=workspace_id, user_id=current_user.id
     )
-    if not ws:
-        raise HTTPException(status_code=404)
-    ws.deleted = True
-    db.commit()
+
     return True
 
 

@@ -115,7 +115,6 @@ const ExperimentsErrorView: FC = () => {
 }
 
 const LOCAL_STORAGE_KEY_PER_PAGE = "optinist_experiment_table_per_page"
-
 const TableImple = memo(function TableImple() {
   const isOwner = useSelector(selectIsWorkspaceOwner)
   const currentPipelineUid = useSelector(selectPipelineLatestUid)
@@ -124,7 +123,8 @@ const TableImple = memo(function TableImple() {
   const experimentListKeys = Object.keys(experimentList)
   const dispatch = useDispatch<AppDispatch>()
   const [checkedList, setCheckedList] = useState<string[]>([])
-  const [open, setOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [page, setPage] = useState(0)
   const [openCopy, setOpenCopy] = useState(false)
   const isRunning = useSelector((state: RootState) => {
     const currentUid = selectPipelineLatestUid(state)
@@ -182,7 +182,7 @@ const TableImple = memo(function TableImple() {
   const recordsIsEmpty = experimentListKeys.length === 0
 
   const onClickDelete = () => {
-    setOpen(true)
+    setDeleteOpen(true)
   }
   const onClickOk = () => {
     dispatch(deleteExperimentByList(checkedList))
@@ -193,14 +193,11 @@ const TableImple = memo(function TableImple() {
       .catch(() => {
         enqueueSnackbar("Failed to delete", { variant: "error" })
       })
-
     checkedList.filter((v) => v === currentPipelineUid).length > 0 &&
       dispatch(clearCurrentPipeline())
     setCheckedList([])
-    setOpen(false)
+    setDeleteOpen(false)
   }
-
-  const [page, setPage] = useState(0)
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage)
@@ -277,8 +274,8 @@ const TableImple = memo(function TableImple() {
         )}
       </Box>
       <ConfirmDialog
-        open={open}
-        setOpen={setOpen}
+        open={deleteOpen}
+        setOpen={setDeleteOpen}
         onConfirm={onClickOk}
         title="Delete records?"
         content={

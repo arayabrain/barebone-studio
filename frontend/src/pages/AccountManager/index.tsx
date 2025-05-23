@@ -45,6 +45,7 @@ import { isRejectedWithValue } from "@reduxjs/toolkit"
 import { ROLE } from "@types"
 import { AddUserDTO, UserDTO } from "api/users/UsersApiDTO"
 import { ConfirmDialog } from "components/common/ConfirmDialog"
+import DeleteConfirmModal from "components/common/DeleteConfirmModal"
 import InputError from "components/common/InputError"
 import Loading from "components/common/Loading"
 import PaginationCustom from "components/common/PaginationCustom"
@@ -800,20 +801,14 @@ const AccountManager = () => {
           limit={Number(limit)}
         />
       ) : null}
-      <ConfirmDialog
+      <DeleteConfirmModal
         open={openDel?.open || false}
-        onCancel={handleClosePopupDel}
-        onConfirm={handleOkDel}
-        title="Delete Account?"
-        content={
-          <>
-            <Typography>ID: {openDel?.id}</Typography>
-            <Typography>Name: {openDel?.name}</Typography>
-          </>
-        }
-        confirmLabel="delete"
+        onClose={handleClosePopupDel}
+        onSubmit={handleOkDel}
+        titleSubmit="Delete Account"
+        description={`Do you want to delete ID:${openDel?.id} Name:${openDel?.name}? `}
+        loading={loading}
         iconType="warning"
-        confirmButtonColor="error"
       />
       <ConfirmDialog
         open={!!userWaitingProxy}

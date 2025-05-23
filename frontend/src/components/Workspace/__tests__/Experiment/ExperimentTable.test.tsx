@@ -95,6 +95,7 @@ describe("ExperimentTable", () => {
             },
             startedAt: "2023-09-17",
             hasNWB: true,
+            data_usage: 0,
           },
           2: {
             uid: "2",
@@ -109,6 +110,7 @@ describe("ExperimentTable", () => {
             },
             startedAt: "2023-09-15",
             hasNWB: true,
+            data_usage: 0,
           },
         },
       } as Experiments,
@@ -171,6 +173,7 @@ describe("ExperimentTable", () => {
         selectedItemId: null,
         items: {},
         layout: [],
+        clickedRois: {},
       },
       snakemake: {
         params: {},
@@ -407,22 +410,26 @@ describe("ExperimentTable", () => {
     // Find the delete button in the first row
     const deleteButton = screen.getAllByTestId("delete-button")[0]
 
-    // // Click the delete button
+    // Click the delete button
     fireEvent.click(deleteButton)
 
     // Wait for the dialog to appear
     const dialog = await waitFor(() =>
       screen.getByRole("dialog", { name: /delete record\?/i }),
     )
+
     expect(dialog).toBeInTheDocument()
 
-    // Find and click the "Cancel" button
+    // Click the Cancel button
     const cancelButton = screen.getByText(/cancel/i)
     fireEvent.click(cancelButton)
 
-    // Check if the dialog has been closed
+    // Assert the dialog has closed
     await waitFor(() => {
-      expect(dialog).not.toBeInTheDocument()
+      const closedDialog = screen.queryByRole("dialog", {
+        name: /delete record\?/i,
+      })
+      expect(closedDialog).not.toBeInTheDocument()
     })
   })
 
