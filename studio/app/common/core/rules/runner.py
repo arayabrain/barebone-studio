@@ -49,7 +49,13 @@ class Runner:
 
             # input_info
             for key in list(input_info):
-                if key not in __rule.return_arg.values():
+                # TODO: Needs refactoring
+                # @see: studio.app.common.core.snakemake.snakemake_rule.algo()
+                sliced_data_input_key = f"{key}:sliced_data"
+                if (
+                    key not in __rule.return_arg.values()
+                    and sliced_data_input_key not in __rule.return_arg.values()
+                ):
                     logger.debug(
                         f"Runner - Removing key '{key}' (not in expected return args)"
                     )
