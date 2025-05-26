@@ -1,4 +1,5 @@
 from studio.app.common.core.logger import AppLogger
+from studio.app.common.dataclass.base import BaseData
 from studio.app.common.dataclass.csv import CsvData
 from studio.app.common.dataclass.image import ImageData
 from studio.app.optinist.dataclass.behavior import BehaviorData
@@ -6,40 +7,46 @@ from studio.app.optinist.dataclass.fluo import FluoData
 from studio.app.optinist.dataclass.roi import RoiData
 
 
-def return_as_data_type(data, processed_data, output_dir, file_name):
+def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
     """Helper function to return the correct data type with processed data."""
     logger = AppLogger.get_logger()
     logger.debug(f"Data as type: {type(data).__name__}")
     logger.debug(f"Processed data as type: {type(processed_data).__name__}")
+
+    # Extract kwargs
+    std = kwargs.get("std", None)
+    index = kwargs.get("index", None)
+
     if isinstance(data, BehaviorData):
         result = BehaviorData(
             data=processed_data,
-            std=data.std if hasattr(data, "std") else None,
-            index=data.index if hasattr(data, "index") else None,
+            std=std,
+            index=index,
             params={},
             file_name=file_name,
         )
-        return {"behaviors_data": result}
+        output_key = "behaviors_data"
 
     elif isinstance(data, CsvData):
-        result = CsvData(
+        result = BehaviorData(
             data=processed_data,
+            std=std,
+            index=index,
             params={},
             file_name=file_name,
-            meta=data.meta if hasattr(data, "meta") else None,
         )
-        return {"behaviors_data": result}
+        output_key = "behaviors_data"
 
     elif isinstance(data, FluoData):
         result = FluoData(
             data=processed_data,
-            std=data.std if hasattr(data, "std") else None,
-            index=data.index if hasattr(data, "index") else None,
+            std=std,
+            index=index,
             params={},
             file_name=file_name,
             meta=data.meta if hasattr(data, "meta") else None,
         )
-        return {"neural_data": result}
+        output_key = "neural_data"
 
     elif isinstance(data, ImageData):
         result = ImageData(
@@ -48,7 +55,7 @@ def return_as_data_type(data, processed_data, output_dir, file_name):
             file_name=file_name,
             meta=data.meta if hasattr(data, "meta") else None,
         )
-        return {"image": result}
+        output_key = "image"
 
     elif isinstance(data, RoiData):
         result = RoiData(
@@ -57,19 +64,19 @@ def return_as_data_type(data, processed_data, output_dir, file_name):
             file_name=file_name,
             meta=data.meta if hasattr(data, "meta") else None,
         )
-        return {"roi": result}
+        output_key = "roi"
 
     else:
-        # Generic approach for other data types
-        try:
-            if hasattr(data, "meta"):
-                result = type(data)(
-                    data=processed_data, file_name=file_name, meta=data.meta
-                )
-            else:
-                result = type(data)(data=processed_data, file_name=file_name)
-            return {"sliced_data": result}
-        except TypeError as e:
-            raise ValueError(
-                f"Cannot create sliced data for type {type(data).__name__}: {str(e)}"
-            )
+        # Generic fallback
+        result = BaseData(
+            data=processed_data,
+            params={},
+            file_name=file_name,
+        )
+        output_key = "data"
+
+    logger.debug(
+        f"Using output key: {output_key} for data type: {type(result).__name__}"
+    )
+
+    return {output_key: result}

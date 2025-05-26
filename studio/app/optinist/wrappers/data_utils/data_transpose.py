@@ -75,11 +75,17 @@ def data_transpose(
         )
 
         # Use utility function to return the correct data type
-        info = {}
-        typed_data_dict = return_as_data_type(data, tp_data, output_dir, file_name)
-        info.update(typed_data_dict)
+        typed_result = return_as_data_type(data, tp_data, output_dir, file_name)
+        data_object = list(typed_result.values())[0]
+        typed_result["transposed_data"] = data_object
 
-        return info
+        return {"transposed_data": data_object}
+
+        # info = {}
+        # typed_data_dict = return_as_data_type(data, tp_data, output_dir, file_name)
+        # info.update(typed_data_dict)
+
+        # return info
 
     except Exception as e:
         logger.error(f"Error during data transposition: {str(e)}")
