@@ -50,7 +50,13 @@ class Runner:
             # input_info
             for key in list(input_info):
                 if key not in __rule.return_arg.values():
+                    logger.debug(
+                        f"Runner - Removing key '{key}' (not in expected return args)"
+                    )
                     input_info.pop(key)
+            logger.debug(
+                f"Runner - After filtering, input_info keys: {list(input_info.keys())}"
+            )
 
             # output_info
             output_info = cls.__execute_function(
@@ -226,8 +232,10 @@ class Runner:
     @classmethod
     def read_input_info(cls, input_files):
         input_info = {}
-        for filepath in input_files:
+        logger.debug(f"Runner - Reading {len(input_files)} input files")
+        for i, filepath in enumerate(input_files):
             load_data = PickleReader.read(filepath)
+            logger.debug(f"Runner - File {i+1} contains keys: {list(load_data.keys())}")
 
             # validate load_data content
             assert PickleReader.check_is_valid_node_pickle(
@@ -239,6 +247,9 @@ class Runner:
             )
             input_info = dict(list(load_data.items()) + list(input_info.items()))
             input_info["nwbfile"] = merged_nwb
+            logger.debug(
+                f"Runner - Final merged input_info keys: {list(input_info.keys())}"
+            )
         return input_info
 
     @classmethod
