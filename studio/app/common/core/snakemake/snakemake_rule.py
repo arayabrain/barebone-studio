@@ -9,6 +9,8 @@ from studio.app.const import FILETYPE
 
 
 class SmkRule:
+    RETURN_ARG_KEY_DELIMITER = ":"
+
     def __init__(
         self,
         workspace_id: str,
@@ -89,9 +91,9 @@ class SmkRule:
                     algo_input.append(input_file)
 
                 # Register input information from the source node
-                return_arg_key = (
-                    f"{return_name}:{sourceNode.id}"  # Generate a unique key
-                )
+                return_arg_key = __class__.RETURN_ARG_KEY_DELIMITER.join(
+                    [return_name, sourceNode.id]
+                )  # Generate a unique key
                 return_arg_names[return_arg_key] = arg_name
 
         params = get_typecheck_params(self._node.data.param, self._node.data.label)

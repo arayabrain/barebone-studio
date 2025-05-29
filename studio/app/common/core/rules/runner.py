@@ -12,6 +12,7 @@ from filelock import FileLock
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import Rule
+from studio.app.common.core.snakemake.snakemake_rule import SmkRule
 from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.file_reader import JsonReader
 from studio.app.common.core.utils.filelock_handler import FileLockUtils
@@ -232,7 +233,7 @@ class Runner:
     @classmethod
     def __change_dict_key_exist(cls, input_info, rule_config: Rule):
         for return_arg_key, arg_name in rule_config.return_arg.items():
-            (return_name, _) = return_arg_key.split(":")
+            return_name = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)[0]
             if return_name in input_info:
                 input_info[arg_name] = input_info.pop(return_name)
 
