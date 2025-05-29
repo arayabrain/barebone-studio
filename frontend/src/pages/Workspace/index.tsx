@@ -407,6 +407,7 @@ const Workspaces = () => {
   }
 
   const handleNavRecords = (id: number) => {
+    dispatch(resetVisualizeLayout())
     navigate(`/console/workspaces/${id}`, { state: { tab: 2 } })
   }
 
