@@ -231,7 +231,8 @@ class Runner:
 
     @classmethod
     def __change_dict_key_exist(cls, input_info, rule_config: Rule):
-        for return_name, arg_name in rule_config.return_arg.items():
+        for return_arg_key, arg_name in rule_config.return_arg.items():
+            (return_name, _) = return_arg_key.split(":")
             if return_name in input_info:
                 input_info[arg_name] = input_info.pop(return_name)
 

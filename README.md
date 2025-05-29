@@ -143,7 +143,7 @@ Kenji Doya, Yukako Yamane [OIST Neural Computation Unit](https://groups.oist.jp/
 <tr>
 <td valign="top" width="50%">
 If you use this software, please cite our paper:
-<a href="https://www.biorxiv.org/content/10.1101/2024.09.17.613603v1">https://www.biorxiv.org/content/10.1101/2024.09.17.613603v1</a>
+<a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1013087">https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1013087</a>
 </td>
 <td valign="top" width="50%" align="right">
 <img src="docs/_static/paper_QR.png" alt="Read our paper" width="150">
@@ -155,11 +155,11 @@ If you use this software, please cite our paper:
 @misc{OptiNiSt,
 	author = {Yamane, Yukako and Li, Yuzhe and Matsumoto, Keita and Kanai, Ryota and Desforges, Miles and Gutierrez, Carlos Enrique and Doya, Kenji},
 	title = {Optical Neuroimage Studio (OptiNiSt): intuitive, scalable, extendable framework for optical neuroimage data analysis},
-	elocation-id = {2024.09.17.613603},
-	year = {2024},
-	doi = {10.1101/2024.09.17.613603},
-  journal = {bioRxiv}
-	publisher = {Cold Spring Harbor Laboratory},
+	volume = {21},
+	issue = {5},
+	year = {2025},
+	doi = {10.1371/journal.pcbi.1013087},
+  journal = {PLOS Computational Biology}
 }
 ```
 

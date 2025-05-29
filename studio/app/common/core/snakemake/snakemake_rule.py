@@ -88,18 +88,11 @@ class SmkRule:
                 if input_file not in algo_input:
                     algo_input.append(input_file)
 
-                # TODO: Needs refactoring
-                # - Temporarily, prefixes are added to the keys of return_arg_names
-                #    only in the case of sliced_data.
-                # - However, the above processing is concerned about implicit
-                #    behavior, so the specification should be clarified
-                # - The problem is due to a lack of consideration of duplication of
-                #    keys of return_arg_names, so the design should be changed to
-                #    avoid duplication, etc.
-                if return_name == "sliced_data":
-                    return_arg_names[f"{arg_name}:{return_name}"] = arg_name
-                else:
-                    return_arg_names[return_name] = arg_name
+                # Register input information from the source node
+                return_arg_key = (
+                    f"{return_name}:{sourceNode.id}"  # Generate a unique key
+                )
+                return_arg_names[return_arg_key] = arg_name
 
         params = get_typecheck_params(self._node.data.param, self._node.data.label)
         algo_output = get_pickle_file(

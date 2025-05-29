@@ -77,6 +77,7 @@ format:
 	black studio *.py
 	isort studio *.py
 	flake8 studio *.py
+	codespell --skip="./dist,./frontend/node_modules,./logs"
 
 .PHONY: docs
 docs:

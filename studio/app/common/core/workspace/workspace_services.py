@@ -15,9 +15,11 @@ from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.mode import MODE
 from studio.app.common.core.utils.file_reader import get_folder_size
 from studio.app.common.core.utils.filepath_creater import join_filepath
+from studio.app.common.core.workflow.workflow_runner import WorkflowRunner
 from studio.app.common.db.database import session_scope
 from studio.app.common.models.experiment import ExperimentRecord
 from studio.app.common.models.workspace import Workspace
+from studio.app.common.schemas.experiment import CopyItem
 from studio.app.dir_path import DIRPATH
 
 logger = AppLogger.get_logger()
@@ -127,6 +129,84 @@ class WorkspaceService:
 
         if auto_commit:
             db.commit()
+
+    @classmethod
+    def copy_workspace_experiment(
+        cls, db: Session, workspace_id: int, copyItem: CopyItem
+    ):
+        created_unique_ids = []
+        try:
+            for unique_id in copyItem.uidList:
+                new_unique_id = WorkflowRunner.create_workflow_unique_id()
+                ExptDataWriter(
+                    workspace_id,
+                    unique_id,
+                ).copy_data(new_unique_id)
+
+                if cls.is_data_usage_available():
+                    cls._copy_workspace_experiment_db(
+                        db,
+                        workspace_id,
+                        unique_id,
+                        new_unique_id,
+                        auto_commit=True,
+                    )
+
+                created_unique_ids.append(new_unique_id)
+                logger.info(f"Copied experiment {unique_id} to {new_unique_id}")
+            return True
+        except Exception as e:
+            logger.error(e, exc_info=True)
+            # Clean up partially created data
+            for created_unique_id in created_unique_ids:
+                try:
+                    ExptDataWriter(
+                        workspace_id,
+                        created_unique_id,
+                    ).delete_data()
+                    logger.info(f"Cleaned up data for unique_id: {created_unique_id}")
+                except Exception as cleanup_error:
+                    logger.error(cleanup_error, exc_info=True)
+                    logger.error(
+                        f"Failed to clean up data for unique_id: {created_unique_id}",
+                        exc_info=True,
+                    )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to copy record. created files have been removed.",
+            )
+
+    @classmethod
+    def _copy_workspace_experiment_db(
+        cls,
+        db: Session,
+        workspace_id: str,
+        unique_id: str,
+        new_unique_id: str,
+        auto_commit: bool = False,
+    ):
+        try:
+            exp = (
+                db.query(ExperimentRecord)
+                .filter(
+                    ExperimentRecord.workspace_id == workspace_id,
+                    ExperimentRecord.uid == unique_id,
+                )
+                .one()
+            )
+            new_exp = ExperimentRecord(
+                workspace_id=workspace_id,
+                uid=new_unique_id,
+                data_usage=exp.data_usage,
+            )
+            db.add(new_exp)
+            if auto_commit:
+                db.commit()
+        except NoResultFound:
+            # If it fails roll back the transaction
+            logger.error(
+                f"Experiment {unique_id} not found in workspace {workspace_id}"
+            )
 
     @classmethod
     def sync_workspace_experiment(cls, db: Session, workspace_id: str):
