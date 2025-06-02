@@ -4,20 +4,31 @@ from studio.app.common.dataclass.csv import CsvData
 from studio.app.common.dataclass.image import ImageData
 from studio.app.optinist.dataclass.behavior import BehaviorData
 from studio.app.optinist.dataclass.fluo import FluoData
+from studio.app.optinist.dataclass.iscell import IscellData
 from studio.app.optinist.dataclass.roi import RoiData
 
 
 def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
     """Helper function to return the correct data type with processed data."""
     logger = AppLogger.get_logger()
-    logger.debug(f"Data as type: {type(data).__name__}")
-    logger.debug(f"Processed data as type: {type(processed_data).__name__}")
 
     # Extract kwargs
     std = kwargs.get("std", None)
     index = kwargs.get("index", None)
+    output_type = kwargs.get("output_type", None)
+    if isinstance(output_type, str) and output_type.strip() == "":
+        output_type = None
 
-    if isinstance(data, BehaviorData):
+    logger.info(f"Input data type: {type(data).__name__}")
+    if output_type is not None:
+        logger.info(f"Requested output_type: {output_type}")
+    else:
+        logger.info("No output_type specified, using input data type for output")
+
+    # Determine output type and key based on input type or explicit output_type
+    if output_type == "behaviors_data" or (
+        output_type is None and isinstance(data, (BehaviorData, CsvData))
+    ):
         result = BehaviorData(
             data=processed_data,
             std=std,
@@ -27,17 +38,9 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "behaviors_data"
 
-    elif isinstance(data, CsvData):
-        result = BehaviorData(
-            data=processed_data,
-            std=std,
-            index=index,
-            params={},
-            file_name=file_name,
-        )
-        output_key = "behaviors_data"
-
-    elif isinstance(data, FluoData):
+    elif output_type == "neural_data" or (
+        output_type is None and isinstance(data, FluoData)
+    ):
         result = FluoData(
             data=processed_data,
             std=std,
@@ -48,7 +51,9 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "neural_data"
 
-    elif isinstance(data, ImageData):
+    elif output_type == "image_data" or (
+        output_type is None and isinstance(data, ImageData)
+    ):
         result = ImageData(
             data=processed_data,
             output_dir=output_dir,
@@ -57,7 +62,18 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "image"
 
-    elif isinstance(data, RoiData):
+    elif output_type == "iscell_data" or (
+        output_type is None and isinstance(data, IscellData)
+    ):
+        result = IscellData(
+            data=processed_data,
+            file_name=file_name,
+        )
+        output_key = "iscell"
+
+    elif output_type == "roi_data" or (
+        output_type is None and isinstance(data, RoiData)
+    ):
         result = RoiData(
             data=processed_data,
             output_dir=output_dir,
@@ -67,7 +83,7 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         output_key = "roi"
 
     else:
-        # Generic fallback
+        logger.warning(f"Unknown output_type '{output_type}', defaulting to BaseData")
         result = BaseData(
             data=processed_data,
             params={},
@@ -75,8 +91,5 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "data"
 
-    logger.debug(
-        f"Using output key: {output_key} for data type: {type(result).__name__}"
-    )
-
+    logger.debug(f"Created {type(result).__name__} with output key: {output_key}")
     return {output_key: result}
