@@ -231,44 +231,65 @@ class Runner:
 
     @classmethod
     def __change_dict_key_exist(cls, input_info, rule_config: Rule):
-        logger.debug(f"__change_dict_key_exist - Before: {list(input_info.keys())}")
-        logger.debug(
-            f"__change_dict_key_exist - return_arg mapping: {rule_config.return_arg}"
-        )
+        logger.debug(f"Dict keys before: {list(input_info.keys())}")
+        logger.debug(f"return_arg mapping: {rule_config.return_arg}")
 
         for return_arg_key, arg_name in rule_config.return_arg.items():
-            return_name = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)[0]
-            source_node_id = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)[1]
+            # Check if this is the new compound format (contains delimiter)
+            key_parts = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)
 
-            # First try the specific source-keyed version
-            source_specific_key = f"{return_name}:{source_node_id}"
-            if source_specific_key in input_info:
-                logger.debug(
-                    f"Duplicate nodes. Renaming '{source_specific_key}' to '{arg_name}'"
-                )
-                input_info[arg_name] = input_info.pop(source_specific_key)
-            elif return_name in input_info:
-                # Fallback to non-source-specific key
-                logger.debug(
-                    f"Duplicate nodes. Renaming '{return_name}' to '{arg_name}'"
-                )
-                input_info[arg_name] = input_info.pop(return_name)
+            if len(key_parts) == 2:
+                # New compound format: "return_name:source_node_id"
+                return_name = key_parts[0]
+                source_node_id = key_parts[1]
+
+                # First try the specific source-keyed version
+                source_specific_key = f"{return_name}:{source_node_id}"
+                if source_specific_key in input_info:
+                    logger.debug(f"Renaming '{source_specific_key}' to '{arg_name}'")
+                    input_info[arg_name] = input_info.pop(source_specific_key)
+                elif return_name in input_info:
+                    # Fallback to non-source-specific key
+                    logger.debug(f"Renaming '{return_name}' to '{arg_name}'")
+                    input_info[arg_name] = input_info.pop(return_name)
+                else:
+                    logger.warning(
+                        f"Expected key {return_name} from {source_node_id} not found"
+                    )
+
+            elif len(key_parts) == 1:
+                # Legacy (and test) format: just "return_name"
+                return_name = return_arg_key
+                if return_name in input_info:
+                    logger.debug(f"Renaming {return_name} to {arg_name}")
+                    input_info[arg_name] = input_info.pop(return_name)
+                else:
+                    logger.warning(f"Expected key '{return_name}' not found")
+
             else:
-                logger.warning(
-                    f"Expected key '{return_name}' from '{source_node_id}' not found"
-                )
+                logger.error(f"Invalid return_arg_key format: '{return_arg_key}'")
 
-        # Clean up any remaining temporary keys
+        # Clean up any remaining temporary keys (only for compound format)
         temp_keys = [
-            k
-            for k in input_info.keys()
-            if ":" in k and k.split(":")[1] in rule_config.return_arg.values()
+            k for k in input_info.keys() if ":" in k and len(k.split(":")) == 2
         ]
         for key in temp_keys:
-            logger.debug(f"__change_dict_key_exist - Removing temporary key: {key}")
-            del input_info[key]
+            # Only remove if the node_id part matches something we expected
+            key_parts = key.split(":")
+            if len(key_parts) == 2:
+                potential_node_id = key_parts[1]
+                # Check if this node_id appears in any of our return_arg keys
+                expected_node_ids = []
+                for return_arg_key in rule_config.return_arg.keys():
+                    parts = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)
+                    if len(parts) == 2:
+                        expected_node_ids.append(parts[1])
 
-        logger.debug(f"__change_dict_key_exist - After: {list(input_info.keys())}")
+                if potential_node_id in expected_node_ids:
+                    logger.debug(f"Removing temporary key: {key}")
+                    del input_info[key]
+
+        logger.debug(f"After: {list(input_info.keys())}")
 
     @classmethod
     def read_input_info(cls, input_files):
