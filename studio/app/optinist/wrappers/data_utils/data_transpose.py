@@ -86,8 +86,15 @@ def data_transpose(
         logger.info(f"Transposed data shape: {tp_data.shape}")
 
         # Use utility function to return the correct data type
-        output_data = return_as_data_type(data, tp_data, output_dir, file_name)
-        return output_data
+        output_data = return_as_data_type(
+            data,
+            tp_data,
+            output_dir,
+            file_name,
+            output_type=None,
+        )
+        data_object = list(output_data.values())[0]
+        return {"transposed_data": data_object}
 
     except Exception as e:
         logger.error(f"Error during data transposition: {str(e)}")

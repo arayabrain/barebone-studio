@@ -48,8 +48,6 @@ class Runner:
             cls.__change_dict_key_exist(input_info, __rule)
             nwbfile = input_info["nwbfile"]
 
-            logger.debug(f"Runner - Expected return args: {__rule.return_arg.values()}")
-
             # input_info
             for key in list(input_info):
                 if key not in __rule.return_arg.values():
@@ -57,9 +55,6 @@ class Runner:
                         f"Runner - Removing key '{key}' (not in expected return args)"
                     )
                     input_info.pop(key)
-            logger.debug(
-                f"Runner - After filtering, input_info keys: {list(input_info.keys())}"
-            )
 
             # output_info
             output_info = cls.__execute_function(
@@ -231,9 +226,6 @@ class Runner:
 
     @classmethod
     def __change_dict_key_exist(cls, input_info, rule_config: Rule):
-        logger.debug(f"Dict keys before: {list(input_info.keys())}")
-        logger.debug(f"return_arg mapping: {rule_config.return_arg}")
-
         for return_arg_key, arg_name in rule_config.return_arg.items():
             # Check if this is the new compound format (contains delimiter)
             key_parts = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)
@@ -246,11 +238,9 @@ class Runner:
                 # First try the specific source-keyed version
                 source_specific_key = f"{return_name}:{source_node_id}"
                 if source_specific_key in input_info:
-                    logger.debug(f"Renaming '{source_specific_key}' to '{arg_name}'")
                     input_info[arg_name] = input_info.pop(source_specific_key)
                 elif return_name in input_info:
                     # Fallback to non-source-specific key
-                    logger.debug(f"Renaming '{return_name}' to '{arg_name}'")
                     input_info[arg_name] = input_info.pop(return_name)
                 else:
                     logger.warning(
@@ -261,7 +251,6 @@ class Runner:
                 # Legacy (and test) format: just "return_name"
                 return_name = return_arg_key
                 if return_name in input_info:
-                    logger.debug(f"Renaming {return_name} to {arg_name}")
                     input_info[arg_name] = input_info.pop(return_name)
                 else:
                     logger.warning(f"Expected key '{return_name}' not found")
@@ -286,21 +275,16 @@ class Runner:
                         expected_node_ids.append(parts[1])
 
                 if potential_node_id in expected_node_ids:
-                    logger.debug(f"Removing temporary key: {key}")
                     del input_info[key]
-
-        logger.debug(f"After: {list(input_info.keys())}")
 
     @classmethod
     def read_input_info(cls, input_files):
         input_info = {}
-        logger.debug(f"Runner - Reading {len(input_files)} input files")
 
         # Read all files first without merging
         all_file_data = []
         for i, filepath in enumerate(input_files):
             load_data = PickleReader.read(filepath)
-            logger.debug(f"Runner - File {i+1} contains keys: {list(load_data.keys())}")
 
             # validate load_data content
             assert PickleReader.check_is_valid_node_pickle(
@@ -312,7 +296,6 @@ class Runner:
             path_parts = filepath.split("/")
             if len(path_parts) >= 2:
                 node_id = path_parts[-2]  # The directory name is the node_id
-                logger.debug(f"Runner - File {i+1} is from node: {node_id}")
             else:
                 node_id = None
 
@@ -347,14 +330,10 @@ class Runner:
                     if node_id:
                         temp_key = f"{key}:{node_id}"
                         input_info[temp_key] = value
-                        logger.debug(f"Runner - Storing as temporary key: {temp_key}")
                 # Also store the last value under the original key as fallback
                 input_info[key] = sources[-1][1]
 
         input_info["nwbfile"] = merged_nwb
-        logger.debug(
-            f"Runner - Final merged input_info keys: {list(input_info.keys())}"
-        )
         return input_info
 
     @classmethod

@@ -11,9 +11,17 @@ from studio.app.optinist.wrappers.data_utils.vacant_roi import vacant_roi
 
 utils_wrapper_dict = {
     "utils": {
-        "microscope_to_img": {
-            "function": microscope_to_img,
-            "conda_name": "microscope",
+        "data_concat": {
+            "function": data_concat,
+            "conda_name": "optinist",
+        },
+        "data_slice": {
+            "function": data_slice,
+            "conda_name": "optinist",
+        },
+        "data_transpose": {
+            "function": data_transpose,
+            "conda_name": "optinist",
         },
         "fluo_from_hdf5": {
             "function": fluo_from_hdf5,
@@ -27,20 +35,12 @@ utils_wrapper_dict = {
             "function": roi_fluo_from_hdf5,
             "conda_name": "optinist",
         },
+        "microscope_to_img": {
+            "function": microscope_to_img,
+            "conda_name": "microscope",
+        },
         "vacant_roi": {
             "function": vacant_roi,
-            "conda_name": "optinist",
-        },
-        "data_transpose": {
-            "function": data_transpose,
-            "conda_name": "optinist",
-        },
-        "data_concat": {
-            "function": data_concat,
-            "conda_name": "optinist",
-        },
-        "data_slice": {
-            "function": data_slice,
             "conda_name": "optinist",
         },
     },

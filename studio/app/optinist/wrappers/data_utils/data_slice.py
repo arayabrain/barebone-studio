@@ -228,12 +228,19 @@ def data_slice(
                 info["mean_image"] = mean_img_data
 
         # Create sliced data object using return_as_data_type with kwargs
-        main_output = return_as_data_type(
-            data, sliced_data, output_dir, file_name, std=sliced_std, index=sliced_index
+        output_data = return_as_data_type(
+            data,
+            sliced_data,
+            output_dir,
+            file_name,
+            std=sliced_std,
+            index=sliced_index,
+            output_type=None,
         )
-        info.update(main_output)
+        info.update(output_data)
 
-        return info
+        main_data_object = list(output_data.values())[0]
+        info = {"sliced_data": main_data_object}
 
     except Exception as e:
         logger.error(f"Error during data slicing: {str(e)}")

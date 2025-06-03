@@ -92,7 +92,7 @@ def data_concat(
     std_axis = int(std_axis)
 
     output_type = params.get("output_type", None) if params else None
-    if output_type is not (None or ""):
+    if output_type is not None and output_type != "":
         output_type = output_type.strip().lower()
         logger.info(f"Output type specified: {output_type}")
     else:
@@ -199,7 +199,8 @@ def data_concat(
             index=concatenated_index,
         )
 
-        return output_data
+        data_object = list(output_data.values())[0]
+        return {"concatenated_data": data_object}
 
     except Exception as e:
         logger.error(f"Error during data concatenation: {str(e)}")
