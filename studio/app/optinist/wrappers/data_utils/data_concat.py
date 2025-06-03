@@ -19,7 +19,29 @@ def data_concat(
     **kwargs,
 ) -> dict(concatenated_data=BaseData):
     """
-    Concatenates two data arrays with user-specified output type.
+    Concatenates two data arrays along specified axis.
+
+    Parameters:
+        data1 (BaseData): First data array to concatenate. Accepts several types:
+                    BehaviorData, CsvData, FluoData, ImageData, IscellData, RoiData.
+        data2 (BaseData): Second data array to concatenate. Accepts same types.
+                    Must be compatible with data1 for concatenation along specified axis
+        output_dir (str): Directory to save the output data.
+        params (dict, optional): Dictionary containing concatenation specifications:
+                    - 'axis': Axis along which to concatenate
+                    - 'output_type': Optional output type specification
+                        (behaviors_data, neural_data, image_data, iscell_data, roi_data)
+                        If not specified, will be inferred from data1 type
+                    - 'time_axis': Specified or determined by data type
+                    - 'std_method': How to handle standard deviation:
+                        * "concatenate": concatenate existing std arrays
+                        * "compute": compute new std for concatenated data
+                        * "none": no std in output
+                    - 'std_axis': If std_method="compute",
+                        which axis to compute std along (default: time_axis)
+
+    Returns:
+        dict: A dictionary containing the concatenated data with appropriate data type.
     """
     logger = AppLogger.get_logger()
     logger.info("Starting data concatenation")
@@ -34,6 +56,8 @@ def data_concat(
         logger.info(
             f"Using default axis {axis} for {type(data1).__name__} concatenation"
         )
+    else:
+        logger.info(f"Concatenation axis specified: {axis}")
 
     time_axis = params.get("time_axis", None) if params else None
     time_axis = (
@@ -41,15 +65,14 @@ def data_concat(
     )
     if time_axis is None:
         time_axis = default_params["time_axis"]
-        logger.debug(f"Using default time_axis {time_axis} for {type(data1).__name__}")
+        logger.info(f"Using default time_axis {time_axis} for {type(data1).__name__}")
+    else:
+        logger.info(f"Time axis specified: {time_axis}")
     time_axis = int(time_axis)
 
     std_method = params.get("std_method", None) if params else None
     if std_method is None:
         std_method = default_params["std_method"]
-        logger.debug(
-            f"Using default std_method '{std_method}' for {type(data1).__name__}"
-        )
     else:
         std_method = std_method.strip().lower()
         if std_method not in ["concatenate", "compute", "none"]:
@@ -57,22 +80,22 @@ def data_concat(
             logger.warning(
                 "Expected std_method values: 'concatenate', 'compute', or 'none'."
             )
+        else:
+            logger.info(f"Std method specified: {std_method}")
 
     std_axis = params.get("std_axis", None) if params else None
     std_axis = int(std_axis) if std_axis is not None and str(std_axis).strip() else None
     if std_axis is None:
         std_axis = default_params["std_axis"]
-        logger.debug(f"Using default std_axis {std_axis} for {type(data1).__name__}")
+    else:
+        logger.info(f"Std axis specified: {std_axis}")
     std_axis = int(std_axis)
 
     output_type = params.get("output_type", None) if params else None
-    if output_type is not None:
+    if output_type is not (None or ""):
         output_type = output_type.strip().lower()
         logger.info(f"Output type specified: {output_type}")
-
-    logger.info(f"Concatenation axis {axis}, Time axis: {time_axis}")
-    logger.info(f"Std method: {std_method}, Std axis: {std_axis}")
-    if output_type == "" or output_type is None:
+    else:
         logger.info("Output type unspecified, using same type as input data 1")
 
     try:
@@ -118,11 +141,11 @@ def data_concat(
             if axis == time_axis:
                 # Concatenating along time dimension - concatenate indices
                 concatenated_index = np.concatenate([data1.index, data2.index])
-                logger.debug("Concatenated time indices")
+                logger.info("Concatenated time indices")
             else:
                 # Use data1's index (should be same for non-time concatenation)
                 concatenated_index = data1.index
-                logger.debug("Used data1 index")
+                logger.info("Used data1 index")
         elif hasattr(data1, "index") and data1.index is not None:
             concatenated_index = data1.index
         elif hasattr(data2, "index") and data2.index is not None:
@@ -140,7 +163,7 @@ def data_concat(
             ):
                 try:
                     concatenated_std = np.concatenate([data1.std, data2.std], axis=axis)
-                    logger.debug("Concatenated existing std arrays")
+                    logger.info("Concatenated existing std arrays")
                 except Exception as e:
                     logger.warning(f"Could not concatenate std arrays: {e}")
 
@@ -153,16 +176,19 @@ def data_concat(
                     concatenated_std = np.broadcast_to(
                         axis_std, concatenated_array.shape
                     )
-                    logger.debug(f"Computed std with shape {concatenated_std.shape}")
+                    logger.info(f"Computed std with shape {concatenated_std.shape}")
                 else:
                     concatenated_std = np.std(concatenated_array, axis=std_axis)
-                    logger.debug(f"Computed new std along axis {std_axis}")
+                    logger.info(f"Computed new std along axis {std_axis}")
             except Exception as e:
                 logger.warning(f"Could not compute std: {e}")
 
-        logger.debug(f"!!! Output type: {output_type} !!!")
         # Create output data object
-        file_name = "concatenated_data"
+        file_name = (
+            f"concatenated_{data1.file_name}"
+            if hasattr(data1, "file_name")
+            else "concatenated_data"
+        )
         output_data = return_as_data_type(
             data1,  # Use data1 as template for type inference
             concatenated_array,

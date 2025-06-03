@@ -38,8 +38,11 @@ def data_slice(
     # Get slice specifications from parameters
     slice_specs = params.get("slice_dims", None) if params else None
 
-    logger.debug(f"Data slice - User input specs: {slice_specs}")
-    logger.debug(f"Data shape: {data.data.shape}")
+    if slice_specs is not None:
+        if isinstance(slice_specs, str):
+            slice_specs = [s.strip() for s in slice_specs.split(",")]
+        elif isinstance(slice_specs, list):
+            slice_specs = [s.strip() if isinstance(s, str) else s for s in slice_specs]
 
     try:
         raw_data = data.data
@@ -54,7 +57,7 @@ def data_slice(
 
     # Handle case where no slice specs are provided
     if slice_specs is None:
-        logger.warning("No slice specifications provided, returning original data")
+        logger.info("No slice specifications provided, returning original data")
         return return_as_data_type(data, raw_data, output_dir, "sliced_data")
 
     # Convert slice_specs to list format if it's a string
@@ -96,9 +99,6 @@ def data_slice(
             idx = int(spec.strip() if isinstance(spec, str) else spec)
             if 0 <= idx < raw_data.shape[i]:
                 # Make sure we're adding an actual integer, not a slice
-                logger.debug(
-                    f"Data slice - Adding integer index {idx} for dimension {i}"
-                )
                 index_specs.append(int(idx))  # Force conversion to int
             else:
                 maxshape = raw_data.shape[i] - 1
@@ -140,7 +140,7 @@ def data_slice(
         logger.warning(f"Unrecognized slice spec: {spec}")
         index_specs.append(slice(None))
 
-    logger.debug(f"Data slice - Applying indexing: {index_specs}")
+    logger.info(f"Data slice - Applying indexing: {index_specs}")
 
     try:
         # Apply slices to all parts of data
@@ -153,7 +153,6 @@ def data_slice(
             try:
                 # Apply the same slicing to std (assumes std has same shape as data)
                 sliced_std = data.std[tuple(index_specs)]
-                logger.debug(f"Successfully sliced std with shape: {sliced_std.shape}")
             except Exception as std_err:
                 logger.warning(f"Failed to slice std: {std_err}")
                 sliced_std = None
@@ -174,9 +173,6 @@ def data_slice(
                     # Apply the slice for the matching dimension
                     index_slice_spec = index_specs[index_dim]
                     sliced_index = original_index[index_slice_spec]
-                    logger.debug(
-                        f"Successfully sliced index using dimension {index_dim}"
-                    )
                 except Exception as idx_err:
                     logger.warning(f"Failed to slice index: {idx_err}")
                     # Create default index for the sliced data
@@ -209,12 +205,9 @@ def data_slice(
 
             if other_axes:  # Only if there are other dimensions to average over
                 mean_timeseries = np.mean(sliced_data, axis=other_axes)
-                logger.info(f"Mean timeseries shape: {mean_timeseries.shape}")
-                logger.info(f"Averaged over axes {other_axes}")
             else:
                 # If only one dimension (the index dimension), use the data as is
                 mean_timeseries = sliced_data
-                logger.info(f"Single dimension data mean {mean_timeseries.shape}")
 
         if mean_timeseries is not None:
             # Create a FluoData object for mean timeseries with the sliced index
@@ -229,31 +222,16 @@ def data_slice(
             spatial_axes = tuple(i for i in range(sliced_data.ndim) if i != index_dim)
             if len(spatial_axes) >= 2:
                 mean_image = np.mean(sliced_data, axis=index_dim)
-                logger.debug(f"Data slice - Mean image shape: {mean_image.shape}")
                 mean_img_data = ImageData(
                     data=mean_image, output_dir=output_dir, file_name="mean_image"
                 )
                 info["mean_image"] = mean_img_data
 
         # Create sliced data object using return_as_data_type with kwargs
-        typed_result = return_as_data_type(
+        main_output = return_as_data_type(
             data, sliced_data, output_dir, file_name, std=sliced_std, index=sliced_index
         )
-        info.update(typed_result)
-
-        # logger.info(f"Data slice - Final output keys: {list(info.keys())}")
-        # logger.info(f"Data slice - Main data type:
-        # {type(list(info.values())[0]).__name__}")
-        # if info.get("neural_data") is not None:
-        #     Type = type(info["neural_data"]).__name__
-        #     logger.debug(f"Data slice - info neural_data type:{Type}")
-        #     Shape = info["neural_data"].data.shape
-        #     logger.debug(f"Data slice - info neural_data shape: {Shape}")
-        # elif info.get("behaviors_data") is not None:
-        #     Type = type(info["behaviors_data"]).__name__
-        #     logger.debug(f"Data slice - info behaviors_data type: {Type}")
-        #     Shape = info["behaviors_data"].data.shape
-        #     logger.debug(f"Data slice - info behaviors_data shape: {Shape}")
+        info.update(main_output)
 
         return info
 
