@@ -51,9 +51,6 @@ class Runner:
             # input_info
             for key in list(input_info):
                 if key not in __rule.return_arg.values():
-                    logger.debug(
-                        f"Runner - Removing key '{key}' (not in expected return args)"
-                    )
                     input_info.pop(key)
 
             # output_info

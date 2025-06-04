@@ -39,9 +39,15 @@ def data_transpose(
 
     if dims is not None:
         if isinstance(dims, str):
-            dims = [int(d.strip()) for d in dims.split(",")]
+            if dims.strip():  # Only process non-empty strings
+                dims = [int(d.strip()) for d in dims.split(",")]
+            else:
+                dims = None
         elif isinstance(dims, list):
-            dims = [int(d) if isinstance(d, str) else d for d in dims]
+            if dims:  # Only process non-empty lists
+                dims = [int(d) if isinstance(d, str) else d for d in dims]
+            else:
+                dims = None
 
     try:
         raw_data = data.data

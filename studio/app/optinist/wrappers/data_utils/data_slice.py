@@ -239,8 +239,7 @@ def data_slice(
         )
         info.update(output_data)
 
-        main_data_object = list(output_data.values())[0]
-        info = {"sliced_data": main_data_object}
+        return info
 
     except Exception as e:
         logger.error(f"Error during data slicing: {str(e)}")

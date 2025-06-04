@@ -4,6 +4,7 @@ from studio.app.common.core.logger import AppLogger
 from studio.app.common.dataclass.base import BaseData
 from studio.app.common.dataclass.csv import CsvData
 from studio.app.common.dataclass.image import ImageData
+from studio.app.common.dataclass.timeseries import TimeSeriesData
 from studio.app.optinist.dataclass.behavior import BehaviorData
 from studio.app.optinist.dataclass.fluo import FluoData
 from studio.app.optinist.dataclass.iscell import IscellData
@@ -68,7 +69,8 @@ def data_concat(
         logger.info(f"Using default time_axis {time_axis} for {type(data1).__name__}")
     else:
         logger.info(f"Time axis specified: {time_axis}")
-    time_axis = int(time_axis)
+    if time_axis is not None:
+        time_axis = int(time_axis)
 
     std_method = params.get("std_method", None) if params else None
     if std_method is None:
@@ -89,7 +91,8 @@ def data_concat(
         std_axis = default_params["std_axis"]
     else:
         logger.info(f"Std axis specified: {std_axis}")
-    std_axis = int(std_axis)
+    if std_axis is not None:
+        std_axis = int(std_axis)
 
     output_type = params.get("output_type", None) if params else None
     if output_type is not None and output_type != "":
@@ -138,7 +141,7 @@ def data_concat(
             and data1.index is not None
             and data2.index is not None
         ):
-            if axis == time_axis:
+            if time_axis is not None and axis == time_axis:
                 # Concatenating along time dimension - concatenate indices
                 concatenated_index = np.concatenate([data1.index, data2.index])
                 logger.info("Concatenated time indices")
@@ -169,19 +172,25 @@ def data_concat(
 
         elif std_method == "compute":
             try:
-                # For timeseries data, we need std to have the same shape as data
+                # Use time_axis as default if std_axis is None
+                effective_std_axis = std_axis if std_axis is not None else time_axis
                 if concatenated_array.ndim == 2:
-                    # Don't reduce dimensions - use broadcasting to maintain shape
-                    axis_std = np.std(concatenated_array, axis=std_axis, keepdims=True)
+                    axis_std = np.std(
+                        concatenated_array, axis=effective_std_axis, keepdims=True
+                    )
                     concatenated_std = np.broadcast_to(
                         axis_std, concatenated_array.shape
                     )
                     logger.info(f"Computed std with shape {concatenated_std.shape}")
                 else:
-                    concatenated_std = np.std(concatenated_array, axis=std_axis)
+                    concatenated_std = np.std(
+                        concatenated_array, axis=effective_std_axis
+                    )
                     logger.info(f"Computed new std along axis {std_axis}")
+
             except Exception as e:
                 logger.warning(f"Could not compute std: {e}")
+                concatenated_std = None
 
         # Create output data object
         file_name = (
@@ -200,7 +209,12 @@ def data_concat(
         )
 
         data_object = list(output_data.values())[0]
-        return {"concatenated_data": data_object}
+        result = {"concatenated_data": data_object}
+        if concatenated_std is not None:
+            result["concatenated_std"] = TimeSeriesData(
+                concatenated_std, index=concatenated_index, file_name="concatenated_std"
+            )
+        return result
 
     except Exception as e:
         logger.error(f"Error during data concatenation: {str(e)}")
@@ -215,14 +229,14 @@ def determine_default_params(data1):
             "axis": 0,  # Time in dim 0, concat along time dimension
             "time_axis": 0,  # Time is in dimension 0
             "std_axis": 0,  # Compute std across time
-            "std_method": "compute",  # Compute new temporal statistics
+            "std_method": "none",  # Compute new temporal statistics
         }
     elif isinstance(data1, FluoData):
         return {
             "axis": 0,  # (roi, time) shape, concat along roi dimension
             "time_axis": 1,  # Time is in dimension 1
             "std_axis": 1,  # Compute std across time for each ROI
-            "std_method": "compute",  # Compute stats over combined ROI population
+            "std_method": "none",  # Compute stats over combined ROI population
         }
     elif isinstance(data1, (BehaviorData, CsvData)):
         return {
@@ -250,5 +264,5 @@ def determine_default_params(data1):
             "axis": 0,  # Default fallback
             "time_axis": 1,  # Legacy default
             "std_axis": 1,  # Legacy default
-            "std_method": "compute",  # Safest default (always works)
+            "std_method": "none",  # Safest default
         }

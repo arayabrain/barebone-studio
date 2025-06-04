@@ -24,8 +24,10 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         logger.info("No output_type specified, using input data type for output")
 
     # Determine output type and key based on input type or explicit output_type
-    if output_type == "behaviors_data" or (
-        output_type is None and isinstance(data, (BehaviorData, CsvData))
+    if (
+        output_type == "behaviors_data"
+        or "BehaviorData"
+        or "CsvData"(output_type is None and isinstance(data, (BehaviorData, CsvData)))
     ):
         result = BehaviorData(
             data=processed_data,
@@ -36,8 +38,10 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "behaviors_data"
 
-    elif output_type == "neural_data" or (
-        output_type is None and isinstance(data, FluoData)
+    elif (
+        output_type == "neural_data"
+        or "FluoData"
+        or (output_type is None and isinstance(data, FluoData))
     ):
         result = FluoData(
             data=processed_data,
@@ -49,8 +53,11 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "neural_data"
 
-    elif output_type == "image_data" or (
-        output_type is None and isinstance(data, ImageData)
+    elif (
+        output_type == "image_data"
+        or "ImageData"
+        or "image"
+        or (output_type is None and isinstance(data, ImageData))
     ):
         result = ImageData(
             data=processed_data,
@@ -60,8 +67,11 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "image"
 
-    elif output_type == "iscell_data" or (
-        output_type is None and isinstance(data, IscellData)
+    elif (
+        output_type == "iscell_data"
+        or "IscellData"
+        or "iscell"
+        or (output_type is None and isinstance(data, IscellData))
     ):
         result = IscellData(
             data=processed_data,
@@ -69,8 +79,10 @@ def return_as_data_type(data, processed_data, output_dir, file_name, **kwargs):
         )
         output_key = "iscell"
 
-    elif output_type == "roi_data" or (
-        output_type is None and isinstance(data, RoiData)
+    elif (
+        output_type == "roi_data"
+        or "RoiData"
+        or (output_type is None and isinstance(data, RoiData))
     ):
         result = RoiData(
             data=processed_data,
