@@ -3,8 +3,8 @@ import math
 import os
 from typing import Optional
 
-import imageio
-import numpy as np
+import dask.array as da
+import imageio.v3 as iio
 import tifffile
 
 from studio.app.common.core.utils.filepath_creater import (
@@ -76,29 +76,40 @@ class ImageData(BaseData):
 
     @property
     def data(self):
+        if self.path is None:
+            return None
+
         if isinstance(self.path, list):
-            return np.concatenate([imageio.volread(p) for p in self.path])
+            arrays = [
+                da.from_array(iio.imread(p, index=None), chunks="auto")
+                for p in self.path
+            ]
+            return da.concatenate(arrays, axis=0)
         else:
-            return np.array(imageio.volread(self.path))
+            return da.from_array(iio.imread(self.path, index=None), chunks="auto")
 
     def save_json(self, json_dir):
         if self.data.ndim < 3:
             self.json_path = join_filepath([json_dir, f"{self.file_name}.json"])
-            JsonWriter.write_as_split(self.json_path, create_images_list(self.data))
+            JsonWriter.write_as_split(
+                self.json_path, create_images_list(self.data.compute())
+            )
             JsonWriter.write_plot_meta(json_dir, self.file_name, self.meta)
 
     @property
     def output_path(self) -> OutputPath:
-        if self.data.ndim >= 3:
-            # self.path will be a list if self.data got into else statement on __init__
-            if isinstance(self.path, list) and isinstance(self.path[0], str):
-                _path = self.path[0]
-            else:
-                _path = self.path
+        data = self.data
+        if data is None:
+            return OutputPath(path=None, type=OutputType.IMAGE, max_index=0)
+
+        array = data.compute()
+
+        if array.ndim >= 3:
+            _path = self.path[0] if isinstance(self.path, list) else self.path
             return OutputPath(
                 path=_path,
                 type=OutputType.IMAGE,
-                max_index=len(self.data),
+                max_index=len(array),
             )
         else:
             return OutputPath(
