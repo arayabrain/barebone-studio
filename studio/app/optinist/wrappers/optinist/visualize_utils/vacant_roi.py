@@ -59,6 +59,7 @@ def vacant_roi(
                 "name": "Fluorescence",
                 "data": timeseries,
                 "unit": "lumens",
+                "rate": nwbfile.get("imaging_plane", {}).get("imaging_rate", 30),
             }
         }
     }
