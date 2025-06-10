@@ -24,7 +24,7 @@ class WorkspaceService:
         logger.info(f"Deleting workspace data for workspace '{workspace_id}'")
 
         workspace_dir = join_filepath([DIRPATH.OUTPUT_DIR, workspace_id])
-        hasDeleteDataArr = []
+        deleted_statuses = []
 
         # Delete experiment folders under workspace
         if os.path.exists(workspace_dir):
@@ -33,15 +33,15 @@ class WorkspaceService:
                 if experiment_id.startswith("."):
                     continue
 
-                deleted = ExperimentService.delete_experiment(
+                deleted_status = ExperimentService.delete_experiment(
                     db, workspace_id, experiment_id, auto_commit=False
                 )
 
-                hasDeleteDataArr.append(deleted)
+                deleted_statuses.append(deleted_status)
         else:
             logger.warning(f"Workspace directory '{workspace_dir}' does not exist")
 
-        if all(hasDeleteDataArr):
+        if all(deleted_statuses):
             # Delete the workspace directory itself
             cls.delete_workspace_files(workspace_id=workspace_id)
 

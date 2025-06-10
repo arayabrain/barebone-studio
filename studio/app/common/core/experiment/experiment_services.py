@@ -43,13 +43,13 @@ class ExperimentService:
         cls, db: Session, workspace_id: str, unique_id: str, auto_commit: bool = False
     ) -> bool:
         # Delete experiment data
-        deleted = ExptDataWriter(workspace_id, unique_id).delete_data()
+        result = ExptDataWriter(workspace_id, unique_id).delete_data()
 
         # Delete experiment database record
         if WorkspaceDataCapacityService.is_available():
             cls._delete_experiment_db(db, workspace_id, unique_id, auto_commit)
 
-        return deleted
+        return result
 
     @classmethod
     def _delete_experiment_db(
