@@ -1,8 +1,8 @@
 import gc
 from typing import Dict, List, Optional
 
-import imageio
-import numpy as np
+import dask.array as da
+import imageio.v3 as iio
 import tifffile
 
 from studio.app.common.core.utils.filepath_creater import (
@@ -42,15 +42,27 @@ class RoiData(BaseData):
 
     @property
     def data(self):
-        data = np.array(imageio.volread(self.path))
-        if data.ndim == 3:
-            return data[0]
-        elif data.ndim == 2:
-            return data
+        if not self.path:
+            return None
+
+        try:
+            dask_array = da.from_array(iio.imread(self.path, index=None), chunks="auto")
+        except Exception as e:
+            print(f"[ImageData] Failed to read image from path {self.path}: {e}")
+            return None
+
+        if dask_array.ndim == 3:
+            return dask_array[0]
+        elif dask_array.ndim == 2:
+            return dask_array
+
+        return None
 
     def save_json(self, json_dir):
         self.json_path = join_filepath([json_dir, f"{self.file_name}.json"])
-        JsonWriter.write_as_split(self.json_path, create_images_list(self.data))
+        JsonWriter.write_as_split(
+            self.json_path, create_images_list(self.data.compute())
+        )
         JsonWriter.write_plot_meta(json_dir, self.file_name, self.meta)
 
     @property

@@ -1,7 +1,9 @@
 import gc
 
-import imageio
+import dask.array as da
+import imageio.v3 as iio
 import numpy as np
+from dask import delayed
 
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
@@ -94,7 +96,25 @@ def caiman_cnmf_multisession(
     templates = []
     mmap_paths = []
     for split_image_path in split_image_paths:
-        split_image = imageio.volread(split_image_path)
+        # Lazily read the first frame to infer shape/dtype
+        sample = iio.imread(split_image_path, index=0)
+        meta = iio.immeta(split_image_path)
+        n_images = meta.get("n_images", 1)
+
+        # Build a stack of delayed frames
+        delayed_frames = [
+            delayed(iio.imread)(split_image_path, index=i) for i in range(n_images)
+        ]
+        lazy_stack = da.stack(
+            [
+                da.from_delayed(f, shape=sample.shape, dtype=sample.dtype)
+                for f in delayed_frames
+            ],
+            axis=0,
+        )
+
+        # Now compute just before use — this gives a real np.ndarray
+        split_image = lazy_stack.compute()
         split_image_mmap, _, mmap_path = util_get_image_memmap(
             function_id, split_image, split_image_path
         )
