@@ -7,17 +7,17 @@ from studio.app.common.schemas.users import UserInfo
 
 
 class Workspace(BaseModel):
-    id: Optional[int]
+    id: Optional[int] = None
     name: str
-    user: Optional[UserInfo]
+    user: Optional[UserInfo] = None
     shared_count: int
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
-    data_usage: Optional[int]
-    canDelete: Optional[bool]
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    data_usage: Optional[int] = None
+    canDelete: Optional[bool] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class WorkspaceCreate(BaseModel):

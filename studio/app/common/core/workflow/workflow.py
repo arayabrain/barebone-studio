@@ -186,9 +186,9 @@ class NodeData:
     param: dict
     path: Union[str, List]
     type: str
-    fileType: str = None
-    hdf5Path: str = None
-    matPath: str = None
+    fileType: Optional[str] = None
+    hdf5Path: Optional[str] = None
+    matPath: Optional[str] = None
     dataFilterParam: Union[DataFilterParam, dict, None] = field(
         default_factory=lambda: DataFilterParam(dim1=[], roi=[])
     )
@@ -199,17 +199,17 @@ class NodeData:
 
 @dataclass
 class NodePosition:
-    x: int
-    y: int
+    x: float
+    y: float
 
 
 @dataclass
 class Style:
-    border: str = None
-    height: int = None
-    padding: int = None
-    width: int = None
-    borderRadius: int = None
+    border: Optional[str] = None
+    height: Optional[int] = None
+    padding: Optional[int] = None
+    width: Optional[int] = None
+    borderRadius: Optional[int] = None
 
 
 @dataclass
@@ -234,7 +234,7 @@ class Edge:
 
 
 class RunItem(BaseModel):
-    name: str = None
+    name: Optional[str] = None
     nodeDict: Dict[str, Node] = {}
     edgeDict: Dict[str, Edge] = {}
     snakemakeParam: dict = {}

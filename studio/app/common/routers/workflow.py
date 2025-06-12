@@ -37,8 +37,8 @@ async def fetch_last_experiment(workspace_id: str):
 
             # fetch workflow
             workflow_config = WorkflowConfigReader.read(workspace_id, unique_id)
-            return WorkflowWithResults(
-                **asdict(last_expt_config), **asdict(workflow_config)
+            return WorkflowWithResults.model_validate(
+                {**asdict(last_expt_config), **asdict(workflow_config)}
             )
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)

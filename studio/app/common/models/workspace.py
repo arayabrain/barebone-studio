@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.sql.functions import current_timestamp
-from sqlmodel import Column, Field, ForeignKey, Relationship, String, UniqueConstraint
+from sqlmodel import Column, Field, ForeignKey, Relationship, UniqueConstraint
 
 from studio.app.common.models.base import Base, TimestampMixin
 
@@ -30,18 +30,16 @@ class WorkspacesShareUser(Base, table=True):
 class Workspace(Base, TimestampMixin, table=True):
     __tablename__ = "workspaces"
 
-    name: str = Field(sa_column=Column(String(100), nullable=False))
+    name: str = Field(max_length=100, nullable=False)
     user_id: int = Field(
-        sa_column=Column(
-            BIGINT(unsigned=True), ForeignKey("users.id", name="user"), nullable=False
-        ),
+        sa_type=BIGINT(unsigned=True), foreign_key="users.id", nullable=False
     )
-    deleted: bool = Field(nullable=False)
+    deleted: bool = Field(default=False, nullable=False)
     input_data_usage: int = Field(
-        sa_column=Column(
-            BIGINT(unsigned=True), nullable=False, comment="data usage in bytes"
-        ),
         default=0,
+        sa_type=BIGINT(unsigned=True),
+        nullable=False,
+        description="data usage in bytes",
     )
 
     user: Optional["User"] = Relationship(back_populates="workspace")  # noqa: F821

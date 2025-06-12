@@ -3,17 +3,16 @@ from enum import Enum
 from typing import Optional
 
 from fastapi import Query
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-password_regex = r"^(?=.*\d)(?=.*[!#$%&()*+,-./@_|])(?=.*[a-zA-Z]).{6,255}$"
+password_regex = r"^[a-zA-Z0-9!#$%&()*+,-./@_|]{6,255}$"
 
 
 class Organization(BaseModel):
     id: int
     name: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserSearchOptions(BaseModel):
@@ -29,28 +28,26 @@ class UserRole(int, Enum):
 class User(BaseModel):
     id: int
     uid: str
-    name: Optional[str]
+    name: Optional[str] = None
     email: EmailStr
     organization: Organization
-    role_id: Optional[int]
-    data_usage: Optional[int]
+    role_id: Optional[int] = None
+    data_usage: Optional[int] = None
 
     @property
     def is_admin(self) -> bool:
         return self.role_id == UserRole.admin
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str = Field(max_length=255, regex=password_regex)
+    password: str = Field(max_length=255, pattern=password_regex)
     name: str
     role_id: int
 
-    class Config:
-        anystr_strip_whitespace = True
+    model_config = ConfigDict(str_strip_whitespace=True)
 
 
 class UserUpdate(BaseModel):
@@ -66,10 +63,9 @@ class SelfUserUpdate(BaseModel):
 
 class UserPasswordUpdate(BaseModel):
     old_password: str
-    new_password: str = Field(max_length=255, regex=password_regex)
+    new_password: str = Field(max_length=255, pattern=password_regex)
 
-    class Config:
-        anystr_strip_whitespace = True
+    model_config = ConfigDict(str_strip_whitespace=True)
 
 
 class UserInfo(BaseModel):
@@ -79,5 +75,4 @@ class UserInfo(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
