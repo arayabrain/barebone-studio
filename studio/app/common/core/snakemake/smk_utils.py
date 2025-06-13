@@ -157,7 +157,18 @@ class SmkUtils:
         config_copy = copy.deepcopy(config)
         nwb_template = config_copy.get("nwb_template", {})
 
-        template_str = json.dumps(nwb_template, sort_keys=True) if nwb_template else ""
+        # Handle Pydantic models by converting to dict
+        if hasattr(nwb_template, 'model_dump'):
+            # Pydantic v2
+            nwb_template_dict = nwb_template.model_dump()
+        elif hasattr(nwb_template, 'dict'):
+            # Pydantic v1 fallback
+            nwb_template_dict = nwb_template.dict()
+        else:
+            # Regular dict or other type
+            nwb_template_dict = nwb_template
+
+        template_str = json.dumps(nwb_template_dict, sort_keys=True) if nwb_template_dict else ""
 
         # Check each rule and convert matching nwbfiles to references
         for rule_name, rule in config_copy.get("rules", {}).items():

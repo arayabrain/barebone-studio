@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 @dataclass
@@ -31,8 +31,8 @@ class AlgoModel(BaseModel):
     children: Union[Dict[str, Algo], Dict[str, "AlgoModel"]]
 
 
-class AlgoList(BaseModel):
-    __root__: Dict[str, AlgoModel] = {
+class AlgoList(RootModel[Dict[str, AlgoModel]]):
+    root: Dict[str, AlgoModel] = {
         "caiman": {
             "children": {
                 "caiman_mc": {

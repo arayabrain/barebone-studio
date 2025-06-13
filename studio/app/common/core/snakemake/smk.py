@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Union
 
 from pydantic import BaseModel
@@ -29,11 +29,10 @@ class ForceRun(BaseModel):
     name: str
 
 
-@dataclass
-class SmkParam:
+class SmkParam(BaseModel):
     use_conda: bool
     cores: int
     forceall: bool
     forcetargets: bool
     lock: bool
-    forcerun: List[ForceRun] = field(default_factory=list)
+    forcerun: List[ForceRun] = []

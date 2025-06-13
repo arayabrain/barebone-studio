@@ -1,6 +1,8 @@
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.filepath_finder import find_param_filepath
+from studio.app.optinist.schemas.nwb import NWBParams
+from studio.app.common.core.snakemake.smk import SmkParam
 
 logger = AppLogger.get_logger()
 
@@ -8,8 +10,26 @@ logger = AppLogger.get_logger()
 def get_typecheck_params(message_params, name):
     default_params = ConfigReader.read(find_param_filepath(name))
     if message_params != {} and message_params is not None:
-        return check_types(nest2dict(message_params), default_params)
-    return default_params
+        params = check_types(nest2dict(message_params), default_params)
+    else:
+        params = default_params
+
+    if name == "nwb":
+        try:
+            validated_params = NWBParams(**params)
+            return validated_params
+        except Exception as e:
+            logger.error(f"Error converting params to NWBParams: {e}")
+            return params
+    elif name == "snakemake":
+        try:
+            validated_params = SmkParam(**params)
+            return validated_params
+        except Exception as e:
+            logger.error(f"Error converting params to SmkParam: {e}")
+            return params
+    
+    return params
 
 
 def check_types(params, default_params):

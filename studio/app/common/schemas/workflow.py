@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 
 from psutil import Process
+from pydantic import BaseModel, ConfigDict
 
 from studio.app.common.core.experiment.experiment import ExptFunction
 from studio.app.common.core.workflow.workflow import Edge, Node
@@ -13,8 +14,8 @@ class WorkflowConfig:
     edgeDict: Dict[str, Edge]
 
 
-@dataclass
-class WorkflowWithResults:
+class WorkflowWithResults(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     workspace_id: str
     unique_id: str
     name: str

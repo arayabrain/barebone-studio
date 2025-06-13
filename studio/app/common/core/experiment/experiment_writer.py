@@ -57,9 +57,12 @@ class ExptConfigWriter:
 
         self.build_function_from_nodeDict()
 
+        config = self.builder.build()
         # Write EXPERIMENT_YML
         self._write_raw(
-            self.workspace_id, self.unique_id, config=asdict(self.builder.build())
+            self.workspace_id, self.unique_id, config=self._convert_config_to_dict(
+                config
+                )
         )
 
     @classmethod
@@ -73,6 +76,19 @@ class ExptConfigWriter:
             auto_file_lock=auto_file_lock,
         )
 
+    @classmethod
+    def _convert_config_to_dict(self, config):
+        """Convert ExptConfig to dictionary, handling Pydantic v2 models"""
+        config_dict = asdict(config)
+        
+        # Convert Pydantic v2 models to dictionaries
+        if hasattr(config.nwb, 'model_dump'):
+            config_dict['nwb'] = config.nwb.model_dump()
+        if hasattr(config.snakemake, 'model_dump'):
+            config_dict['snakemake'] = config.snakemake.model_dump()
+        
+        return config_dict
+
     def overwrite(self, update_params: dict) -> None:
         expt_filepath = ExptConfigReader.get_config_yaml_path(
             self.workspace_id, self.unique_id
@@ -85,7 +101,10 @@ class ExptConfigWriter:
             config = ExptConfigReader.read(self.workspace_id, self.unique_id)
 
             # Merge overwrite params
-            config_merged = differential_deep_merge(asdict(config), update_params)
+            config_merged = differential_deep_merge(
+                self._convert_config_to_dict(config),
+                update_params
+                )
 
             # Overwrite experiment config
             __class__._write_raw(
@@ -382,3 +401,4 @@ class ExptDataWriter:
         except Exception as e:
             logger.error(f"Failed to update experiment.yml: {e}")
             return False
+        
