@@ -6,7 +6,7 @@ from typing import Dict, List
 
 import numpy as np
 from fastapi import HTTPException, status
-from snakemake import snakemake
+from snakemake.api import SnakemakeApi
 
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
@@ -71,7 +71,7 @@ class EditRoiUtils:
 
     @classmethod
     def _execute_process(cls, filepath: str) -> bool:
-        result = snakemake(
+        result = SnakemakeApi(
             DIRPATH.SNAKEMAKE_FILEPATH,
             use_conda=True,
             cores=2,

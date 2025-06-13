@@ -5,6 +5,8 @@ from studio.app.dir_path import DIRPATH
 
 from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil
 
+configfile: "snakemake.yaml" 
+
 if config.get('type') == "EDIT_ROI":
     rule edit_ROI:
         conda:

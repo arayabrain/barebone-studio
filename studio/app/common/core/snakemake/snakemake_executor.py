@@ -1,10 +1,16 @@
 import os
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 from typing import Dict
 
-from snakemake import snakemake
-
+from snakemake.api import (
+    SnakemakeApi,
+    OutputSettings,
+    ResourceSettings,
+    StorageSettings,
+    DeploymentSettings,
+)
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
@@ -50,21 +56,51 @@ def _snakemake_execute_process(
         ]
     )
 
-    result = snakemake(
-        DIRPATH.SNAKEMAKE_FILEPATH,
-        forceall=params.forceall,
-        cores=params.cores,
-        use_conda=params.use_conda,
-        conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
-        workdir=smk_workdir,
-        configfiles=[SmkConfigReader.get_config_yaml_path(workspace_id, unique_id)],
-        log_handler=[smk_logger.log_handler],
-    )
+    config_file_path = SmkConfigReader.get_config_yaml_path(workspace_id, unique_id)
+    logger.debug(f"Snakemake config file path: {config_file_path}")
+    logger.debug(f"Config file exists: {os.path.exists(config_file_path)}")
+    logger.debug(f"Snakemake file path: {DIRPATH.SNAKEMAKE_FILEPATH}")
+    logger.debug(f"Snakemake file exists: {os.path.exists(DIRPATH.SNAKEMAKE_FILEPATH)}")
+    logger.debug(f"Working directory: {smk_workdir}")
+    logger.debug(f"Working directory exists: {os.path.exists(smk_workdir)}")
+    logger.debug(f"Conda prefix: {DIRPATH.SNAKEMAKE_CONDA_ENV_DIR}")
+    logger.debug(f"Conda prefix exists: {os.path.exists(DIRPATH.SNAKEMAKE_CONDA_ENV_DIR) if DIRPATH.SNAKEMAKE_CONDA_ENV_DIR else 'None'}")
+    logger.debug(f"SmkParam Execution parameters: {params}")
 
-    if result:
-        logger.info("snakemake_execute succeeded.")
-    else:
-        logger.error("snakemake_execute failed..")
+    # Use context manager for proper cleanup
+    cores = getattr(params, 'cores', 1)
+
+    # Use context manager for proper cleanup
+    with SnakemakeApi(
+        OutputSettings(
+            verbose=True,
+            show_failed_logs=True,
+        ),
+    ) as snakemake_api:
+        workflow_api = snakemake_api.workflow(
+            snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
+            workdir=Path(smk_workdir),
+            storage_settings=StorageSettings(),
+            resource_settings=ResourceSettings(cores=cores),
+            deployment_settings=DeploymentSettings(
+                conda_frontend="conda",
+                conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
+            ),
+        )
+        logger.debug("Workflow API created successfully")
+        logger.debug("Creating DAG...")
+
+        dag_api = workflow_api.dag()
+        logger.debug("DAG created successfully")
+        logger.info("Starting workflow execution...")
+
+        try:
+            dag_api.execute_workflow()
+            result = True
+            logger.info("snakemake_execute succeeded.")
+        except Exception as e:
+            result = False
+            logger.error(f"snakemake_execute failed: {e}")
 
     smk_logger.clean_up()
 
