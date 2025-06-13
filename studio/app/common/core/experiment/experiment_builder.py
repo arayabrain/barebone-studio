@@ -1,4 +1,6 @@
 from studio.app.common.core.experiment.experiment import ExptConfig
+from studio.app.optinist.schemas.nwb import NWBParams
+from studio.app.common.core.snakemake.smk import SmkParam
 
 
 class ExptConfigBuilder:
@@ -58,11 +60,27 @@ class ExptConfigBuilder:
         return self
 
     def set_nwbfile(self, nwbfile) -> "ExptConfigBuilder":
-        self._nwbfile = nwbfile
+        # Convert dict to NWBParams if needed
+        if isinstance(nwbfile, dict):
+            try:
+                self._nwbfile = NWBParams(**nwbfile)
+            except Exception:
+                # If conversion fails, store as dict
+                self._nwbfile = nwbfile
+        else:
+            self._nwbfile = nwbfile
         return self
 
     def set_snakemake(self, snakemake) -> "ExptConfigBuilder":
-        self._snakemake = snakemake
+        # Convert dict to SmkParam if needed
+        if isinstance(snakemake, dict):
+            try:
+                self._snakemake = SmkParam(**snakemake)
+            except Exception:
+                # If conversion fails, store as dict
+                self._snakemake = snakemake
+        else:
+            self._snakemake = snakemake
         return self
 
     def set_data_usage(self, data_usage) -> "ExptConfigBuilder":

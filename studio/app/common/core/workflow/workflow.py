@@ -128,7 +128,7 @@ class NodeItem(BaseModel):
 class OutputPath:
     path: str
     type: str
-    max_index: int = None
+    max_index: Optional[int] = None
     data_shape: Optional[list] = field(default_factory=list)
 
 

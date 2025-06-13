@@ -1,5 +1,6 @@
 import os
 
+from pydantic import BaseModel
 import yaml
 from filelock import FileLock
 
@@ -48,6 +49,17 @@ class ConfigWriter:
         create_directory(dirname)
 
         config_path = join_filepath([dirname, filename])
+
+        def convert_to_serializable(obj):
+            if isinstance(obj, BaseModel):
+                return obj.model_dump()
+            elif isinstance(obj, dict):
+                return {k: convert_to_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_to_serializable(item) for item in obj]
+            return obj
+        
+        config = convert_to_serializable(config)
 
         if auto_file_lock:
             # Exclusive control for parallel updates from multiple processes.

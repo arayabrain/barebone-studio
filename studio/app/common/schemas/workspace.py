@@ -1,12 +1,14 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from studio.app.common.schemas.users import UserInfo
 
 
 class Workspace(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: Optional[int] = None
     name: str
     user: Optional[UserInfo] = None
@@ -15,9 +17,6 @@ class Workspace(BaseModel):
     updated_at: Optional[datetime] = None
     data_usage: Optional[int] = None
     canDelete: Optional[bool] = None
-
-    class Config:
-        from_attributes = True
 
 
 class WorkspaceCreate(BaseModel):

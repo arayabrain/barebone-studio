@@ -9,7 +9,6 @@ from studio.app.common.core.snakemake.snakemake_executor import (
     delete_dependencies,
     snakemake_execute,
 )
-from studio.app.common.core.snakemake.snakemake_reader import SmkParamReader
 from studio.app.common.core.snakemake.snakemake_rule import SmkRule
 from studio.app.common.core.snakemake.snakemake_writer import SmkConfigWriter
 from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil, RunItem
@@ -50,10 +49,11 @@ class WorkflowRunner:
     def run_workflow(self, background_tasks):
         self.set_smk_config()
 
-        snakemake_params: SmkParam = get_typecheck_params(
+        snakemake_params = get_typecheck_params(
             self.runItem.snakemakeParam, "snakemake"
-        )
-        snakemake_params = SmkParamReader.read(snakemake_params)
+            )
+        if not isinstance(snakemake_params, SmkParam):
+            snakemake_params = SmkParam(**snakemake_params)
         snakemake_params.forcerun = self.runItem.forceRunList
         if len(snakemake_params.forcerun) > 0:
             delete_dependencies(
@@ -71,6 +71,7 @@ class WorkflowRunner:
     def set_smk_config(self):
         rules, last_output = self.rulefile()
 
+        # get_typecheck_params now returns a dictionary, not a Pydantic model
         nwb_template = get_typecheck_params(self.runItem.nwbParam, "nwb")
 
         flow_config = FlowConfig(
@@ -79,8 +80,11 @@ class WorkflowRunner:
             nwb_template=nwb_template,
         )
 
+        # Convert to dict
+        config_dict = asdict(flow_config)
+
         SmkConfigWriter.write_raw(
-            self.workspace_id, self.unique_id, asdict(flow_config)
+            self.workspace_id, self.unique_id, config_dict
         )
 
     def rulefile(self) -> Dict[str, Rule]:
