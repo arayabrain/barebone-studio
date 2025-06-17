@@ -1,10 +1,15 @@
 import os
 import shutil
+import time
 
 from studio.app.common.core.experiment.experiment import ExptFunction
 from studio.app.common.core.rules.runner import Runner
 from studio.app.common.core.workflow.workflow import Message, NodeRunStatus
-from studio.app.common.core.workflow.workflow_result import NodeResult, WorkflowResult
+from studio.app.common.core.workflow.workflow_result import (
+    NodeResult,
+    WorkflowMonitor,
+    WorkflowResult,
+)
 from studio.app.dir_path import DIRPATH
 
 workspace_id = "default"
@@ -19,14 +24,14 @@ pickle_path = (
 )
 
 
-def test_WorkflowResult_get():
+def test_WorkflowResult_get_success():
     shutil.copytree(
         workflow_dirpath,
         output_dirpath,
         dirs_exist_ok=True,
     )
 
-    # first, write pid_file
+    # Write pid_file
     Runner.write_pid_file(
         output_dirpath, "xxxx_dummy_func", "xxxx_dummy_func_script.py"
     )
@@ -36,7 +41,7 @@ def test_WorkflowResult_get():
     )
 
     assert isinstance(output, dict)
-    assert len(output) == 1
+    assert output[node_1st].status == "success"
 
 
 def test_NodeResult_get():
@@ -56,3 +61,27 @@ def test_NodeResult_get():
     ).observe(expt_function)
 
     assert isinstance(output, Message)
+
+
+def test_WorkflowResult_get_error():
+    shutil.copytree(
+        workflow_dirpath,
+        output_dirpath,
+        dirs_exist_ok=True,
+    )
+
+    # Write pid_file file (causes timeout error)
+    pid_file_create_time = time.time() - WorkflowMonitor.PROCESS_SNAKEMAKE_WAIT_TIMEOUT
+    Runner.write_pid_file(
+        output_dirpath,
+        "xxxx_dummy_func",
+        "xxxx_dummy_func_script.py",
+        pid_file_create_time,
+    )
+
+    output = WorkflowResult(workspace_id=workspace_id, unique_id=unique_id).observe(
+        node_id_list
+    )
+
+    assert isinstance(output, dict)
+    assert output[node_1st].status == "error"
