@@ -170,7 +170,7 @@ class NWBCreater:
             data=xy_trans_data,
             unit="pixels",
             starting_time=0.0,
-            rate=1.0,
+            rate=float(nwbfile.imaging_planes["ImagingPlane"].imaging_rate),
         )
 
         corrected_image_stack = CorrectedImageStack(
@@ -256,7 +256,7 @@ class NWBCreater:
             data=value.data,
             unit="second",
             starting_time=0.0,
-            rate=1.0,
+            rate=float(nwbfile.imaging_planes["ImagingPlane"].imaging_rate),
         )
 
         nwbfile.processing["ophys"].add(timeseries_data)
