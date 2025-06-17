@@ -345,6 +345,7 @@ def caiman_cnmf(
                 "name": "Fluorescence",
                 "data": fluorescence.T,
                 "unit": "lumens",
+                "rate": fr,
             }
         }
     }

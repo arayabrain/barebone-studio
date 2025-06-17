@@ -198,6 +198,7 @@ def caiman_cnmf_multisession(
                 "name": "Fluorescence",
                 "data": fluorescence.T,
                 "unit": "lumens",
+                "rate": fr,
                 "comments": f"ROIs were detected in {reg_files} out of "
                 + f"{n_split_images} sessions ({reg_file_rate} overall).",
             }
