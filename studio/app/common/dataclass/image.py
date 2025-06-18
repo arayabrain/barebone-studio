@@ -43,7 +43,7 @@ class ImageData(BaseData):
             create_directory(_dir)
 
             _path = join_filepath([_dir, f"{file_name}.tif"])
-            tifffile.imsave(_path, data)
+            tifffile.imwrite(_path, data)
             self.path = [_path]
 
             del data
