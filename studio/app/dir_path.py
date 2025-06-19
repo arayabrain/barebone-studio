@@ -1,6 +1,7 @@
 import os
 import platform
 from enum import Enum
+from types import SimpleNamespace
 
 from dotenv import load_dotenv
 
@@ -33,6 +34,12 @@ class DIRPATH:
     CONFIG_DIR = f"{STUDIO_DIR}/config"
     if os.path.isfile(f"{CONFIG_DIR}/.env"):
         load_dotenv(f"{CONFIG_DIR}/.env")
+
+    FRONTEND_DIR = f"{ROOT_DIR}/frontend"
+    FRONTEND_DIRS = SimpleNamespace(
+        PUBLIC=f"{FRONTEND_DIR}/public",
+        BUILD=f"{FRONTEND_DIR}/build",
+    )
 
     LOCKFILE_DIR = f"{_DEFAULT_DIR}/locks"
     if not os.path.exists(LOCKFILE_DIR):
