@@ -20,12 +20,10 @@ class DIRPATH:
     INPUT_DIR = f"{DATA_DIR}/input"
     OUTPUT_DIR = f"{DATA_DIR}/output"
 
-    if not os.path.exists(INPUT_DIR):
-        os.makedirs(INPUT_DIR)
+    os.makedirs(INPUT_DIR, exist_ok=True)
     assert os.path.exists(INPUT_DIR)
 
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     assert os.path.exists(OUTPUT_DIR)
 
     ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -42,8 +40,7 @@ class DIRPATH:
     )
 
     LOCKFILE_DIR = f"{_DEFAULT_DIR}/locks"
-    if not os.path.exists(LOCKFILE_DIR):
-        os.makedirs(LOCKFILE_DIR)
+    os.makedirs(LOCKFILE_DIR, exist_ok=True)
     assert os.path.exists(LOCKFILE_DIR)
 
     CONDAENV_DIR = (

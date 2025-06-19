@@ -116,6 +116,7 @@ async def is_standalone():
     return MODE.IS_STANDALONE
 
 
+os.makedirs(f"{DIRPATH.FRONTEND_DIRS.BUILD}/static", exist_ok=True)
 app.mount(
     "/static",
     StaticFiles(directory=f"{DIRPATH.FRONTEND_DIRS.BUILD}/static"),
