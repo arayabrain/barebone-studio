@@ -5,16 +5,16 @@ from pathlib import Path
 from typing import Dict
 
 from snakemake.api import (
-    SnakemakeApi,
+    DeploymentSettings,
     OutputSettings,
     ResourceSettings,
+    SnakemakeApi,
     StorageSettings,
-    DeploymentSettings,
 )
+
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
-from studio.app.common.core.snakemake.snakemake_reader import SmkConfigReader
 from studio.app.common.core.utils.filepath_creater import get_pickle_file, join_filepath
 from studio.app.common.core.workflow.workflow import Edge, Node
 from studio.app.common.core.workflow.workflow_result import WorkflowResult
@@ -56,19 +56,8 @@ def _snakemake_execute_process(
         ]
     )
 
-    config_file_path = SmkConfigReader.get_config_yaml_path(workspace_id, unique_id)
-    logger.debug(f"Snakemake config file path: {config_file_path}")
-    logger.debug(f"Config file exists: {os.path.exists(config_file_path)}")
-    logger.debug(f"Snakemake file path: {DIRPATH.SNAKEMAKE_FILEPATH}")
-    logger.debug(f"Snakemake file exists: {os.path.exists(DIRPATH.SNAKEMAKE_FILEPATH)}")
-    logger.debug(f"Working directory: {smk_workdir}")
-    logger.debug(f"Working directory exists: {os.path.exists(smk_workdir)}")
-    logger.debug(f"Conda prefix: {DIRPATH.SNAKEMAKE_CONDA_ENV_DIR}")
-    logger.debug(f"Conda prefix exists: {os.path.exists(DIRPATH.SNAKEMAKE_CONDA_ENV_DIR) if DIRPATH.SNAKEMAKE_CONDA_ENV_DIR else 'None'}")
-    logger.debug(f"SmkParam Execution parameters: {params}")
-
     # Use context manager for proper cleanup
-    cores = getattr(params, 'cores', 1)
+    cores = getattr(params, "cores", 1)
 
     # Use context manager for proper cleanup
     with SnakemakeApi(
@@ -83,6 +72,7 @@ def _snakemake_execute_process(
             storage_settings=StorageSettings(),
             resource_settings=ResourceSettings(cores=cores),
             deployment_settings=DeploymentSettings(
+                deployment_method=["conda"],
                 conda_frontend="conda",
                 conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
             ),
