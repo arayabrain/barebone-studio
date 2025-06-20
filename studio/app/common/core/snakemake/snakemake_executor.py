@@ -1,14 +1,20 @@
 import os
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 from typing import Dict
 
-from snakemake import snakemake
+from snakemake.api import (
+    DeploymentSettings,
+    OutputSettings,
+    ResourceSettings,
+    SnakemakeApi,
+    StorageSettings,
+)
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
-from studio.app.common.core.snakemake.snakemake_reader import SmkConfigReader
 from studio.app.common.core.utils.filepath_creater import get_pickle_file, join_filepath
 from studio.app.common.core.workflow.workflow import Edge, Node
 from studio.app.common.core.workflow.workflow_result import WorkflowResult
@@ -50,21 +56,41 @@ def _snakemake_execute_process(
         ]
     )
 
-    result = snakemake(
-        DIRPATH.SNAKEMAKE_FILEPATH,
-        forceall=params.forceall,
-        cores=params.cores,
-        use_conda=params.use_conda,
-        conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
-        workdir=smk_workdir,
-        configfiles=[SmkConfigReader.get_config_yaml_path(workspace_id, unique_id)],
-        log_handler=[smk_logger.log_handler],
-    )
+    # Use context manager for proper cleanup
+    cores = getattr(params, "cores", 1)
 
-    if result:
-        logger.info("snakemake_execute succeeded.")
-    else:
-        logger.error("snakemake_execute failed..")
+    # Use context manager for proper cleanup
+    with SnakemakeApi(
+        OutputSettings(
+            verbose=True,
+            show_failed_logs=True,
+        ),
+    ) as snakemake_api:
+        workflow_api = snakemake_api.workflow(
+            snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
+            workdir=Path(smk_workdir),
+            storage_settings=StorageSettings(),
+            resource_settings=ResourceSettings(cores=cores),
+            deployment_settings=DeploymentSettings(
+                deployment_method=["conda"],
+                conda_frontend="conda",
+                conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
+            ),
+        )
+        logger.debug("Workflow API created successfully")
+        logger.debug("Creating DAG...")
+
+        dag_api = workflow_api.dag()
+        logger.debug("DAG created successfully")
+        logger.info("Starting workflow execution...")
+
+        try:
+            dag_api.execute_workflow()
+            result = True
+            logger.info("snakemake_execute succeeded.")
+        except Exception as e:
+            result = False
+            logger.error(f"snakemake_execute failed: {e}")
 
     smk_logger.clean_up()
 

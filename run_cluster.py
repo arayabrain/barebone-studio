@@ -2,7 +2,7 @@ import argparse
 import os
 import shutil
 
-from snakemake import snakemake
+from snakemake.api import SnakemakeApi
 
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.dir_path import DIRPATH
@@ -16,9 +16,8 @@ def main(args):
             join_filepath([DIRPATH.STUDIO_DIR, DIRPATH.SNAKEMAKE_CONFIG_YML]),
         )
 
-    snakemake(
+    SnakemakeApi(
         DIRPATH.SNAKEMAKE_FILEPATH,
-        forceall=args.forceall,
         cores=args.cores,
         use_conda=args.use_conda,
         workdir=f"{os.path.dirname(DIRPATH.STUDIO_DIR)}",
@@ -28,7 +27,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="optinist")
     parser.add_argument("--cores", type=int, default=2)
-    parser.add_argument("--forceall", action="store_true")
     parser.add_argument("--use_conda", action="store_true")
     parser.add_argument("--config", type=str, default=None)
 
