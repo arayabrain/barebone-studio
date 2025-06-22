@@ -305,3 +305,31 @@ class MockStorageController(BaseRemoteStorageController):
             shutil.rmtree(experiment_remote_path)
 
         return True
+
+    async def delete_workspace(self, workspace_id: str, category: str) -> bool:
+        try:
+            logger.info(f"[MOCK] Delete WID '{workspace_id}' for category '{category}'")
+
+            # Construct paths
+            input_path = os.path.join(__class__.MOCK_INPUT_DIR, workspace_id)
+            output_path = os.path.join(__class__.MOCK_OUTPUT_DIR, workspace_id)
+
+            # Remove input directory if it exists
+            if os.path.isdir(input_path):
+                shutil.rmtree(input_path)
+                logger.debug(f"Deleted mock input workspace path: {input_path}")
+            else:
+                logger.debug(f"Mock input workspace path not found: {input_path}")
+
+            # Remove output directory if it exists
+            if os.path.isdir(output_path):
+                shutil.rmtree(output_path)
+                logger.debug(f"Deleted mock output workspace path: {output_path}")
+            else:
+                logger.debug(f"Mock output workspace path not found: {output_path}")
+
+            return True
+
+        except Exception as e:
+            logger.exception(f"[MOCK] Failed to delete workspace '{workspace_id}': {e}")
+            return False
