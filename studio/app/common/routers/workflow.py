@@ -176,7 +176,6 @@ async def import_sample_data(
     category: str,
     remote_bucket_name: str = Depends(get_user_remote_bucket_name),
 ):
-
     logger.info(
         f"Starting sample data import: workspace: {workspace_id}, category: {category}"
     )
