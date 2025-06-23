@@ -9,16 +9,6 @@ import os
 
 configfile: "snakemake.yaml"
 
-last_output_path = config.get("last_output", [None])[0]
-last_output_path = os.path.dirname(os.path.join(DIRPATH.OUTPUT_DIR, last_output_path))
-ids = ExptOutputPathIds(last_output_path)
-ConfigFile = join_filepath(
-            [str(DIRPATH.OUTPUT_DIR), str(ids.workspace_id), str(ids.unique_id), str(DIRPATH.SNAKEMAKE_CONFIG_YML)]
-        )
-print("==============ConifFilePath ===============",ConfigFile)
-print("snakemake config exists? ", os.path.exists(ConfigFile))
-
-configfile: ConfigFile
 
 if config.get('type') == "EDIT_ROI":
     rule edit_ROI:
