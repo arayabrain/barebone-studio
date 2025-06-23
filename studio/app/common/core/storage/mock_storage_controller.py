@@ -28,6 +28,9 @@ class MockStorageController(BaseRemoteStorageController):
     MOCK_INPUT_DIR = f"{MOCK_STORAGE_DIR}/input"
     MOCK_OUTPUT_DIR = f"{MOCK_STORAGE_DIR}/output"
 
+    INPUT = "input"
+    OUTPUT = "output"
+
     def __init__(self):
         # initialization: create directories
         create_directory(__class__.MOCK_INPUT_DIR)
@@ -56,6 +59,19 @@ class MockStorageController(BaseRemoteStorageController):
             [__class__.MOCK_OUTPUT_DIR, workspace_id, unique_id]
         )
         return experiment_remote_path
+
+    def _make_workspace_input_path(self, workspace_id: str, category: str) -> str:
+        return join_filepath([self.MOCK_INPUT_DIR, category, workspace_id])
+
+    def _make_workspace_output_path(self, workspace_id: str, category: str) -> str:
+        return join_filepath([self.MOCK_OUTPUT_DIR, category, workspace_id])
+
+    def _delete_directory_if_exists(self, path: str, label: str) -> None:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+            logger.debug(f"Deleted mock {label} workspace path: {path}")
+        else:
+            logger.debug(f"Mock {label} workspace path not found: {path}")
 
     @property
     def bucket_name(self) -> str:
@@ -308,25 +324,23 @@ class MockStorageController(BaseRemoteStorageController):
 
     async def delete_workspace(self, workspace_id: str, category: str) -> bool:
         try:
-            logger.info(f"[MOCK] Delete WID '{workspace_id}' for category '{category}'")
+            logger.info(
+                f"[MOCK] Deleting workspace '{workspace_id}' (category: '{category}')"
+            )
 
-            # Construct paths
-            input_path = os.path.join(__class__.MOCK_INPUT_DIR, workspace_id)
-            output_path = os.path.join(__class__.MOCK_OUTPUT_DIR, workspace_id)
+            if category == __class__.INPUT:
+                path = os.path.join(self.MOCK_INPUT_DIR, workspace_id)
+                self._delete_directory_if_exists(path, __class__.INPUT)
 
-            # Remove input directory if it exists
-            if os.path.isdir(input_path):
-                shutil.rmtree(input_path)
-                logger.debug(f"Deleted mock input workspace path: {input_path}")
+            elif category == __class__.OUTPUT:
+                path = os.path.join(self.MOCK_OUTPUT_DIR, workspace_id)
+                self._delete_directory_if_exists(path, __class__.OUTPUT)
+
             else:
-                logger.debug(f"Mock input workspace path not found: {input_path}")
-
-            # Remove output directory if it exists
-            if os.path.isdir(output_path):
-                shutil.rmtree(output_path)
-                logger.debug(f"Deleted mock output workspace path: {output_path}")
-            else:
-                logger.debug(f"Mock output workspace path not found: {output_path}")
+                logger.warning(
+                    f"[MOCK] Unknown category '{category}' — no action taken."
+                )
+                return False
 
             return True
 
