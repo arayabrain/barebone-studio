@@ -1,6 +1,8 @@
+import asyncio
 import os
 import shutil
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
@@ -13,6 +15,7 @@ from studio.app.common.core.storage.remote_storage_controller import (
     RemoteStorageController,
     RemoteStorageLockError,
     RemoteStorageReader,
+    RemoteStorageSimpleWriter,
     RemoteStorageWriter,
     RemoteSyncStatusFileUtil,
 )
@@ -173,6 +176,10 @@ async def import_sample_data(
     category: str,
     remote_bucket_name: str = Depends(get_user_remote_bucket_name),
 ):
+    logger.info(
+        f"Starting sample data import: workspace: {workspace_id}, category: {category}"
+    )
+
     sample_data_dir_name = "sample_data"
     folders = ["input", "output"]
 
@@ -192,26 +199,60 @@ async def import_sample_data(
 
     # Operate remote storage data.
     if RemoteStorageController.is_available():
-        from glob import glob
-
-        # Get list of sample data names.
-        sample_data_output_dir = join_filepath(
-            [DIRPATH.ROOT_DIR, sample_data_dir_name, category, "output"]
+        # ------------------------------------------------------------
+        # Upload the input sample data to remote storage process.
+        # ------------------------------------------------------------
+        sample_data_input_dir = Path(
+            join_filepath([DIRPATH.ROOT_DIR, sample_data_dir_name, category, "input"])
         )
-        sample_data_subdirs = sorted(glob(f"{sample_data_output_dir}/*"))
 
-        # Process sample data individually.
-        for sample_data_subdir in sample_data_subdirs:
-            unique_id = os.path.basename(sample_data_subdir)
+        sample_data_input_subdirs = sorted(
+            [
+                p
+                for p in sample_data_input_dir.iterdir()
+                if p.is_file() and p.name.startswith("sample_")
+            ]
+        )
 
-            # Note: Force transfer of sample_data to remote storage
-            #   to enable reproduction of sample data.
-            async with RemoteStorageWriter(
-                remote_bucket_name, workspace_id, unique_id
-            ) as remote_storage_controller:
-                await remote_storage_controller.upload_experiment(
-                    workspace_id, unique_id
-                )
+        logger.info(
+            f"Found {len(sample_data_input_subdirs)} sample input subdirectories."
+        )
+
+        if not sample_data_input_subdirs:
+            logger.warning("No valid sample input subdirectories found for upload.")
+
+        async with RemoteStorageSimpleWriter(
+            remote_bucket_name
+        ) as remote_storage_controller:
+            tasks = [
+                remote_storage_controller.upload_input_data(workspace_id, p.name)
+                for p in sample_data_input_subdirs
+            ]
+            await asyncio.gather(*tasks)
+
+        # ------------------------------------------------------------
+        # Upload the output sample data to remote storage process.
+        # ------------------------------------------------------------
+
+        sample_data_output_dir = Path(
+            join_filepath([DIRPATH.ROOT_DIR, sample_data_dir_name, category, "output"])
+        )
+
+        sample_data_output_subdirs = sorted(
+            [p for p in sample_data_output_dir.iterdir() if p.is_dir()]
+        )
+
+        if not sample_data_output_subdirs:
+            logger.warning("No valid sample output directories found for upload.")
+
+        async with RemoteStorageWriter(
+            remote_bucket_name, workspace_id, ""
+        ) as remote_storage_controller:
+            tasks = [
+                remote_storage_controller.upload_experiment(workspace_id, p.name)
+                for p in sample_data_output_subdirs
+            ]
+            await asyncio.gather(*tasks)
 
     return True
 

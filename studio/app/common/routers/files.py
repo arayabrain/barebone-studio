@@ -239,11 +239,22 @@ async def delete_file(
     filename: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    remote_bucket_name: str = Depends(get_user_remote_bucket_name),
 ):
     filepath = join_filepath([DIRPATH.INPUT_DIR, workspace_id, filename])
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="File not found.")
     try:
+        # Remove from remote storage if available
+        if RemoteStorageController.is_available():
+            async with RemoteStorageSimpleWriter(
+                remote_bucket_name
+            ) as remote_storage_controller:
+                await remote_storage_controller.delete_input_data(
+                    workspace_id, filename
+                )
+
+        # Remove local file
         os.remove(filepath)
 
         if WorkspaceDataCapacityService.is_available():
