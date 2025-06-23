@@ -176,6 +176,11 @@ async def import_sample_data(
     category: str,
     remote_bucket_name: str = Depends(get_user_remote_bucket_name),
 ):
+
+    logger.info(
+        f"Starting sample data import: workspace: {workspace_id}, category: {category}"
+    )
+
     sample_data_dir_name = "sample_data"
     folders = ["input", "output"]
 
@@ -200,10 +205,6 @@ async def import_sample_data(
         # ------------------------------------------------------------
         sample_data_input_dir = Path(
             join_filepath([DIRPATH.ROOT_DIR, sample_data_dir_name, category, "input"])
-        )
-
-        logger.info(
-            f"Uploading sample input data from {sample_data_input_dir} to storage."
         )
 
         sample_data_input_subdirs = sorted(
