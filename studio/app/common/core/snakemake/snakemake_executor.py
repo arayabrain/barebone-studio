@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict
 
 from snakemake.api import (
+    DeploymentMethod,
     DeploymentSettings,
     OutputSettings,
     ResourceSettings,
@@ -59,6 +60,10 @@ def _snakemake_execute_process(
     # Use context manager for proper cleanup
     cores = getattr(params, "cores", 1)
 
+    deployment_methods = []
+    if getattr(params, "use_conda", True):
+        deployment_methods.append(DeploymentMethod.CONDA)
+
     # Use context manager for proper cleanup
     with SnakemakeApi(
         OutputSettings(
@@ -72,7 +77,7 @@ def _snakemake_execute_process(
             storage_settings=StorageSettings(),
             resource_settings=ResourceSettings(cores=cores),
             deployment_settings=DeploymentSettings(
-                deployment_method=["conda"],
+                deployment_method=deployment_methods,
                 conda_frontend="conda",
                 conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
             ),
