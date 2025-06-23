@@ -107,7 +107,11 @@ class Runner:
 
     @classmethod
     def write_pid_file(
-        cls, workflow_dirpath: str, func_name: str, run_script_path: str
+        cls,
+        workflow_dirpath: str,
+        func_name: str,
+        run_script_path: str,
+        create_time: time = None,
     ) -> None:
         """
         save snakemake script file path and PID of current running algo function
@@ -116,7 +120,7 @@ class Runner:
             last_pid=os.getpid(),
             func_name=func_name,
             last_script_file=run_script_path,
-            create_time=time.time(),
+            create_time=time.time() if create_time is None else create_time,
         )
 
         ids = ExptOutputPathIds(workflow_dirpath)

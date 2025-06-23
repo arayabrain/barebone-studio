@@ -35,14 +35,29 @@ from studio.app.common.routers import (
 )
 from studio.app.dir_path import DIRPATH
 from studio.app.optinist.routers import hdf5, mat, nwb, roi
+from studio.app.version import Version
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup event
+    """
+    Startup event
+    """
+    import platform
+    import sys
+
+    sys_version = sys.version.replace("\n", " ")
     mode = "standalone" if MODE.IS_STANDALONE else "multiuser"
+
     logger = AppLogger.get_logger()
-    logger.info(f'"Studio" application startup complete. [mode: {mode}]')
+    logger.info(
+        f'"Studio" application startup complete.\n'
+        f"    # Platform: {platform.platform()}\n"
+        f"    # Python Version: {sys_version}\n"
+        f"    # App Version: {Version.APP_VERSION}\n"
+        f"    # Env:DATA_DIR: {DIRPATH.DATA_DIR}\n"
+        f"    # Mode: {mode}\n"
+    )
 
     yield
 
