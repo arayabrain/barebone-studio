@@ -7,6 +7,7 @@ import numpy as np
 import yaml
 
 from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.utils.filepath_finder import find_condaenv_filepath
 from studio.app.dir_path import DIRPATH
 from studio.app.optinist.core.edit_ROI.wrappers import edit_roi_wrapper_dict
@@ -71,7 +72,7 @@ class EditRoiUtils:
                 "file_path": filepath,
             }
 
-            config_file = temp_workdir / "snakemake.yaml"
+            config_file = join_filepath(temp_workdir, "snakemake.yaml")
             with open(config_file, "w") as f:
                 yaml.dump(config_data, f)
 

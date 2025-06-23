@@ -9,7 +9,6 @@ import os
 
 configfile: "snakemake.yaml"
 
-
 if config.get('type') == "EDIT_ROI":
     rule edit_ROI:
         conda:
