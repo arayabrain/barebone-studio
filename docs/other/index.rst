@@ -7,5 +7,4 @@ Other
   :caption: OTHER:
 
   host_for_multiuser/index
-  cui_execution
   debugging
