@@ -82,11 +82,11 @@ def _snakemake_execute_process(
                 conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
             ),
         )
-        logger.debug("Workflow API created successfully")
-        logger.debug("Creating DAG...")
+        logger.info("Workflow API created successfully")
+        logger.info("Creating DAG...")
 
         dag_api = workflow_api.dag()
-        logger.debug("DAG created successfully")
+        logger.info("DAG created successfully")
         logger.info("Starting workflow execution...")
 
         try:
@@ -96,6 +96,8 @@ def _snakemake_execute_process(
         except Exception as e:
             result = False
             logger.error(f"snakemake_execute failed: {e}")
+        finally:
+            smk_logger.extract_errors_from_snakemake_log(smk_workdir)
 
     smk_logger.clean_up()
 

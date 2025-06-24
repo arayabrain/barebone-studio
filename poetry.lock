@@ -3818,14 +3818,14 @@ files = [
 
 [[package]]
 name = "snakemake"
-version = "8.30.0"
+version = "9.6.1"
 description = "Workflow management system to create reproducible and scalable data analyses"
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "snakemake-8.30.0-py3-none-any.whl", hash = "sha256:f793e977931fa5e41408d58ff956468b0040287ebc20915c78cb22dd2f8cf59e"},
-    {file = "snakemake-8.30.0.tar.gz", hash = "sha256:fd4c1c2c5521c38c507fed81f90a3756279ca5bca0cd17613ace2883d0c46622"},
+    {file = "snakemake-9.6.1-py3-none-any.whl", hash = "sha256:2099e1ae9931bba120f86e357bf048c11866c6cf9f7e9b864b00f67fd1c21025"},
+    {file = "snakemake-9.6.1.tar.gz", hash = "sha256:c93963c4dda0f134301bd821904a31db5c40cc82f197a1ed5ef4afe4fd47bba5"},
 ]
 
 [package.dependencies]
@@ -3843,22 +3843,24 @@ jsonschema = "*"
 nbformat = "*"
 packaging = "*"
 psutil = "*"
-pulp = ">=2.3.1,<2.10"
+pulp = ">=2.3.1,<3.3"
 pyyaml = "*"
+referencing = "*"
 requests = ">=2.8.1,<3.0"
 reretry = "*"
 smart-open = ">=4.0,<8.0"
 snakemake-interface-common = ">=1.17.0,<2.0"
 snakemake-interface-executor-plugins = ">=9.3.2,<10.0"
+snakemake-interface-logger-plugins = ">=1.1.0,<2.0.0"
 snakemake-interface-report-plugins = ">=1.1.0,<2.0.0"
-snakemake-interface-storage-plugins = ">=3.2.3,<4.0"
+snakemake-interface-storage-plugins = ">=4.1.0,<5.0"
 tabulate = "*"
 throttler = "*"
 wrapt = "*"
 yte = ">=1.5.5,<2.0"
 
 [package.extras]
-messaging = ["slack_sdk"]
+all = ["eido", "peppy", "pygments"]
 pep = ["eido", "peppy"]
 reports = ["pygments"]
 
@@ -3896,6 +3898,21 @@ snakemake-interface-common = ">=1.17.4"
 throttler = ">=1.2.2"
 
 [[package]]
+name = "snakemake-interface-logger-plugins"
+version = "1.2.3"
+description = "Logger plugin interface for snakemake"
+optional = false
+python-versions = "<4.0,>=3.11"
+groups = ["main"]
+files = [
+    {file = "snakemake_interface_logger_plugins-1.2.3-py3-none-any.whl", hash = "sha256:95dd1dd83f04f2c7191c9cfdea78bf1dd7e216b838d91f86d4780aa11a4ce276"},
+    {file = "snakemake_interface_logger_plugins-1.2.3.tar.gz", hash = "sha256:9228cc01f2cc0b35e9144c02d10f71cc9874296272896aeb86f9fac7db5e2c69"},
+]
+
+[package.dependencies]
+snakemake-interface-common = ">=1.17.4"
+
+[[package]]
 name = "snakemake-interface-report-plugins"
 version = "1.1.0"
 description = "The interface for Snakemake report plugins."
@@ -3912,21 +3929,21 @@ snakemake-interface-common = ">=1.16.0,<2.0.0"
 
 [[package]]
 name = "snakemake-interface-storage-plugins"
-version = "3.5.0"
+version = "4.2.1"
 description = "This package provides a stable interface for interactions between Snakemake and its storage plugins."
 optional = false
-python-versions = "<4.0,>=3.11"
+python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "snakemake_interface_storage_plugins-3.5.0-py3-none-any.whl", hash = "sha256:90841b6333c60e5859f81eec5f63d66e8bd29108f40fe922862d31c0f761b1ca"},
-    {file = "snakemake_interface_storage_plugins-3.5.0.tar.gz", hash = "sha256:88ee1dde95f9d5abb03113c52fb8cfa78ee502cce9ec788c161b3c09076fc075"},
+    {file = "snakemake_interface_storage_plugins-4.2.1-py3-none-any.whl", hash = "sha256:780904853a80ea96e69bc8047fec8281b1f18c2b525044ffffb2b053fc29f50b"},
+    {file = "snakemake_interface_storage_plugins-4.2.1.tar.gz", hash = "sha256:41f23c1940942d45fe6afa6578b50a7181b2d4d32013421ef2fc1ea0e4bbe137"},
 ]
 
 [package.dependencies]
-reretry = ">=0.11.8,<0.12.0"
-snakemake-interface-common = ">=1.12.0,<2.0.0"
-throttler = ">=1.2.2,<2.0.0"
-wrapt = ">=1.15.0,<2.0.0"
+reretry = ">=0.11.8"
+snakemake-interface-common = ">=1.12.0"
+throttler = ">=1.2.2"
+wrapt = ">=1.15.0"
 
 [[package]]
 name = "sniffio"
@@ -4690,4 +4707,4 @@ pyyaml = ">=6.0,<7.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "71f89cbe04309fba39a489122f62e2854952027fb0dc49bc9a6aadace7fda1dd"
+content-hash = "33f7628cbe1523c0fdb8a81f78c23a9583f621608b42db4560718bdb04950b44"

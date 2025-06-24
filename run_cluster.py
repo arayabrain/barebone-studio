@@ -18,6 +18,7 @@ from studio.app.dir_path import DIRPATH
 
 def main(args):
     # Create temporary directory for isolated execution
+    # Using temp directory in case of rw permission issues
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_workdir = Path(temp_dir)
 
@@ -29,23 +30,13 @@ def main(args):
                 # User provided a file path
                 if not Path(args.config).exists():
                     raise FileNotFoundError(f"Config file not found: {args.config}")
-                tmp_config_path = temp_workdir / DIRPATH.SNAKEMAKE_CONFIG_YML
+                tmp_config_path = join_filepath(
+                    [str(temp_workdir), DIRPATH.SNAKEMAKE_CONFIG_YML]
+                )
                 shutil.copyfile(args.config, tmp_config_path)
                 print(f"Config file copied from {args.config} to {tmp_config_path}")
             else:
-                # User provided a directory path, look for config file in that directory
-                source_config_path = join_filepath(
-                    [args.config, DIRPATH.SNAKEMAKE_CONFIG_YML]
-                )
-                if not Path(source_config_path).exists():
-                    raise FileNotFoundError(
-                        f"Config file not found: {source_config_path}"
-                    )
-                tmp_config_path = temp_workdir / DIRPATH.SNAKEMAKE_CONFIG_YML
-                shutil.copyfile(source_config_path, tmp_config_path)
-                print(
-                    f"Config file copied from {source_config_path} to {tmp_config_path}"
-                )
+                print("Please enter config file path")
 
             print(f"Config file copied to temporary directory: {temp_workdir}")
 
