@@ -28,9 +28,6 @@ class MockStorageController(BaseRemoteStorageController):
     MOCK_INPUT_DIR = f"{MOCK_STORAGE_DIR}/input"
     MOCK_OUTPUT_DIR = f"{MOCK_STORAGE_DIR}/output"
 
-    INPUT = "input"
-    OUTPUT = "output"
-
     def __init__(self):
         # initialization: create directories
         create_directory(__class__.MOCK_INPUT_DIR)
@@ -60,11 +57,11 @@ class MockStorageController(BaseRemoteStorageController):
         )
         return experiment_remote_path
 
-    def _make_workspace_input_path(self, workspace_id: str, category: str) -> str:
-        return join_filepath([self.MOCK_INPUT_DIR, category, workspace_id])
+    def _make_workspace_input_path(self, workspace_id: str) -> str:
+        return join_filepath([__class__.MOCK_INPUT_DIR, workspace_id])
 
-    def _make_workspace_output_path(self, workspace_id: str, category: str) -> str:
-        return join_filepath([self.MOCK_OUTPUT_DIR, category, workspace_id])
+    def _make_workspace_output_path(self, workspace_id: str) -> str:
+        return join_filepath([__class__.MOCK_OUTPUT_DIR, workspace_id])
 
     def _delete_directory_if_exists(self, path: str, label: str) -> None:
         if os.path.isdir(path):
@@ -328,13 +325,13 @@ class MockStorageController(BaseRemoteStorageController):
                 f"[MOCK] Deleting workspace '{workspace_id}' (category: '{category}')"
             )
 
-            if category == __class__.INPUT:
-                path = os.path.join(self.MOCK_INPUT_DIR, workspace_id)
-                self._delete_directory_if_exists(path, __class__.INPUT)
+            if category == "input":
+                path = self._make_workspace_input_path(workspace_id)
+                self._delete_directory_if_exists(path, "input")
 
-            elif category == __class__.OUTPUT:
-                path = os.path.join(self.MOCK_OUTPUT_DIR, workspace_id)
-                self._delete_directory_if_exists(path, __class__.OUTPUT)
+            elif category == "output":
+                path = self._make_workspace_output_path(workspace_id)
+                self._delete_directory_if_exists(path, "output")
 
             else:
                 logger.warning(
