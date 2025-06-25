@@ -21,7 +21,7 @@ def data_slice(
                          BehaviorData, CsvData, FluoData, ImageData, or RoiData.
         output_dir (str): Directory to save the output data.
         params (dict, optional): Dictionary containing slice specifications:
-                               - 'slice_specs': List of slice specs for each dimension.
+                               - 'slice_dims': List of slice specs for each dimension.
                                  Each spec can be:
                                  - Null/empty/':'/all: Keep the entire dimension
                                  - 'start:end': Range slice
@@ -36,13 +36,13 @@ def data_slice(
     logger.info("Starting data slicing")
 
     # Get slice specifications from parameters
-    slice_specs = params.get("slice_dims", None) if params else None
+    slice_dims = params.get("slice_dims", None) if params else None
 
-    if slice_specs is not None:
-        if isinstance(slice_specs, str):
-            slice_specs = [s.strip() for s in slice_specs.split(",")]
-        elif isinstance(slice_specs, list):
-            slice_specs = [s.strip() if isinstance(s, str) else s for s in slice_specs]
+    if slice_dims is not None:
+        if isinstance(slice_dims, str):
+            slice_dims = [s.strip() for s in slice_dims.split(",")]
+        elif isinstance(slice_dims, list):
+            slice_dims = [s.strip() if isinstance(s, str) else s for s in slice_dims]
 
     try:
         raw_data = data.data
@@ -56,28 +56,28 @@ def data_slice(
         )
 
     # Handle case where no slice specs are provided
-    if slice_specs is None:
+    if slice_dims is None:
         logger.info("No slice specifications provided, returning original data")
         return return_as_data_type(data, raw_data, output_dir, "sliced_data")
 
-    # Convert slice_specs to list format if it's a string
-    if isinstance(slice_specs, str):
-        slice_specs = [s.strip() for s in slice_specs.split(",")]
-    elif isinstance(slice_specs, list):
-        slice_specs = [s.strip() if isinstance(s, str) else s for s in slice_specs]
+    # Convert slice_dims to list format if it's a string
+    if isinstance(slice_dims, str):
+        slice_dims = [s.strip() for s in slice_dims.split(",")]
+    elif isinstance(slice_dims, list):
+        slice_dims = [s.strip() if isinstance(s, str) else s for s in slice_dims]
 
     # Make sure we have specs for all dimensions
-    if len(slice_specs) < ndim:
-        slice_specs = slice_specs + [None] * (ndim - len(slice_specs))
-    elif len(slice_specs) > ndim:
+    if len(slice_dims) < ndim:
+        slice_dims = slice_dims + [None] * (ndim - len(slice_dims))
+    elif len(slice_dims) > ndim:
         raise ValueError(
-            f"Too many slice specs provided ({len(slice_specs)} for {ndim} dimensions)"
+            f"Too many slice specs provided ({len(slice_dims)} for {ndim} dimensions)"
         )
 
     # Process each dimension's slice specification
     index_specs = []
 
-    for i, spec in enumerate(slice_specs):
+    for i, spec in enumerate(slice_dims):
         # Skip empty specs or "all" indicator
         if spec is None or (isinstance(spec, str) and spec.strip() in ("", ":", "all")):
             index_specs.append(slice(None))
