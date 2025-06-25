@@ -72,15 +72,19 @@ export const copyExperimentByList = createAsyncThunk<
   ThunkApiConfig
 >(`${EXPERIMENTS_SLICE_NAME}/copyExperimentByList`, async (uid, thunkAPI) => {
   const workspaceId = selectCurrentWorkspaceId(thunkAPI.getState())
-  if (workspaceId) {
-    try {
-      const response = await copyExperimentByListApi(workspaceId, uid)
-      return response
-    } catch (e) {
-      return thunkAPI.rejectWithValue(e)
-    }
-  } else {
+  if (!workspaceId) {
     return thunkAPI.rejectWithValue("workspace id does not exist.")
+  }
+
+  try {
+    const response = await copyExperimentByListApi(workspaceId, uid)
+    if (!response) {
+      return thunkAPI.rejectWithValue("Copy API returned falsy result.")
+    }
+    // Don't return anything if success is only indicated by non-error
+    return true
+  } catch (e) {
+    return thunkAPI.rejectWithValue(e)
   }
 })
 
