@@ -19,17 +19,26 @@ def main(args):
 
         config_file_path = None
 
-        if args.config is not None:
-            if args.config.endswith(".yml") or args.config.endswith(".yaml"):
-                if not Path(args.config).exists():
-                    raise FileNotFoundError(f"Config file not found: {args.config}")
+        if args.config is None:
+            raise FileNotFoundError(
+                "Please provide snakemake file path --config='my/path/snakemake.yaml'"
+            )
+
+        else:
+            if not (args.config.endswith(".yml") or args.config.endswith(".yaml")):
                 config_file_path = join_filepath(
-                    [str(temp_workdir), DIRPATH.SNAKEMAKE_CONFIG_YML]
+                    [args.config, DIRPATH.SNAKEMAKE_CONFIG_YML]
                 )
-                shutil.copyfile(args.config, config_file_path)
-                print(f"Config file copied from {args.config} to {config_file_path}")
             else:
-                print(f"Please provide a valid YAML config file, got: {args.config}")
+                config_file_path = args.config
+            if not Path(config_file_path).exists():
+                raise FileNotFoundError(f"Config file not found: {args.config}")
+
+            shutil.copyfile(
+                config_file_path,
+                join_filepath([str(temp_workdir), str(Path(config_file_path).name)]),
+            )
+            print(f"Config file copied from {config_file_path} to {temp_workdir}")
 
         snakemake_args = {
             "snakefile": DIRPATH.SNAKEMAKE_FILEPATH,
