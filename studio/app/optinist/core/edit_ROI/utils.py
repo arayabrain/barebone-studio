@@ -72,7 +72,7 @@ class EditRoiUtils:
                 "file_path": filepath,
             }
 
-            config_file = join_filepath(temp_workdir, "snakemake.yaml")
+            config_file = join_filepath([temp_workdir, "snakemake.yaml"])
             with open(config_file, "w") as f:
                 yaml.dump(config_data, f)
 
