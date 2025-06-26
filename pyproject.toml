@@ -16,6 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Operating System :: POSIX :: Linux",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: MacOS :: MacOS X",
@@ -49,7 +50,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 fastapi = "0.104.*"
 uvicorn = "0.24.*"
 numpy = "1.24.3"
@@ -64,7 +65,7 @@ future = "*"
 pynwb = "2.8.3"
 psutil = "*"
 nbstripout = "*"
-snakemake = { version = ">=7.24, <7.31" }
+snakemake = { version = ">=9, <10" }
 jinja2 = "3.1.*"
 httpx = "0.21.0"
 starlette = "0.27.0"
@@ -81,13 +82,15 @@ filelock = "*"
 ruamel-yaml = "^0.18.5"
 pymatreader = "^0.0.32"
 xmltodict = "*"
-boto3 = "^1.34.122"
+boto3 = "^1.38.27"
 pytest-asyncio = "^0.24.0"
-aioboto3 = "^13.1.1"
+aioboto3 = "7.0.0"
 matplotlib = "3.7.*"
 concurrent-log-handler = "^0.9.25"
 numpydoc = "*"
 yapf = "*"
+setuptools = "<70"
+snakemake-executor-plugin-aws-batch = "^0.2.1"
 
 [tool.poetry.group.dev]
 optional = true

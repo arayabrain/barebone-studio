@@ -29,10 +29,7 @@ class SmkParamReader:
         return SmkParam(
             use_conda=params["use_conda"],
             cores=params["cores"],
-            forceall=params["forceall"],
-            forcetargets=params["forcetargets"],
             lock=params["lock"],
-            forcerun=params["forcerun"] if "forcerun" in params else [],
         )
 
 

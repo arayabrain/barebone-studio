@@ -123,8 +123,10 @@ class OutputType:
 
 @dataclass
 class ProcessType:
-    POST_PROCESS: NormalRun = NormalRun(
-        id="post_process_0", type="post_process", label="post_process"
+    POST_PROCESS: NormalRun = field(
+        default_factory=lambda: NormalRun(
+            id="post_process_0", type="post_process", label="post_process"
+        )
     )
 
 
