@@ -1,12 +1,10 @@
 import os
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from glob import glob
 from typing import Dict, List
 
 import numpy as np
 from fastapi import HTTPException, status
-from snakemake import snakemake
 
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
@@ -29,7 +27,6 @@ from studio.app.common.core.workflow.workflow import ProcessType
 from studio.app.common.dataclass.base import BaseData
 from studio.app.dir_path import DIRPATH
 from studio.app.optinist.core.edit_ROI.utils import create_ellipse_mask
-from studio.app.optinist.core.edit_ROI.wrappers import edit_roi_wrapper_dict
 from studio.app.optinist.core.nwb.nwb_creater import overwrite_nwb
 from studio.app.optinist.dataclass import EditRoiData, IscellData, RoiData
 from studio.app.optinist.schemas.roi import RoiStatus
