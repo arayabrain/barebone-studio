@@ -42,7 +42,7 @@ class User(BaseModel):
 
     @property
     def remote_bucket_name(self) -> str:
-        return self.attributes.get("remote_bucket_name")
+        return self.attributes.get("remote_bucket_name") if self.attributes else None
 
     class Config:
         orm_mode = True
