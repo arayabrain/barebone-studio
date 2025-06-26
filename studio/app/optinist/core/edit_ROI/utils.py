@@ -1,3 +1,4 @@
+import os
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -6,7 +7,14 @@ from typing import Tuple
 import numpy as np
 import yaml
 
+from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.storage.remote_storage_controller import (
+    RemoteStorageController,
+    RemoteSyncAction,
+    RemoteSyncLockFileUtil,
+    RemoteSyncStatusFileUtil,
+)
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.utils.filepath_finder import find_condaenv_filepath
 from studio.app.dir_path import DIRPATH
@@ -36,7 +44,33 @@ class EditRoiUtils:
         return algo
 
     @classmethod
-    def execute(cls, filepath: str):
+    def execute(cls, filepath: str, remote_bucket_name: str):
+        # Get workspace_id, unique_id from output file path
+        ids = ExptOutputPathIds(os.path.dirname(filepath))
+        workspace_id = ids.workspace_id
+        unique_id = ids.unique_id
+
+        # Operate remote storage data.
+        if RemoteStorageController.is_available():
+            # Check for remote-sync-lock-file
+            # - If lock file exists, an exception is raised (raise_error=True)
+            RemoteSyncLockFileUtil.check_sync_lock_file(
+                workspace_id, unique_id, raise_error=True
+            )
+
+            # creating remote-sync-lock-file
+            RemoteSyncLockFileUtil.create_sync_lock_file(workspace_id, unique_id)
+
+            # creating remote_sync_status file.
+            # - The status file is used to pass bucket info to subsequent processing.
+            RemoteSyncStatusFileUtil.create_sync_status_file_for_processing(
+                remote_bucket_name,
+                workspace_id,
+                unique_id,
+                RemoteSyncAction.UPLOAD,
+            )
+
+        # Run snakemake
         result = False
         with ProcessPoolExecutor(max_workers=1) as executor:
             logger.info("start snakemake edit_roi process.")

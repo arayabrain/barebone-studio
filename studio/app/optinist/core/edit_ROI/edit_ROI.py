@@ -13,15 +13,11 @@ from studio.app.common.core.snakemake.snakemake_reader import SmkConfigReader
 from studio.app.common.core.storage.remote_storage_controller import (
     RemoteStorageController,
     RemoteStorageWriter,
-    RemoteSyncAction,
     RemoteSyncLockFileUtil,
     RemoteSyncStatusFileUtil,
 )
 from studio.app.common.core.utils.filepath_creater import join_filepath
-from studio.app.common.core.utils.filepath_finder import (
-    find_condaenv_filepath,
-    find_recent_updated_files,
-)
+from studio.app.common.core.utils.filepath_finder import find_recent_updated_files
 from studio.app.common.core.utils.pickle_handler import PickleReader, PickleWriter
 from studio.app.common.core.workflow.workflow import ProcessType
 from studio.app.common.dataclass.base import BaseData
@@ -40,83 +36,6 @@ class CellType:
     NON_ROI = 0
     TEMP_ADD = -1
     TEMP_DELETE = -2
-
-
-class EditRoiUtils:
-    @classmethod
-    def conda(cls, config):
-        algo = config["algo"]
-        if "conda_name" in edit_roi_wrapper_dict[algo]:
-            conda_name = edit_roi_wrapper_dict[algo]["conda_name"]
-            return find_condaenv_filepath(conda_name) if conda_name else None
-
-        return None
-
-    @classmethod
-    def get_algo(cls, filepath):
-        algo_list = edit_roi_wrapper_dict.keys()
-
-        algo = next((algo for algo in algo_list if algo in filepath), None)
-        if not algo:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
-        return algo
-
-    @classmethod
-    def execute(cls, filepath: str, remote_bucket_name: str):
-        # Get workspace_id, unique_id from output file path
-        ids = ExptOutputPathIds(os.path.dirname(filepath))
-        workspace_id = ids.workspace_id
-        unique_id = ids.unique_id
-
-        # Operate remote storage data.
-        if RemoteStorageController.is_available():
-            # Check for remote-sync-lock-file
-            # - If lock file exists, an exception is raised (raise_error=True)
-            RemoteSyncLockFileUtil.check_sync_lock_file(
-                workspace_id, unique_id, raise_error=True
-            )
-
-            # creating remote-sync-lock-file
-            RemoteSyncLockFileUtil.create_sync_lock_file(workspace_id, unique_id)
-
-            # creating remote_sync_status file.
-            # - The status file is used to pass bucket info to subsequent processing.
-            RemoteSyncStatusFileUtil.create_sync_status_file_for_processing(
-                remote_bucket_name,
-                workspace_id,
-                unique_id,
-                RemoteSyncAction.UPLOAD,
-            )
-
-        # Run snakemake
-        result = False
-        with ProcessPoolExecutor(max_workers=1) as executor:
-            logger.info("start snakemake edit_roi process.")
-
-            future = executor.submit(cls._execute_process, filepath)
-            result = future.result()
-
-            logger.info("finish snakemake edit_roi process. result: %s", result)
-
-        if not result:
-            logger.error("edit_ROI snakemake run failed.")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @classmethod
-    def _execute_process(cls, filepath: str) -> bool:
-        result = snakemake(
-            DIRPATH.SNAKEMAKE_FILEPATH,
-            use_conda=True,
-            cores=2,
-            workdir=f"{os.path.dirname(DIRPATH.STUDIO_DIR)}",
-            config={
-                "type": "EDIT_ROI",
-                "algo": cls.get_algo(filepath),
-                "file_path": filepath,
-            },
-        )
-
-        return result
 
 
 class EditROI:
