@@ -44,6 +44,11 @@ class RemoteSyncAction(Enum):
     DELETE = "delete"
 
 
+class StorageOption(Enum):
+    INPUT = "input"
+    OUTPUT = "output"
+
+
 class RemoteStorageLockError(Exception):
     def __init__(self, workspace_id: str, unique_id: str):
         self.workspace_id = workspace_id

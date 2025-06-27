@@ -5,6 +5,7 @@ from glob import glob
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     BaseRemoteStorageController,
+    StorageOption,
 )
 from studio.app.common.core.utils.filepath_creater import (
     create_directory,
@@ -325,13 +326,13 @@ class MockStorageController(BaseRemoteStorageController):
                 f"[MOCK] Deleting workspace '{workspace_id}' (category: '{category}')"
             )
 
-            if category == "input":
+            if category == StorageOption.INPUT:
                 path = self._make_workspace_input_path(workspace_id)
-                self._delete_directory_if_exists(path, "input")
+                self._delete_directory_if_exists(path, StorageOption.INPUT)
 
-            elif category == "output":
+            elif category == StorageOption.OUTPUT:
                 path = self._make_workspace_output_path(workspace_id)
-                self._delete_directory_if_exists(path, "output")
+                self._delete_directory_if_exists(path, StorageOption.OUTPUT)
 
             else:
                 logger.warning(

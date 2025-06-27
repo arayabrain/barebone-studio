@@ -8,8 +8,8 @@ from studio.app.common.core.experiment.experiment_services import ExperimentServ
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     RemoteStorageController,
+    StorageOption,
 )
-from studio.app.common.core.storage.s3_storage_controller import S3StorageController
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.models.workspace import Workspace
 from studio.app.dir_path import DIRPATH
@@ -81,11 +81,12 @@ class WorkspaceService:
             remote_storage_controller = RemoteStorageController(remote_bucket_name)
             if is_input_dir:
                 await remote_storage_controller.delete_workspace(
-                    workspace_id, category=S3StorageController.S3_INPUT_DIR
+                    workspace_id,
+                    category=StorageOption.INPUT,
                 )
             else:
                 await remote_storage_controller.delete_workspace(
-                    workspace_id, category=S3StorageController.S3_OUTPUT_DIR
+                    workspace_id, category=StorageOption.OUTPUT
                 )
 
         if is_input_dir:
