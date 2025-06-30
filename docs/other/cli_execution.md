@@ -1,7 +1,7 @@
 (cli-execution)=
 CLI Usage
 =================
-This section describes how to run a workflow created in GUI on a cluster or in Command Line Interface (CLI).
+This section describes how to run a workflow created in GUI on a cluster or in Command Line Interface (CLI), such as Terminal.
 
 - [CLI execution](#cli-execution)
   - [1. Config file settings](#1-config-file-settings)
@@ -28,7 +28,7 @@ Input files are stored under `/{OPTINIST_DIR}/input/`.
 For example, if there is `mouse_123.tiff`, it is stored as `/{OPTINIST_DIR}/input/mouse_123.tiff`.
 
 ## 4. Execution
-It can be executed in CLI by running `run_cluster.py`.
+It can be executed in the CLI by running `run_cluster.py`.
 
 The parameter arguments are as follows.
 - **config** [string, required]: Path of config.yaml file set in step 1
