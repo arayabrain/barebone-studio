@@ -7,4 +7,5 @@ Other
   :caption: OTHER:
 
   host_for_multiuser/index
+  cli_execution
   debugging
