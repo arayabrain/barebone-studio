@@ -69,6 +69,9 @@ class EditRoiData(BaseData):
         self.merge_roi = []
         self.delete_roi = []
 
+    def save_json(self, json_dir):
+        pass
+
     @property
     def temp_merge_roi_list(self) -> list:
         merge_roi = [(k, *v, -1.0) for k, v in self.temp_merge_roi.items()]
