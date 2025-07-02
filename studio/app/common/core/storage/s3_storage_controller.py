@@ -20,6 +20,9 @@ class S3StorageController(BaseRemoteStorageController):
     S3 Storage Controller
     """
 
+    S3_INPUT_DIR = "input"
+    S3_OUTPUT_DIR = "output"
+
     def __init__(self, bucket_name: str):
         # init s3 bucket attributes
         assert bucket_name, "S3 bucket name is not defined."
