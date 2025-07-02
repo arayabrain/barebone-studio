@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop-main
+      - develop-feature
     paths-ignore:
       - 'docs/**'
 

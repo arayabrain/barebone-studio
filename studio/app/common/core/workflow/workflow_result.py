@@ -392,7 +392,7 @@ class NodeResult(BaseNodeResult):
         return message
 
     def is_ready(self) -> bool:
-        is_ready = (not self.workflow_has_error) and (self.info is not None)
+        is_ready = (self.info is not None) or self.workflow_has_error
         return is_ready
 
     @classmethod

@@ -90,11 +90,14 @@ class ExperimentService:
         try:
             for unique_id in copyItem.uidList:
                 new_unique_id = WorkflowRunner.create_workflow_unique_id()
-                await ExptDataWriter(
+                success = await ExptDataWriter(
                     remote_bucket_name,
                     workspace_id,
                     unique_id,
                 ).copy_data(new_unique_id)
+
+                if not success:
+                    raise Exception(f"Failed to copy data for unique_id: {unique_id}")
 
                 if WorkspaceDataCapacityService.is_available():
                     cls._copy_experiment_db(
