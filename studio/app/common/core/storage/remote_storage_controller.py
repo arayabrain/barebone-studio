@@ -394,7 +394,9 @@ class BaseRemoteStorageController(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    async def delete_workspace(self, workspace_id: str) -> bool:
+    async def delete_workspace(
+        self, workspace_id: str, category: StorageOptionType
+    ) -> bool:
         """
         Delete workspace data.
         """
@@ -646,9 +648,13 @@ class RemoteStorageController(BaseRemoteStorageController):
 
         return result
 
-    async def delete_workspace(self, workspace_id: str, category: str) -> bool:
+    async def delete_workspace(
+        self, workspace_id: str, category: StorageOptionType
+    ) -> bool:
         try:
-            logger.info(f"[AWS] Delete WID '{workspace_id}' for category '{category}'")
+            logger.info(
+                f"[AWS] Delete WID '{workspace_id}' for category '{category.value}'"
+            )
 
             # Delegate the call to the actual backend (S3, Mock, etc.)
             return await self.__controller.delete_workspace(workspace_id, category)
