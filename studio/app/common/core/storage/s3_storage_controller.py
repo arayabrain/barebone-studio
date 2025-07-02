@@ -7,6 +7,7 @@ import aioboto3
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     BaseRemoteStorageController,
+    StorageOptionType,
 )
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.dir_path import DIRPATH
@@ -658,21 +659,23 @@ class S3StorageController(BaseRemoteStorageController):
 
         return True
 
-    async def delete_workspace(self, workspace_id: str, category: str) -> bool:
+    async def delete_workspace(
+        self, workspace_id: str, category: StorageOptionType
+    ) -> bool:
         try:
             logger.info(
-                f"[S3] Deleting workspace '{workspace_id}' for category '{category}'"
+                f"[S3]Delete workspace '{workspace_id}' for category '{category.value}'"
             )
 
             # Validate category
             if category not in [
-                __class__.S3_OUTPUT_DIR,
-                __class__.S3_INPUT_DIR,
+                StorageOptionType.OUTPUT,
+                StorageOptionType.INPUT,
             ]:
-                logger.error(f"Invalid category specified: {category}")
+                logger.error(f"Invalid category specified: {category.value}")
                 return False
 
-            prefix = f"{category}/{workspace_id}/"
+            prefix = f"{category.value}/{workspace_id}/"
 
             async with self.__get_s3_resource() as s3_resource:
                 bucket = await s3_resource.Bucket(self.bucket_name)

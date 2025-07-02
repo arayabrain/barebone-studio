@@ -44,7 +44,7 @@ class RemoteSyncAction(Enum):
     DELETE = "delete"
 
 
-class StorageOption(Enum):
+class StorageOptionType(Enum):
     INPUT = "input"
     OUTPUT = "output"
 
