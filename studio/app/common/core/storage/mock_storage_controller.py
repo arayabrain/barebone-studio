@@ -5,7 +5,7 @@ from glob import glob
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     BaseRemoteStorageController,
-    StorageOptionType,
+    StorageDirectoryType,
 )
 from studio.app.common.core.utils.filepath_creater import (
     create_directory,
@@ -64,12 +64,16 @@ class MockStorageController(BaseRemoteStorageController):
     def _make_workspace_output_path(self, workspace_id: str) -> str:
         return join_filepath([__class__.MOCK_OUTPUT_DIR, workspace_id])
 
-    def _delete_directory_if_exists(self, path: str, label: str) -> None:
+    def _delete_directory_if_exists(
+        self, path: str, directory_type: StorageDirectoryType
+    ) -> None:
         if os.path.isdir(path):
             shutil.rmtree(path)
-            logger.debug(f"Deleted mock {label} workspace path: {path}")
+            logger.debug(f"Deleted mock {directory_type.value} workspace path: {path}")
         else:
-            logger.debug(f"Mock {label} workspace path not found: {path}")
+            logger.debug(
+                f"Mock {directory_type.value} workspace path not found: {path}"
+            )
 
     @property
     def bucket_name(self) -> str:
@@ -321,19 +325,20 @@ class MockStorageController(BaseRemoteStorageController):
         return True
 
     async def delete_workspace(
-        self, workspace_id: str, category: StorageOptionType
+        self, workspace_id: str, directory_type: StorageDirectoryType
     ) -> bool:
         try:
             logger.info(
-                f"[MOCK]Delete workspace '{workspace_id}' category: '{category.value}'"
+                f"[MOCK]Delete workspace '{workspace_id}' "
+                f"category: '{directory_type.value}'"
             )
 
             path = (
                 self._make_workspace_input_path(workspace_id)
-                if category == StorageOptionType.INPUT
+                if directory_type == StorageDirectoryType.INPUT
                 else self._make_workspace_output_path(workspace_id)
             )
-            self._delete_directory_if_exists(path, category.value)
+            self._delete_directory_if_exists(path, directory_type)
 
             return True
 

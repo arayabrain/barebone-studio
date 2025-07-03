@@ -44,7 +44,7 @@ class RemoteSyncAction(Enum):
     DELETE = "delete"
 
 
-class StorageOptionType(Enum):
+class StorageDirectoryType(Enum):
     INPUT = "input"
     OUTPUT = "output"
 
@@ -395,7 +395,7 @@ class BaseRemoteStorageController(metaclass=ABCMeta):
 
     @abstractmethod
     async def delete_workspace(
-        self, workspace_id: str, category: StorageOptionType
+        self, workspace_id: str, category: StorageDirectoryType
     ) -> bool:
         """
         Delete workspace data.
@@ -649,7 +649,7 @@ class RemoteStorageController(BaseRemoteStorageController):
         return result
 
     async def delete_workspace(
-        self, workspace_id: str, category: StorageOptionType
+        self, workspace_id: str, category: StorageDirectoryType
     ) -> bool:
         try:
             logger.info(

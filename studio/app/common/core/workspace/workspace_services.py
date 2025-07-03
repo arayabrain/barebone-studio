@@ -8,7 +8,7 @@ from studio.app.common.core.experiment.experiment_services import ExperimentServ
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     RemoteStorageController,
-    StorageOptionType,
+    StorageDirectoryType,
 )
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.models.workspace import Workspace
@@ -82,11 +82,11 @@ class WorkspaceService:
             if is_input_dir:
                 await remote_storage_controller.delete_workspace(
                     workspace_id,
-                    category=StorageOptionType.INPUT,
+                    category=StorageDirectoryType.INPUT,
                 )
             else:
                 await remote_storage_controller.delete_workspace(
-                    workspace_id, category=StorageOptionType.OUTPUT
+                    workspace_id, category=StorageDirectoryType.OUTPUT
                 )
 
         if is_input_dir:
