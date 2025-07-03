@@ -1,0 +1,18 @@
+# Axis along which to concatenate the data (0=rows/cells, 1=columns/time)
+axis: null
+
+# Optional: specify output dictionary key (behaviors_data, neural_data, image, roi)
+# If not specified, will be inferred from output_type
+output_type: null
+
+# Which axis represents time (for proper index handling)
+time_axis: null
+
+# How to handle standard deviation:
+# - "concatenate": concatenate existing std arrays along concatenation axis
+# - "compute": compute new std from concatenated data along std_axis
+# - "none": no std in output
+std_method: null
+
+# If std_method="compute", which axis to compute std along (default: time_axis)
+std_axis: null
