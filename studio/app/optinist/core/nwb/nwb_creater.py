@@ -256,7 +256,7 @@ class NWBCreater:
             data=value.data,
             unit="second",
             starting_time=0.0,
-            rate=float(nwbfile.imaging_planes["ImagingPlane"].imaging_rate),
+            rate=1.0,
         )
 
         nwbfile.processing["ophys"].add(timeseries_data)
@@ -270,7 +270,7 @@ class NWBCreater:
             data=value.data,
             unit="second",
             starting_time=0.0,
-            rate=float(nwbfile.imaging_planes["ImagingPlane"].imaging_rate),
+            rate=1.0,
         )
 
         nwbfile.processing["optinist"].add(timeseries_data)
