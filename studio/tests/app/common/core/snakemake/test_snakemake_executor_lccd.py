@@ -25,6 +25,7 @@ node_2nd_node_label = "pca"
 smk_param = SmkParam(
     use_conda=True,
     cores=2,
+    forceall=True,
     forcetargets=True,
     lock=False,
 )
