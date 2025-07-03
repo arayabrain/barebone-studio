@@ -228,63 +228,14 @@ class Runner:
     @classmethod
     def __change_dict_key_exist(cls, input_info, rule_config: Rule):
         for return_arg_key, arg_name in rule_config.return_arg.items():
-            # Check if this is the new compound format (contains delimiter)
-            key_parts = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)
-
-            if len(key_parts) == 2:
-                # New compound format: "return_name:source_node_id"
-                return_name = key_parts[0]
-                source_node_id = key_parts[1]
-
-                # First try the specific source-keyed version
-                source_specific_key = f"{return_name}:{source_node_id}"
-                if source_specific_key in input_info:
-                    input_info[arg_name] = input_info.pop(source_specific_key)
-                elif return_name in input_info:
-                    # Fallback to non-source-specific key
-                    input_info[arg_name] = input_info.pop(return_name)
-                else:
-                    logger.warning(
-                        f"Expected key {return_name} from {source_node_id} not found"
-                    )
-
-            elif len(key_parts) == 1:
-                # Legacy (and test) format: just "return_name"
-                return_name = return_arg_key
-                if return_name in input_info:
-                    input_info[arg_name] = input_info.pop(return_name)
-                else:
-                    logger.warning(f"Expected key '{return_name}' not found")
-
-            else:
-                logger.error(f"Invalid return_arg_key format: '{return_arg_key}'")
-
-        # Clean up any remaining temporary keys (only for compound format)
-        temp_keys = [
-            k for k in input_info.keys() if ":" in k and len(k.split(":")) == 2
-        ]
-        for key in temp_keys:
-            # Only remove if the node_id part matches something we expected
-            key_parts = key.split(":")
-            if len(key_parts) == 2:
-                potential_node_id = key_parts[1]
-                # Check if this node_id appears in any of our return_arg keys
-                expected_node_ids = []
-                for return_arg_key in rule_config.return_arg.keys():
-                    parts = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)
-                    if len(parts) == 2:
-                        expected_node_ids.append(parts[1])
-
-                if potential_node_id in expected_node_ids:
-                    del input_info[key]
+            return_name = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)[0]
+            if return_name in input_info:
+                input_info[arg_name] = input_info.pop(return_name)
 
     @classmethod
     def read_input_info(cls, input_files):
         input_info = {}
-
-        # Read all files first without merging
-        all_file_data = []
-        for i, filepath in enumerate(input_files):
+        for filepath in input_files:
             load_data = PickleReader.read(filepath)
 
             # validate load_data content
@@ -292,49 +243,11 @@ class Runner:
                 load_data
             ), f"Invalid node input data content. [{filepath}]"
 
-            # Extract source node ID from filepath
-            # Format: /path/workspace_id/unique_id/node_id/algo_name.pkl
-            path_parts = filepath.split("/")
-            if len(path_parts) >= 2:
-                node_id = path_parts[-2]  # The directory name is the node_id
-            else:
-                node_id = None
-
-            all_file_data.append((filepath, node_id, load_data))
-
-        # Now merge intelligently
-        merged_nwb = {}
-
-        # Group data by keys to detect collisions
-        key_to_sources = {}
-        for filepath, node_id, file_data in all_file_data:
-            # Handle nwbfile separately
-            if "nwbfile" in file_data:
-                merged_nwb = cls.__deep_merge(merged_nwb, file_data.pop("nwbfile"))
-
-            # Track all other keys with their sources
-            for key, value in file_data.items():
-                if key not in key_to_sources:
-                    key_to_sources[key] = []
-                key_to_sources[key].append((node_id, value))
-
-        # Now add to input_info, keeping track of source nodes for duplicate keys
-        for key, sources in key_to_sources.items():
-            if len(sources) == 1:
-                # No collision, use directly
-                input_info[key] = sources[0][1]
-            else:
-                # Multiple sources for same key
-                # Store all values with node_id suffix temporarily
-                logger.warning(f"Runner - Key '{key}' found in {len(sources)} sources")
-                for node_id, value in sources:
-                    if node_id:
-                        temp_key = f"{key}:{node_id}"
-                        input_info[temp_key] = value
-                # Also store the last value under the original key as fallback
-                input_info[key] = sources[-1][1]
-
-        input_info["nwbfile"] = merged_nwb
+            merged_nwb = cls.__deep_merge(
+                load_data.pop("nwbfile", {}), input_info.pop("nwbfile", {})
+            )
+            input_info = dict(list(load_data.items()) + list(input_info.items()))
+            input_info["nwbfile"] = merged_nwb
         return input_info
 
     @classmethod
