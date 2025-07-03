@@ -44,6 +44,24 @@ We're building in the open! You can explore the codebase, check out open issues,
 
 `Visit the Optinist GitHub Repository <https://github.com/oist/optinist>`_
 
+Citation
+--------
+
+If you use this software, please cite our paper:
+`Optical Neuroimage Studio (OptiNiSt): intuitive, scalable, extendable framework for optical neuroimage data analysis <https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1013087>`_.
+
+.. code-block:: bibtex
+
+   @misc{OptiNiSt,
+       author = {Yamane, Yukako and Li, Yuzhe and Matsumoto, Keita and Kanai, Ryota and Desforges, Miles and Gutierrez, Carlos Enrique and Doya, Kenji},
+       title = {Optical Neuroimage Studio (OptiNiSt): intuitive, scalable, extendable framework for optical neuroimage data analysis},
+       volume = {21},
+       issue = {5},
+       year = {2025},
+       doi = {10.1371/journal.pcbi.1013087},
+       journal = {PLOS Computational Biology}
+   }
+
 Join Our User Community on Slack
 --------------------------------
 We've launched a Slack workspace to provide a more casual space for discussions and interaction among users.
