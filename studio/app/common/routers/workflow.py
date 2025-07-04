@@ -245,6 +245,7 @@ async def import_sample_data(
         if not sample_data_output_subdirs:
             logger.warning("No valid sample output directories found for upload.")
 
+        # remote sync status file is created with RemoteStorageWriter class.
         async with RemoteStorageWriter(
             remote_bucket_name, workspace_id, ""
         ) as remote_storage_controller:
@@ -253,6 +254,13 @@ async def import_sample_data(
                 for p in sample_data_output_subdirs
             ]
             await asyncio.gather(*tasks)
+
+    # Clean up sync files for sample data workspace
+    if RemoteStorageController.is_available():
+        try:
+            RemoteSyncStatusFileUtil.delete_sync_status_file(workspace_id, "")
+        except Exception as e:
+            logger.warning(f"Failed to clean up sync files: {e}")
 
     return True
 
