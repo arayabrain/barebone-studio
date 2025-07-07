@@ -221,14 +221,11 @@ async def import_sample_data(
         if not sample_data_input_subdirs:
             logger.warning("No valid sample input subdirectories found for upload.")
 
-        async with RemoteStorageSimpleWriter(
-            remote_bucket_name
-        ) as remote_storage_controller:
-            tasks = [
-                remote_storage_controller.upload_input_data(workspace_id, p.name)
-                for p in sample_data_input_subdirs
-            ]
-            await asyncio.gather(*tasks)
+        tasks = [
+            upload_single_input_data(remote_bucket_name, workspace_id, p.name)
+            for p in sample_data_input_subdirs
+        ]
+        await asyncio.gather(*tasks)
 
         # ------------------------------------------------------------
         # Upload the output sample data to remote storage process.
@@ -245,22 +242,11 @@ async def import_sample_data(
         if not sample_data_output_subdirs:
             logger.warning("No valid sample output directories found for upload.")
 
-        # remote sync status file is created with RemoteStorageWriter class.
-        async with RemoteStorageWriter(
-            remote_bucket_name, workspace_id, ""
-        ) as remote_storage_controller:
-            tasks = [
-                remote_storage_controller.upload_experiment(workspace_id, p.name)
-                for p in sample_data_output_subdirs
-            ]
-            await asyncio.gather(*tasks)
-
-    # Clean up sync files for sample data workspace
-    if RemoteStorageController.is_available():
-        try:
-            RemoteSyncStatusFileUtil.delete_sync_status_file(workspace_id, "")
-        except Exception as e:
-            logger.warning(f"Failed to clean up sync files: {e}")
+        tasks = [
+            upload_single_experiment(remote_bucket_name, workspace_id, p.name)
+            for p in sample_data_output_subdirs
+        ]
+        await asyncio.gather(*tasks)
 
     return True
 
@@ -301,3 +287,17 @@ async def force_sync_unsynced_experiment(
                 )
 
     return True
+
+
+async def upload_single_experiment(remote_bucket_name, workspace_id, experiment_name):
+    async with RemoteStorageWriter(
+        remote_bucket_name, workspace_id, experiment_name
+    ) as remote_storage_controller:
+        await remote_storage_controller.upload_experiment(workspace_id, experiment_name)
+
+
+async def upload_single_input_data(remote_bucket_name, workspace_id, input_data_name):
+    async with RemoteStorageSimpleWriter(
+        remote_bucket_name
+    ) as remote_storage_controller:
+        await remote_storage_controller.upload_input_data(workspace_id, input_data_name)
