@@ -663,22 +663,23 @@ class S3StorageController(BaseRemoteStorageController):
         return True
 
     async def delete_workspace(
-        self, workspace_id: str, category: StorageDirectoryType
+        self, workspace_id: str, directory_type: StorageDirectoryType
     ) -> bool:
         try:
             logger.info(
-                f"[S3]Delete workspace '{workspace_id}' for category '{category.value}'"
+                f"[S3]Delete workspace '{workspace_id}'"
+                f" for category '{directory_type.value}'"
             )
 
             # Validate category
-            if category not in [
+            if directory_type not in [
                 StorageDirectoryType.OUTPUT,
                 StorageDirectoryType.INPUT,
             ]:
-                logger.error(f"Invalid category specified: {category.value}")
+                logger.error(f"Invalid category specified: {directory_type.value}")
                 return False
 
-            prefix = f"{category.value}/{workspace_id}/"
+            prefix = f"{directory_type.value}/{workspace_id}/"
 
             async with self.__get_s3_resource() as s3_resource:
                 bucket = await s3_resource.Bucket(self.bucket_name)

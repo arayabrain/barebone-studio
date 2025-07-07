@@ -82,11 +82,11 @@ class WorkspaceService:
             if is_input_dir:
                 await remote_storage_controller.delete_workspace(
                     workspace_id,
-                    category=StorageDirectoryType.INPUT,
+                    directory_type=StorageDirectoryType.INPUT,
                 )
             else:
                 await remote_storage_controller.delete_workspace(
-                    workspace_id, category=StorageDirectoryType.OUTPUT
+                    workspace_id, directory_type=StorageDirectoryType.OUTPUT
                 )
 
         if is_input_dir:

@@ -395,7 +395,7 @@ class BaseRemoteStorageController(metaclass=ABCMeta):
 
     @abstractmethod
     async def delete_workspace(
-        self, workspace_id: str, category: StorageDirectoryType
+        self, workspace_id: str, directory_type: StorageDirectoryType
     ) -> bool:
         """
         Delete workspace data.
@@ -649,15 +649,18 @@ class RemoteStorageController(BaseRemoteStorageController):
         return result
 
     async def delete_workspace(
-        self, workspace_id: str, category: StorageDirectoryType
+        self, workspace_id: str, directory_type: StorageDirectoryType
     ) -> bool:
         try:
             logger.info(
-                f"[AWS] Delete WID '{workspace_id}' for category '{category.value}'"
+                f"[AWS] Delete WID '{workspace_id}'"
+                f"for category '{directory_type.value}'"
             )
 
             # Delegate the call to the actual backend (S3, Mock, etc.)
-            return await self.__controller.delete_workspace(workspace_id, category)
+            return await self.__controller.delete_workspace(
+                workspace_id, directory_type
+            )
 
         except Exception as e:
             logger.exception(f"[AWS] Failed to delete workspace '{workspace_id}': {e}")
