@@ -3,6 +3,7 @@ dependencies:
   - python=3.9
   - numpy<2
   - pip
+  - h5py>=3.8.0
   - pip:
       - scikit-learn==1.1.*
       - statsmodels==0.13.*
@@ -10,3 +11,5 @@ dependencies:
       - numexpr
       - numba
       - dpca
+      - tifffile==2022.3.*
+      - matplotlib
