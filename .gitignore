@@ -25,3 +25,8 @@ tensorflow-*.whl
 
 .env*
 !*.env*.example
+
+terraform.*
+.terraform*
+*.pem
+app_setup.sh

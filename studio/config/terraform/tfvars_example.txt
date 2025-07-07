@@ -1,0 +1,46 @@
+# This file needs to be saved as terraform.tfvars
+
+# AWS configuration
+aws_region           = "ap-northeast-1"
+availability_zone    = "ap-northeast-1a"
+key_name             = "subscr-optinist-for-cloud-key"
+
+# s3_bucket_name = "optinist-server-test-data-bucket"
+# s3_mount_dir = "/home/optinist/experiments_datasets"
+
+# Git branch
+git_repo = "https://github.com/arayabrain/optinist-for-cloud.git"
+git_branch = "feature/aws-batch-integration"
+
+# ECR repository
+ecr_repository_url = "{AWS ECR REPO}"
+
+# Database configuration
+mysql_root_password = ""
+mysql_database      = "studio"
+mysql_user          = "studio_db_user"
+mysql_password      = ""
+
+USE_FIREBASE_TOKEN=True
+IS_STANDALONE=False
+
+# MYSQL_SERVER={AWS RDS ARN}:3306
+
+# Note: for AWS personal account
+# REMOTE_STORAGE_TYPE="2"  # 0: No use, 1: Mock (for devel), 2: AWS S3
+# S3_DEFAULT_BUCKET_NAME="subscr-storage-optinist"
+
+# OptiNiSt configuration
+optinist_secret_key  = "optinist_secret_key"
+optinist_org_name    = "Araya"
+optinist_admin_name  = "Admin"
+optinist_admin_email = ""
+optinist_admin_uid   = ""
+
+firebase_config_json = <<-EOT
+{}
+EOT
+
+firebase_private_json = <<-EOT
+{}
+EOT

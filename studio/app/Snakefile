@@ -5,8 +5,6 @@ from studio.app.optinist.core.edit_ROI import EditRoiUtils
 from studio.app.dir_path import DIRPATH
 
 from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil
-from studio.app.common.core.experiment.experiment import ExptOutputPathIds
-import os
 
 configfile: "snakemake.yaml"
 
