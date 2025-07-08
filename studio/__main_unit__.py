@@ -15,6 +15,7 @@ from studio.app.common.core.auth.auth_dependencies import (
 )
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.mode import MODE
+from studio.app.common.core.storage.remote_storage_controller import RemoteStorageType
 from studio.app.common.core.workspace.workspace_dependencies import (
     is_workspace_available,
     is_workspace_owner,
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI):
 
     sys_version = sys.version.replace("\n", " ")
     mode = "standalone" if MODE.IS_STANDALONE else "multiuser"
+    remote_storage_type = RemoteStorageType.get_activated_type()
 
     logger = AppLogger.get_logger()
     logger.info(
@@ -60,6 +62,7 @@ async def lifespan(app: FastAPI):
         f"    # App Version: {Version.APP_VERSION}\n"
         f"    # Env:DATA_DIR: {DIRPATH.DATA_DIR}\n"
         f"    # Mode: {mode}\n"
+        f"    # REMOTE_STORAGE_TYPE: {remote_storage_type}\n"
     )
 
     yield
