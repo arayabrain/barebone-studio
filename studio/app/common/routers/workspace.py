@@ -7,7 +7,10 @@ from sqlalchemy import func
 from sqlmodel import Session, or_, select
 
 from studio.app.common import models as common_model
-from studio.app.common.core.auth.auth_dependencies import get_current_user
+from studio.app.common.core.auth.auth_dependencies import (
+    get_current_user,
+    get_user_remote_bucket_name,
+)
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.utils.filepath_creater import join_filepath
@@ -249,13 +252,14 @@ def update_workspace(
 - delete workspace
 """,
 )
-def delete_workspace(
+async def delete_workspace(
     workspace_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    remote_bucket_name: str = Depends(get_user_remote_bucket_name),
 ):
-    WorkspaceService.process_workspace_deletion(
-        db, current_user.remote_bucket_name, workspace_id, current_user.id
+    await WorkspaceService.process_workspace_deletion(
+        db, remote_bucket_name, workspace_id, current_user.id
     )
 
     return True

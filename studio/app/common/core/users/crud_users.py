@@ -273,7 +273,7 @@ async def delete_user(db: Session, user_id: int, organization_id: int) -> bool:
 
         # Delete owned workspaces
         for workspace_id in workspace_ids:
-            WorkspaceService.process_workspace_deletion(
+            await WorkspaceService.process_workspace_deletion(
                 db, user_db.remote_bucket_name, workspace_id, user_id
             )
 

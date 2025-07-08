@@ -10,6 +10,10 @@ from studio.app.common.core.experiment.experiment import ExptConfig
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
 from studio.app.common.core.experiment.experiment_writer import ExptDataWriter
 from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.storage.remote_storage_controller import (
+    RemoteStorageController,
+    RemoteSyncLockFileUtil,
+)
 from studio.app.common.core.workflow.workflow_runner import WorkflowRunner
 from studio.app.common.core.workspace.workspace_data_capacity_services import (
     WorkspaceDataCapacityService,
@@ -47,6 +51,12 @@ class ExperimentService:
         unique_id: str,
         auto_commit: bool = False,
     ) -> bool:
+        if RemoteStorageController.is_available():
+            # Check for remote-sync-lock-file
+            # - If lock file exists, an exception is raised (raise_error=True)
+            RemoteSyncLockFileUtil.check_sync_lock_file(
+                workspace_id, unique_id, raise_error=True
+            )
         # Delete experiment data
         result = await ExptDataWriter(
             remote_bucket_name, workspace_id, unique_id
