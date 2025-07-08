@@ -137,7 +137,9 @@ def _get_user_remote_bucket_name(
         remote_storage_type = RemoteStorageType.get_activated_type()
 
         if MODE.IS_TEST:
-            remote_bucket_name = "TEST_DUMMY_BUCKET_NAME"
+            remote_bucket_name = os.environ.get(
+                "S3_DEFAULT_BUCKET_NAME", "TEST_DUMMY_BUCKET_NAME"
+            )
         elif remote_storage_type == RemoteStorageType.S3:
             remote_bucket_name = os.environ.get("S3_DEFAULT_BUCKET_NAME")
         else:
