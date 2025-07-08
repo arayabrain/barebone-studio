@@ -15,9 +15,9 @@ from studio.app.common.core.storage.remote_storage_controller import (
     RemoteStorageController,
     RemoteStorageLockError,
     RemoteStorageReader,
-    RemoteStorageSimpleWriter,
-    RemoteStorageWriter,
     RemoteSyncStatusFileUtil,
+    upload_experiment_wrapper,
+    upload_input_data_wrapper,
 )
 from studio.app.common.core.utils.filepath_creater import (
     create_directory,
@@ -222,7 +222,7 @@ async def import_sample_data(
             logger.warning("No valid sample input subdirectories found for upload.")
 
         tasks = [
-            upload_single_input_data(remote_bucket_name, workspace_id, p.name)
+            upload_input_data_wrapper(remote_bucket_name, workspace_id, p.name)
             for p in sample_data_input_subdirs
         ]
         await asyncio.gather(*tasks)
@@ -243,7 +243,7 @@ async def import_sample_data(
             logger.warning("No valid sample output directories found for upload.")
 
         tasks = [
-            upload_single_experiment(remote_bucket_name, workspace_id, p.name)
+            upload_experiment_wrapper(remote_bucket_name, workspace_id, p.name)
             for p in sample_data_output_subdirs
         ]
         await asyncio.gather(*tasks)
@@ -287,17 +287,3 @@ async def force_sync_unsynced_experiment(
                 )
 
     return True
-
-
-async def upload_single_experiment(remote_bucket_name, workspace_id, experiment_name):
-    async with RemoteStorageWriter(
-        remote_bucket_name, workspace_id, experiment_name
-    ) as remote_storage_controller:
-        await remote_storage_controller.upload_experiment(workspace_id, experiment_name)
-
-
-async def upload_single_input_data(remote_bucket_name, workspace_id, input_data_name):
-    async with RemoteStorageSimpleWriter(
-        remote_bucket_name
-    ) as remote_storage_controller:
-        await remote_storage_controller.upload_input_data(workspace_id, input_data_name)

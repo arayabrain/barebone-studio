@@ -794,3 +794,22 @@ class RemoteStorageDeleter(BaseRemoteStorageReaderWriter):
 
     def __init__(self, bucket_name: str, workspace_id: str, unique_id: str):
         super().__init__(bucket_name, workspace_id, unique_id, RemoteSyncAction.DELETE)
+
+
+# Utility functions for uploading experiments and input data
+# These functions are used in the workflow router to upload data to remote storage.
+async def upload_experiment_wrapper(remote_bucket_name, workspace_id, experiment_name):
+    async with RemoteStorageWriter(
+        remote_bucket_name, workspace_id, experiment_name
+    ) as remote_storage_controller:
+        await remote_storage_controller.upload_experiment(workspace_id, experiment_name)
+
+
+async def upload_input_data_wrapper(remote_bucket_name, workspace_id, input_data_name):
+    async with RemoteStorageSimpleWriter(
+        remote_bucket_name
+    ) as remote_storage_controller:
+        await remote_storage_controller.upload_input_data(workspace_id, input_data_name)
+
+
+# End of the utility functions
