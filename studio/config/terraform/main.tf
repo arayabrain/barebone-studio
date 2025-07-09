@@ -3,6 +3,14 @@ provider "aws" {
   region = var.aws_region
 }
 
+terraform {
+  backend "s3" {
+    bucket = "subscr-optinist-for-cloud-tfstate"
+    key    = "terraform.tfstate"
+    region = "ap-northeast-1"
+  }
+}
+
 # Variables
 variable "aws_region" {
   description = "AWS region to deploy resources"
@@ -107,18 +115,6 @@ variable "asg_desired_capacity" {
   description = "Desired number of instances in ASG"
   type        = number
   default     = 1
-}
-
-variable "aws_access_key_id" {
-  description = "AWS access key ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "aws_secret_access_key" {
-  description = "AWS secret access key"
-  type        = string
-  sensitive   = true
 }
 
 # Data sources
@@ -2242,14 +2238,6 @@ resource "aws_ecs_task_definition" "app" {
         {
           name  = "SECRET_KEY"
           value = var.optinist_secret_key
-        },
-        {
-          name = "AWS_ACCESS_KEY_ID"
-          value = var.aws_access_key_id
-        },
-        {
-          name = "AWS_SECRET_ACCESS_KEY"
-          value = var.aws_secret_access_key
         },
         {
           name = "S3_DEFAULT_BUCKET_NAME"
