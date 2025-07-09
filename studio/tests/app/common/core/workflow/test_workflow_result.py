@@ -4,8 +4,14 @@ import time
 
 import pytest
 
+from studio.app.common.core.auth.auth_dependencies import _get_user_remote_bucket_name
 from studio.app.common.core.experiment.experiment import ExptFunction
 from studio.app.common.core.rules.runner import Runner
+from studio.app.common.core.storage.remote_storage_controller import (
+    RemoteStorageController,
+    RemoteSyncAction,
+    RemoteSyncStatusFileUtil,
+)
 from studio.app.common.core.workflow.workflow import Message, NodeRunStatus
 from studio.app.common.core.workflow.workflow_result import (
     NodeResult,
@@ -14,6 +20,7 @@ from studio.app.common.core.workflow.workflow_result import (
 )
 from studio.app.dir_path import DIRPATH
 
+remote_bucket_name = _get_user_remote_bucket_name()
 workspace_id = "default"
 unique_id = "result_test"
 node_id_list = ["func1", "func2"]
@@ -28,6 +35,10 @@ pickle_path = (
 
 @pytest.mark.asyncio
 async def test_WorkflowResult_get_success():
+    # ----------------------------------------
+    # Preparation
+    # ----------------------------------------
+
     shutil.copytree(
         workflow_dirpath,
         output_dirpath,
@@ -38,6 +49,19 @@ async def test_WorkflowResult_get_success():
     Runner.write_pid_file(
         output_dirpath, "xxxx_dummy_func", "xxxx_dummy_func_script.py"
     )
+
+    # Write remote storage related files
+    if RemoteStorageController.is_available():
+        RemoteSyncStatusFileUtil.create_sync_status_file_for_success(
+            remote_bucket_name,
+            workspace_id,
+            unique_id,
+            RemoteSyncAction.UPLOAD,
+        )
+
+    # ----------------------------------------
+    # Tests
+    # ----------------------------------------
 
     output = await WorkflowResult(
         workspace_id=workspace_id, unique_id=unique_id
@@ -69,6 +93,10 @@ async def test_NodeResult_get():
 
 @pytest.mark.asyncio
 async def test_WorkflowResult_get_error():
+    # ----------------------------------------
+    # Preparation
+    # ----------------------------------------
+
     shutil.copytree(
         workflow_dirpath,
         output_dirpath,
@@ -83,6 +111,19 @@ async def test_WorkflowResult_get_error():
         "xxxx_dummy_func_script.py",
         pid_file_create_time,
     )
+
+    # Write remote storage related files
+    if RemoteStorageController.is_available():
+        RemoteSyncStatusFileUtil.create_sync_status_file_for_success(
+            remote_bucket_name,
+            workspace_id,
+            unique_id,
+            RemoteSyncAction.UPLOAD,
+        )
+
+    # ----------------------------------------
+    # Preparation
+    # ----------------------------------------
 
     output = await WorkflowResult(
         workspace_id=workspace_id, unique_id=unique_id
