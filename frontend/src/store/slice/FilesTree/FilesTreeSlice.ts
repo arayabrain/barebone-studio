@@ -114,18 +114,6 @@ export const filesTreeSlice = createSlice({
           state[FILE_TREE_TYPE_SET.ALL].isLatest = false
         }
       })
-      .addCase(importSampleData.fulfilled, (state) => {
-        ;[
-          FILE_TREE_TYPE_SET.IMAGE,
-          FILE_TREE_TYPE_SET.CSV,
-          FILE_TREE_TYPE_SET.HDF5,
-          FILE_TREE_TYPE_SET.ALL,
-        ].forEach((fileType) => {
-          if (state[fileType] != null) {
-            state[fileType].isLatest = false
-          }
-        })
-      })
   },
 })
 

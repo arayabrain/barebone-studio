@@ -6,6 +6,10 @@ from sqlmodel import Session
 
 from studio.app.common.core.experiment.experiment_services import ExperimentService
 from studio.app.common.core.logger import AppLogger
+from studio.app.common.core.storage.remote_storage_controller import (
+    RemoteStorageController,
+    StorageDirectoryType,
+)
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.models.workspace import Workspace
 from studio.app.dir_path import DIRPATH
@@ -15,7 +19,7 @@ logger = AppLogger.get_logger()
 
 class WorkspaceService:
     @classmethod
-    def delete_workspace_contents(
+    async def delete_workspace_contents(
         cls,
         db: Session,
         ws: Workspace,
@@ -34,7 +38,7 @@ class WorkspaceService:
                 if experiment_id.startswith("."):
                     continue
 
-                deleted_status = ExperimentService.delete_experiment(
+                deleted_status = await ExperimentService.delete_experiment(
                     db,
                     remote_bucket_name,
                     workspace_id,
@@ -48,10 +52,16 @@ class WorkspaceService:
 
         if all(deleted_statuses):
             # Delete the workspace directory itself
-            cls.delete_workspace_files(workspace_id=workspace_id)
+            await cls.delete_workspace_files(
+                workspace_id=workspace_id, remote_bucket_name=remote_bucket_name
+            )
 
             # Delete input directory
-            cls.delete_workspace_files(workspace_id=workspace_id, is_input_dir=True)
+            await cls.delete_workspace_files(
+                workspace_id=workspace_id,
+                remote_bucket_name=remote_bucket_name,
+                is_input_dir=True,
+            )
 
             # Soft delete the workspace
             ws.deleted = True
@@ -63,7 +73,22 @@ class WorkspaceService:
             )
 
     @classmethod
-    def delete_workspace_files(cls, workspace_id: str, is_input_dir: bool = False):
+    async def delete_workspace_files(
+        cls, workspace_id: str, remote_bucket_name, is_input_dir: bool = False
+    ):
+        if RemoteStorageController.is_available():
+            # delete remote data
+            remote_storage_controller = RemoteStorageController(remote_bucket_name)
+            if is_input_dir:
+                await remote_storage_controller.delete_workspace(
+                    workspace_id,
+                    directory_type=StorageDirectoryType.INPUT,
+                )
+            else:
+                await remote_storage_controller.delete_workspace(
+                    workspace_id, directory_type=StorageDirectoryType.OUTPUT
+                )
+
         if is_input_dir:
             directory = join_filepath([DIRPATH.INPUT_DIR, workspace_id])
         else:
@@ -81,7 +106,7 @@ class WorkspaceService:
             )
 
     @classmethod
-    def process_workspace_deletion(
+    async def process_workspace_deletion(
         cls, db: Session, remote_bucket_name: str, workspace_id: str, user_id: str
     ):
         try:
@@ -100,7 +125,7 @@ class WorkspaceService:
                 raise HTTPException(status_code=404, detail="Workspace not found")
 
             # Delete workspace storage files
-            cls.delete_workspace_contents(db, ws, remote_bucket_name)
+            await cls.delete_workspace_contents(db, ws, remote_bucket_name)
 
             # Commit all DB changes before doing anything irreversible
             db.commit()

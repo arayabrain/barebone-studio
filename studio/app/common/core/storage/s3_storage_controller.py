@@ -7,6 +7,7 @@ import aioboto3
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     BaseRemoteStorageController,
+    StorageDirectoryType,
 )
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.dir_path import DIRPATH
@@ -660,3 +661,39 @@ class S3StorageController(BaseRemoteStorageController):
                 await bucket.delete_objects(Delete={"Objects": keys_to_delete})
 
         return True
+
+    async def delete_workspace(
+        self, workspace_id: str, directory_type: StorageDirectoryType
+    ) -> bool:
+        try:
+            logger.info(
+                f"[S3]Delete workspace '{workspace_id}'"
+                f" for category '{directory_type.value}'"
+            )
+
+            # Validate category
+            if directory_type not in [
+                StorageDirectoryType.OUTPUT,
+                StorageDirectoryType.INPUT,
+            ]:
+                logger.error(f"Invalid category specified: {directory_type.value}")
+                return False
+
+            prefix = f"{directory_type.value}/{workspace_id}/"
+
+            async with self.__get_s3_resource() as s3_resource:
+                bucket = await s3_resource.Bucket(self.bucket_name)
+                objects_to_delete = bucket.objects.filter(Prefix=prefix)
+                keys_to_delete = [{"Key": obj.key} async for obj in objects_to_delete]
+
+                if keys_to_delete:
+                    await bucket.delete_objects(Delete={"Objects": keys_to_delete})
+                    logger.info(f"[S3] Deleted S3 objects under prefix: {prefix}")
+                else:
+                    logger.warning(f"[S3] No objects found for prefix: {prefix}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"[S3] Failed to delete workspace: {e}", exc_info=True)
+            return False
