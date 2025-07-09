@@ -139,6 +139,9 @@ testpaths = "/app/studio/tests"
 env = [
   "OPTINIST_DIR=/app/studio/test_data",
   "IS_TEST=True",
+  "REMOTE_STORAGE_TYPE=1",  # See .env
+  "MOCK_STORAGE_DIR=/tmp/studio/mock_storage",  # See .env
+
 ]
 filterwarnings = [
     "ignore:pkg_resources is deprecated as an API:DeprecationWarning",

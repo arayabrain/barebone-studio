@@ -44,6 +44,11 @@ class RemoteSyncAction(Enum):
     DELETE = "delete"
 
 
+class StorageDirectoryType(Enum):
+    INPUT = "input"
+    OUTPUT = "output"
+
+
 class RemoteStorageLockError(Exception):
     def __init__(self, workspace_id: str, unique_id: str):
         self.workspace_id = workspace_id
@@ -388,6 +393,14 @@ class BaseRemoteStorageController(metaclass=ABCMeta):
         delete experiment data from remote storage.
         """
 
+    @abstractmethod
+    async def delete_workspace(
+        self, workspace_id: str, directory_type: StorageDirectoryType
+    ) -> bool:
+        """
+        Delete workspace data.
+        """
+
     async def _clear_local_experiment_data(self, experiment_local_path: str):
         """
         Clean existing local experiment data
@@ -635,6 +648,24 @@ class RemoteStorageController(BaseRemoteStorageController):
 
         return result
 
+    async def delete_workspace(
+        self, workspace_id: str, directory_type: StorageDirectoryType
+    ) -> bool:
+        try:
+            logger.info(
+                f"[AWS] Delete WID '{workspace_id}'"
+                f"for category '{directory_type.value}'"
+            )
+
+            # Delegate the call to the actual backend (S3, Mock, etc.)
+            return await self.__controller.delete_workspace(
+                workspace_id, directory_type
+            )
+
+        except Exception as e:
+            logger.exception(f"[AWS] Failed to delete workspace '{workspace_id}': {e}")
+            return False
+
 
 class BaseRemoteStorageSimpleReaderWriter(metaclass=ABCMeta):
     """
@@ -763,3 +794,31 @@ class RemoteStorageDeleter(BaseRemoteStorageReaderWriter):
 
     def __init__(self, bucket_name: str, workspace_id: str, unique_id: str):
         super().__init__(bucket_name, workspace_id, unique_id, RemoteSyncAction.DELETE)
+
+
+async def upload_experiment_wrapper(
+    remote_bucket_name: str, workspace_id: str, unique_id
+):
+    """
+    Utility functions for uploading input data
+    This function combines multiple steps into one function
+      so that it can be executed via asyncio.gather.
+    """
+    async with RemoteStorageWriter(
+        remote_bucket_name, workspace_id, unique_id
+    ) as remote_storage_controller:
+        await remote_storage_controller.upload_experiment(workspace_id, unique_id)
+
+
+async def upload_input_data_wrapper(
+    remote_bucket_name: str, workspace_id: str, input_data_name: str
+):
+    """
+    Utility functions for uploading experiments data
+    This function combines multiple steps into one function
+      so that it can be executed via asyncio.gather.
+    """
+    async with RemoteStorageSimpleWriter(
+        remote_bucket_name
+    ) as remote_storage_controller:
+        await remote_storage_controller.upload_input_data(workspace_id, input_data_name)

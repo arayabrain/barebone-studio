@@ -3,6 +3,7 @@ import shutil
 
 import pytest
 
+from studio.app.common.core.auth.auth_dependencies import _get_user_remote_bucket_name
 from studio.app.common.core.mode import MODE
 from studio.app.common.core.snakemake.smk import ForceRun, SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
@@ -10,10 +11,16 @@ from studio.app.common.core.snakemake.snakemake_executor import (
     delete_dependencies,
     snakemake_execute,
 )
+from studio.app.common.core.storage.remote_storage_controller import (
+    RemoteStorageController,
+    RemoteSyncAction,
+    RemoteSyncStatusFileUtil,
+)
 from studio.app.common.core.utils.pickle_handler import PickleReader
 from studio.app.common.core.workflow.workflow import Edge, Node, NodeData
 from studio.app.dir_path import DIRPATH
 
+remote_bucket_name = _get_user_remote_bucket_name()
 workspace_id = "default"
 unique_id = "smk_exec_suite2p"
 
@@ -100,6 +107,15 @@ def test_snakemake_execute(client):
 
     # Force running in standalone-mode
     MODE.reset_mode(is_standalone=True)
+
+    # Write remote storage related files
+    if RemoteStorageController.is_available():
+        RemoteSyncStatusFileUtil.create_sync_status_file_for_processing(
+            remote_bucket_name,
+            workspace_id,
+            unique_id,
+            RemoteSyncAction.UPLOAD,
+        )
 
     # Run snakemake executor
     snakemake_execute(workspace_id, unique_id, smk_param)

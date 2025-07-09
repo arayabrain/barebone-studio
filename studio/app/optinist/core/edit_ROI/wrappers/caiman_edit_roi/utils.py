@@ -43,6 +43,7 @@ def set_nwbfile(edit_roi_data: EditRoiData, iscell, function_id, fluorescence=No
                 if fluorescence is not None and fluorescence.size > 0
                 else np.array([]).reshape(0, 0),
                 "unit": "lumens",
+                "rate": nwbfile.get("imaging_plane", {}).get("imaging_rate", 30),
             },
         }
     }
