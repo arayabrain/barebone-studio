@@ -56,7 +56,10 @@ class Runner:
                 # We're in the main process, not in batch yet
                 logger.debug("=================== AWS BATCH CONFIG ===================")
                 logger.debug(
-                    f"aws_batch_job_queue = {BATCH_CONFIG.AWS_BATCH_JOB_QUEUE}"
+                    f"aws_batch_free_queue = {BATCH_CONFIG.AWS_BATCH_FREE_QUEUE}"
+                )
+                logger.debug(
+                    f"aws_batch_paid_queue = {BATCH_CONFIG.AWS_BATCH_PAID_QUEUE}"
                 )
                 logger.debug(
                     f"aws_batch_job_definition={BATCH_CONFIG.AWS_BATCH_JOB_DEFINITION}"
@@ -107,7 +110,8 @@ class Runner:
             if is_batch and BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME:
                 # In batch context - prepare for S3 upload (future implementation)
                 logger.info(
-                    "Batch execution detected - S3 upload will be implemented later"
+                    "Batch execution detected "
+                    "if needed S3 upload will be implemented later"
                 )
                 # For now, just save locally as before
                 PickleWriter.write(__rule.output, output_info)

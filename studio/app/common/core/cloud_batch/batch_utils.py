@@ -100,7 +100,7 @@ class BatchUtils:
             "unique_id": self.unique_id,
             "job_queue": self.get_job_queue_for_user(),
             "s3_bucket": BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME,
-            "s3_prefix": f"snakemake-tmp/{self.workspace_id}/{self.unique_id}",
+            "s3_prefix": "subscr-optinist/",
         }
 
         os.makedirs(os.path.dirname(batch_config_path), exist_ok=True)

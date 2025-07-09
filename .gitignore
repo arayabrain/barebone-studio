@@ -15,6 +15,7 @@ Pipfile.lock
 .tox
 .snakemake
 .pytest_cache
+.claude
 
 studio/test_data/output
 docs/_build

@@ -174,7 +174,7 @@ def _snakemake_execute_batch(
         s3_prefix = BATCH_CONFIG.AWS_DEFAULT_PROVIDER.lower()
         s3_storage = (
             f"{s3_prefix}://{BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME}"
-            f"/snakemake-tmp/{workspace_id}/{unique_id}/"
+            f"/snakemake/{workspace_id}/{unique_id}/"
         )
 
         # Use context manager for proper cleanup
@@ -228,6 +228,10 @@ def _snakemake_execute_batch(
             logger.info("Starting workflow execution on AWS Batch...")
             try:
                 # Execute workflow - Snakemake will handle job submission to AWS Batch
+                # Get user-appropriate job queue (free or paid tier)
+                selected_job_queue = batch_executor.get_job_queue_for_user()
+                logger.info(f"Using AWS Batch job queue: {selected_job_queue}")
+
                 dag_api.execute_workflow(
                     executor="aws-batch",
                     execution_settings=ExecutionSettings(
@@ -236,7 +240,7 @@ def _snakemake_execute_batch(
                     ),
                     executor_settings=ExecutorSettings(
                         region=BATCH_CONFIG.AWS_DEFAULT_REGION,
-                        job_queue=batch_executor.get_job_queue_for_user(),
+                        job_queue=selected_job_queue,
                         job_role=BATCH_CONFIG.AWS_BATCH_JOB_ROLE,
                     ),
                     remote_execution_settings=RemoteExecutionSettings(

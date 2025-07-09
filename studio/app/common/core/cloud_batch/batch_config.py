@@ -7,7 +7,6 @@ from studio.app.dir_path import DIRPATH
 class BatchConfig(BaseSettings):
     # Core AWS Batch settings
     USE_AWS_BATCH: bool = Field(default=False, env="USE_AWS_BATCH")
-    AWS_BATCH_JOB_QUEUE: str = Field(default="", env="AWS_BATCH_JOB_QUEUE")
     AWS_BATCH_JOB_DEFINITION: str = Field(default="", env="AWS_BATCH_JOB_DEFINITION")
     AWS_BATCH_JOB_ROLE: str = Field(default="", env="AWS_BATCH_JOB_ROLE")
     AWS_DEFAULT_REGION: str = Field(default="ap-northeast-1", env="AWS_DEFAULT_REGION")
@@ -39,9 +38,12 @@ class BatchConfig(BaseSettings):
             required_fields = [
                 "AWS_BATCH_S3_BUCKET_NAME",
                 "AWS_BATCH_JOB_ROLE",
-                "AWS_BATCH_JOB_QUEUE",
                 "AWS_BATCH_JOB_DEFINITION",
             ]
+
+            # Check for at least one job queue configuration
+            queue_fields = ["AWS_BATCH_FREE_QUEUE", "AWS_BATCH_PAID_QUEUE"]
+            has_queue = any(values.get(field) for field in queue_fields)
 
             missing_fields = [
                 field for field in required_fields if not values.get(field)
@@ -51,6 +53,14 @@ class BatchConfig(BaseSettings):
                 logger.warning(
                     f"AWS Batch configuration incomplete. "
                     f"Missing: {', '.join(missing_fields)}. Disabling AWS Batch."
+                )
+                values["USE_AWS_BATCH"] = False
+            elif not has_queue:
+                logger.warning(
+                    "AWS Batch configuration incomplete. "
+                    "Missing job queue configuration "
+                    "(AWS_BATCH_FREE_QUEUE or AWS_BATCH_PAID_QUEUE). "
+                    "Disabling AWS Batch."
                 )
                 values["USE_AWS_BATCH"] = False
             else:

@@ -478,8 +478,12 @@ resource "aws_efs_access_point" "snmk" {
 # S3 bucket for application storage
 # =================================
 
+locals {
+  bucket_suffix = formatdate("YYYY-MM-DD", timestamp())
+}
+
 resource "aws_s3_bucket" "app_storage" {
-  bucket = "subscr-optinist-app-storage-${data.aws_caller_identity.current.account_id}"
+  bucket = "subscr-optinist-app-storage-${local.bucket_suffix}"
   force_destroy = true
 
   tags = {
@@ -488,8 +492,25 @@ resource "aws_s3_bucket" "app_storage" {
   }
 }
 
+resource "aws_s3_bucket" "user_data" {
+  bucket = "subscr-optinist-user-data-${local.bucket_suffix}"
+  force_destroy = true
+
+  tags = {
+    Name        = "Subscr OptiNiSt User Data Storage"
+    Environment = "Production"
+  }
+}
+
 resource "aws_s3_bucket_versioning" "app_storage" {
   bucket = aws_s3_bucket.app_storage.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "user_data" {
+  bucket = aws_s3_bucket.user_data.id
   versioning_configuration {
     status = "Enabled"
   }
@@ -504,24 +525,13 @@ resource "aws_s3_bucket_public_access_block" "app_storage" {
   restrict_public_buckets = true
 }
 
-# S3 bucket for ALB access logs
-resource "aws_s3_bucket" "alb_logs" {
-  bucket        = "subscr-optinist-alb-logs-${data.aws_caller_identity.current.account_id}"
-  force_destroy = true
-
-  tags = {
-    Name = "Subscr OptiNiSt ALB Access Logs"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
+resource "aws_s3_bucket_public_access_block" "user_data" {
+  bucket = aws_s3_bucket.user_data.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
 
 # =========================
 # Application Load Balancer
@@ -538,10 +548,14 @@ resource "aws_lb" "main" {
 
   # Enable access logs for detailed monitoring
   access_logs {
-    bucket  = aws_s3_bucket.alb_logs.id
-    prefix  = "alb-access-logs"
+    bucket  = aws_s3_bucket.app_storage.id
+    prefix  = "alb-logs"
     enabled = true
   }
+
+  depends_on = [
+    aws_s3_bucket_policy.app_storage
+  ]
 
   tags = {
     Name = "subscr-optinist-load-balancer"
@@ -1323,32 +1337,24 @@ resource "aws_s3_bucket_policy" "app_storage" {
           aws_s3_bucket.app_storage.arn,
           "${aws_s3_bucket.app_storage.arn}/*"
         ]
-      }
-    ]
-  })
-}
-
-resource "aws_s3_bucket_policy" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
+      },
       {
+        Sid    = "AllowALBLogsAccess"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::582318560864:root" # ALB service account for ap-northeast-1
         }
         Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.alb_logs.arn}/alb-access-logs/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+        Resource = "${aws_s3_bucket.app_storage.arn}/alb-logs/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
       },
       {
+        Sid    = "AllowLogsDeliveryAccess"
         Effect = "Allow"
         Principal = {
           Service = "delivery.logs.amazonaws.com"
         }
         Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.alb_logs.arn}/alb-access-logs/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+        Resource = "${aws_s3_bucket.app_storage.arn}/alb-logs/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
         Condition = {
           StringEquals = {
             "s3:x-amz-acl" = "bucket-owner-full-control"
@@ -1356,12 +1362,13 @@ resource "aws_s3_bucket_policy" "alb_logs" {
         }
       },
       {
+        Sid    = "AllowALBGetBucketAcl"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::582318560864:root"
         }
         Action   = "s3:GetBucketAcl"
-        Resource = aws_s3_bucket.alb_logs.arn
+        Resource = aws_s3_bucket.app_storage.arn
       }
     ]
   })
@@ -1684,6 +1691,16 @@ resource "aws_cloudwatch_log_group" "batch" {
 
   tags = {
     Name = "subscr-optinist-batch-logs"
+  }
+  depends_on = [
+    aws_batch_job_queue.free_tier,
+    aws_batch_job_queue.paid_tier,
+    aws_batch_compute_environment.free_tier,
+    aws_batch_compute_environment.paid_tier
+  ]
+  lifecycle {
+    ignore_changes = [name]
+    prevent_destroy = true
   }
 }
 
@@ -2014,10 +2031,41 @@ resource "null_resource" "deploy_to_ecs" {
         --region ${var.aws_region}
 
       echo "Waiting for ECS service to stabilize..."
-      aws ecs wait services-stable \
-        --cluster ${aws_ecs_cluster.main.name} \
-        --services ${aws_ecs_service.main.name} \
-        --region ${var.aws_region}
+            # Check if service is already running first
+            SERVICE_STATUS=$(aws ecs describe-services \
+              --cluster ${aws_ecs_cluster.main.name} \
+              --services ${aws_ecs_service.main.name} \
+              --region ${var.aws_region} \
+              --query 'services[0].status' --output text)
+
+            if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+              echo "Service is already active, checking running count..."
+              RUNNING_COUNT=$(aws ecs describe-services \
+                --cluster ${aws_ecs_cluster.main.name} \
+                --services ${aws_ecs_service.main.name} \
+                --region ${var.aws_region} \
+                --query 'services[0].runningCount' --output text)
+
+              if [ "$RUNNING_COUNT" -gt "0" ]; then
+                echo "Service already has $RUNNING_COUNT running tasks"
+              else
+                echo "Waiting for service to stabilize..."
+                timeout 1800 aws ecs wait services-stable \
+                  --cluster ${aws_ecs_cluster.main.name} \
+                  --services ${aws_ecs_service.main.name} \
+                  --region ${var.aws_region} \
+                  --cli-read-timeout 1800 \
+                  --cli-connect-timeout 120 || echo "Warning: Service stabilization timed out, but continuing..."
+              fi
+            else
+              echo "Service not active, waiting..."
+              timeout 1800 aws ecs wait services-stable \
+                --cluster ${aws_ecs_cluster.main.name} \
+                --services ${aws_ecs_service.main.name} \
+                --region ${var.aws_region} \
+                --cli-read-timeout 1800 \
+                --cli-connect-timeout 120 || echo "Warning: Service stabilization timed out, but continuing..."
+            fi
 
       echo "=== DEPLOYMENT COMPLETE ==="
       echo "✅ Application is ready at: http://${aws_lb.main.dns_name}"
@@ -2242,6 +2290,10 @@ resource "aws_ecs_task_definition" "app" {
         {
           name = "S3_DEFAULT_BUCKET_NAME"
           value = aws_s3_bucket.app_storage.id
+        },
+        {
+          name  = "USE_AWS_BATCH"
+          value = "true"
         },
         {
           name = "AWS_BATCH_S3_BUCKET_NAME"
@@ -2612,6 +2664,7 @@ output "aws_batch_config" {
   value = {
     AWS_BATCH_JOB_ROLE = aws_iam_role.ecs_task.arn
     AWS_BATCH_S3_BUCKET_NAME = aws_s3_bucket.app_storage.id
+    AWS_BATCH_S3_USER_DATA_BUCKET = aws_s3_bucket.user_data.id
     AWS_BATCH_FREE_QUEUE = aws_batch_job_queue.free_tier.name
     AWS_BATCH_PAID_QUEUE = aws_batch_job_queue.paid_tier.name
     AWS_BATCH_JOB_DEFINITION = aws_batch_job_definition.optinist.name
