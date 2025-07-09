@@ -81,7 +81,7 @@ class BatchUtils:
         )
 
         # Upload input files to S3
-        self._upload_workspace_to_s3()
+        # self._upload_workspace_to_s3()
 
         # Create batch-specific configuration file
         batch_config_path = join_filepath(
@@ -112,7 +112,9 @@ class BatchUtils:
     def _upload_workspace_to_s3(self):
         """Upload workspace files to S3 before batch execution."""
 
-        s3_controller = S3StorageController()
+        s3_controller = S3StorageController(
+            bucket_name=BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
+        )
 
         # Upload workspace data to S3
         workspace_path = join_filepath(

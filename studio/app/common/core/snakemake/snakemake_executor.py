@@ -257,7 +257,7 @@ def _snakemake_execute_batch(
             finally:
                 smk_logger.extract_errors_from_snakemake_log(smk_workdir)
                 # Sync results back from batch execution
-                batch_executor.sync_batch_results()
+                # batch_executor.sync_batch_results()
 
     except Exception as e:
         logger.error(f"Failed to setup AWS Batch execution: {e}")
