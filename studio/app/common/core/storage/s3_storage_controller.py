@@ -1,8 +1,10 @@
+import asyncio
 import os
 import re
 from subprocess import CalledProcessError
 
 import aioboto3
+import boto3
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
@@ -43,8 +45,9 @@ class S3StorageController(BaseRemoteStorageController):
         return input_data_local_path
 
     def _make_input_data_remote_path(self, workspace_id: str, filename: str) -> str:
+        # Include app/studio_data path to match Snakemake's expected S3 structure
         input_data_remote_path = join_filepath(
-            [__class__.S3_INPUT_DIR, workspace_id, filename]
+            ["app", "studio_data", __class__.S3_INPUT_DIR, workspace_id, filename]
         )
         return input_data_remote_path
 
@@ -55,8 +58,9 @@ class S3StorageController(BaseRemoteStorageController):
         return experiment_local_path
 
     def _make_experiment_remote_path(self, workspace_id: str, unique_id: str) -> str:
+        # Include app/studio_data path to match Snakemake's expected S3 structure
         experiment_remote_path = join_filepath(
-            [__class__.S3_OUTPUT_DIR, workspace_id, unique_id]
+            ["app", "studio_data", __class__.S3_OUTPUT_DIR, workspace_id, unique_id]
         )
         return experiment_remote_path
 
@@ -186,10 +190,19 @@ class S3StorageController(BaseRemoteStorageController):
             f"{input_data_remote_path} ({file_size:,} bytes)"
         )
 
-        async with self.__get_s3_client() as __s3_client:
-            await __s3_client.upload_file(
-                input_data_local_path, self.bucket_name, input_data_remote_path
+        try:
+            # Use synchronous boto3 to avoid aioboto3 asyncio compatibility issues
+            # Run in thread pool to maintain async interface
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: boto3.client("s3").upload_file(
+                    input_data_local_path, self.bucket_name, input_data_remote_path
+                ),
             )
+        except Exception as e:
+            logger.error(f"Failed to upload input data: {e}")
+            return False
 
         logger.debug(
             f"finish upload data from S3 [{self.bucket_name}] "
@@ -592,7 +605,7 @@ class S3StorageController(BaseRemoteStorageController):
         if target_files:  # Target specified files.
             target_abs_paths = [f"{experiment_local_path}/{f}" for f in target_files]
         else:  # Target all files.
-            for root, dirs, files in os.walk(experiment_local_path):
+            for root, _, files in os.walk(experiment_local_path):
                 for filename in files:
                     local_abs_path = os.path.join(root, filename)
                     target_abs_paths.append(local_abs_path)
@@ -616,21 +629,32 @@ class S3StorageController(BaseRemoteStorageController):
             adjusted_target_files.append([local_abs_path, s3_file_path, file_size])
 
         # do upload data to remote storage
-        async with self.__get_s3_client() as __s3_client:
-            target_files_count = len(adjusted_target_files)
-            for index, (local_abs_path, s3_file_path, file_size) in enumerate(
-                adjusted_target_files
-            ):
-                logger.debug(
-                    f"upload data to S3 [{self.bucket_name}] "
-                    f"({index+1}/{target_files_count}) "
-                    f"{s3_file_path} ({file_size:,} bytes)"
-                )
+        target_files_count = len(adjusted_target_files)
+        loop = asyncio.get_event_loop()
 
-                # do upload experiment files
-                await __s3_client.upload_file(
-                    local_abs_path, self.bucket_name, s3_file_path
+        for index, (local_abs_path, s3_file_path, file_size) in enumerate(
+            adjusted_target_files
+        ):
+            logger.debug(
+                f"upload data to S3 [{self.bucket_name}] "
+                f"({index+1}/{target_files_count}) "
+                f"{s3_file_path} ({file_size:,} bytes)"
+            )
+
+            try:
+                # Use synchronous boto3 to avoid aioboto3 asyncio compatibility issues
+                # Run in thread pool to maintain async interface
+                def upload_file(local_path, s3_path):
+                    return boto3.client("s3").upload_file(
+                        local_path, self.bucket_name, s3_path
+                    )
+
+                await loop.run_in_executor(
+                    None, upload_file, local_abs_path, s3_file_path
                 )
+            except Exception as e:
+                logger.error(f"Failed to upload experiment file {s3_file_path}: {e}")
+                return False
 
         return True
 

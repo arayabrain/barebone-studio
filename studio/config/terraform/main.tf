@@ -1493,12 +1493,58 @@ resource "aws_iam_role_policy" "ecs_task_batch" {
           "batch:SubmitJob",
           "batch:DescribeJobs",
           "batch:ListJobs",
-          "batch:CancelJob"
+          "batch:CancelJob",
+          "batch:RegisterJobDefinition"
         ]
         Resource = "*"
       }
     ]
   })
+}
+
+# IAM User for this OptiNiSt Cloud project (separate from other webapps)
+resource "aws_iam_user" "subscr_optinist_cloud_user" {
+  name = "subscr-optinist-cloud-user"
+  path = "/"
+}
+
+# IAM Policy for this OptiNiSt Cloud User
+resource "aws_iam_policy" "subscr_optinist_cloud_user_policy" {
+  name        = "subscr-optinist-cloud-user-policy"
+  description = "Policy for this OptiNiSt Cloud project"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "batch:SubmitJob",
+          "batch:DescribeJobs",
+          "batch:ListJobs",
+          "batch:CancelJob",
+          "batch:RegisterJobDefinition",
+          "iam:PassRole",
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach policy to user
+resource "aws_iam_user_policy_attachment" "subscr_optinist_cloud_user_policy_attachment" {
+  user       = aws_iam_user.subscr_optinist_cloud_user.name
+  policy_arn = aws_iam_policy.subscr_optinist_cloud_user_policy.arn
+}
+
+# Create access key for the user
+resource "aws_iam_access_key" "subscr_optinist_cloud_user_access_key" {
+  user = aws_iam_user.subscr_optinist_cloud_user.name
 }
 
 # Batch Spot Fleet Role
@@ -2136,7 +2182,53 @@ FIREBASE_PRIVATE
 
 # Database initialization
 echo "$(date): Starting database initialization"
+
+# Install MySQL client for database initialization
+echo "$(date): Installing MySQL client"
+apt-get update
+apt-get install -y mysql-client-core-8.0
+
 retry_command 30 10 "nc -z ${replace(aws_db_instance.main.endpoint, ":3306", "")} 3306"
+
+# Initialize database tables and users
+echo "$(date): Initializing database tables"
+cat > /tmp/init_optinist_db.sql << 'INIT_SQL'
+USE ${var.mysql_database};
+
+-- Insert initial data
+INSERT IGNORE INTO organization (name) VALUES ('${var.optinist_org_name}');
+INSERT IGNORE INTO roles (id, role) VALUES (1, 'admin'), (10, 'data manager'), (20, 'operator'), (30, 'guest operator');
+
+-- Default admin user with S3 bucket info
+INSERT IGNORE INTO users (uid, organization_id, name, email, active, attributes)
+VALUES ('${var.optinist_admin_uid}', 1, '${var.optinist_admin_name}', '${var.optinist_admin_email}', true, '{"remote_bucket_name": "${aws_s3_bucket.app_storage.id}"}');
+
+INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (1, 1);
+
+UPDATE users SET attributes = JSON_MERGE_PATCH(IFNULL(attributes,'{}'), '{"remote_bucket_name": "${aws_s3_bucket.app_storage.id}"}') WHERE id = 1;
+
+INIT_SQL
+
+chmod 644 /tmp/init_optinist_db.sql
+
+# Wait for database to be ready and execute initialization
+max_attempts=10
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+  echo "$(date): Attempting to initialize database (attempt $attempt/$max_attempts)"
+  if mysql -h ${replace(aws_db_instance.main.endpoint, ":3306", "")} -P 3306 -u ${var.mysql_user} -p'${var.mysql_password}' ${var.mysql_database} < /tmp/init_optinist_db.sql; then
+    echo "$(date): Database initialization successful"
+    break
+  else
+    echo "$(date): Database initialization attempt $attempt failed, waiting to retry..."
+    sleep 30
+    attempt=$((attempt+1))
+  fi
+done
+
+if [ $attempt -gt $max_attempts ]; then
+  echo "$(date): ERROR: Failed to initialize the database after $max_attempts attempts"
+fi
 
 echo "$(date): Application setup completed successfully"
 EOF
@@ -2144,11 +2236,27 @@ EOF
   filename = "${path.module}/app_setup.sh"
 }
 
+# Upload the setup script to S3 so SSM can download it
+resource "aws_s3_object" "app_setup_script" {
+  bucket = aws_s3_bucket.app_storage.id
+  key    = "scripts/app_setup.sh"
+  source = local_file.app_setup_script.filename
+  etag   = filemd5(local_file.app_setup_script.filename)
+
+  depends_on = [local_file.app_setup_script]
+
+  tags = {
+    Name = "OptiNiSt App Setup Script"
+  }
+}
+
 # SSM document to run setup script
 resource "aws_ssm_document" "app_setup" {
   name          = "subscr-optinist-app-setup"
   document_type = "Command"
   document_format = "YAML"
+
+  depends_on = [aws_s3_object.app_setup_script]
 
   content = jsonencode({
     schemaVersion = "2.2"
@@ -2314,6 +2422,14 @@ resource "aws_ecs_task_definition" "app" {
         {
           name  = "AWS_DEFAULT_REGION"
           value = var.aws_region
+        },
+        {
+          name  = "AWS_ACCESS_KEY_ID"
+          value = aws_iam_access_key.subscr_optinist_cloud_user_access_key.id
+        },
+        {
+          name  = "AWS_SECRET_ACCESS_KEY"
+          value = aws_iam_access_key.subscr_optinist_cloud_user_access_key.secret
         },
         {
           name  = "AWS_BATCH_FREE_QUEUE"
@@ -2508,6 +2624,32 @@ resource "aws_batch_job_definition" "optinist" {
           sourceVolume = "tmp"
           containerPath = "/tmp"
           readOnly = false
+        },
+        {
+          sourceVolume = "efs"
+          containerPath = "/mnt/efs"
+          readOnly = false
+        }
+      ]
+
+    volumes = [
+        {
+          name = "tmp"
+          host = {
+            sourcePath = "/tmp"
+          }
+        },
+        {
+          name = "efs"
+          efsVolumeConfiguration = {
+            fileSystemId = "${aws_efs_file_system.snmk.id}"
+            rootDirectory = "/"
+            transitEncryption = "ENABLED"
+            authorizationConfig = {
+              accessPointId = "${aws_efs_access_point.snmk.id}"
+              iam = "DISABLED"
+            }
+          }
         }
       ]
 
@@ -2685,4 +2827,16 @@ output "ssh_private_key_path" {
 output "ssh_command" {
   description = "SSH command to connect to instances"
   value       = "ssh -i ${local_file.private_key.filename} ec2-user@<INSTANCE_IP>"
+}
+
+# Output the access key credentials
+output "optinist_cloud_user_access_key_id" {
+  description = "Access Key ID for subscr-optinist-cloud-user"
+  value       = aws_iam_access_key.subscr_optinist_cloud_user_access_key.id
+}
+
+output "optinist_cloud_user_secret_access_key" {
+  description = "Secret Access Key for subscr-optinist-cloud-user"
+  value       = aws_iam_access_key.subscr_optinist_cloud_user_access_key.secret
+  sensitive   = true
 }

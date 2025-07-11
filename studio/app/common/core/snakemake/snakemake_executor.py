@@ -14,6 +14,7 @@ from snakemake.api import (
     OutputSettings,
     RemoteExecutionSettings,
     ResourceSettings,
+    SharedFSUsage,
     SnakemakeApi,
     StorageSettings,
 )
@@ -39,6 +40,89 @@ from studio.app.common.core.workspace.workspace_data_capacity_services import (
 from studio.app.dir_path import DIRPATH
 
 logger = AppLogger.get_logger()
+
+
+def _get_efs_optimized_storage_settings(
+    workspace_id: str, unique_id: str
+) -> StorageSettings:
+    """
+    Configure optimized storage settings for EFS with local scratch directories.
+    This implements the best practices for shared network filesystems.
+    """
+    # EFS mount path - should be persistent across batch jobs
+    efs_storage = f"file:///mnt/efs/{workspace_id}/{unique_id}/"
+
+    # Local scratch directory - should be fast local storage (e.g., NVMe SSD)
+    # This will be used for intermediate files and temporary storage
+    local_scratch = "/tmp/snakemake_scratch"
+
+    # Per-job scratch directory to avoid conflicts between concurrent jobs
+    job_local_scratch = "/tmp/snakemake_scratch/$JOBID"
+
+    storage_settings = StorageSettings(
+        default_storage_provider="fs",  # Use the filesystem storage plugin
+        default_storage_prefix=efs_storage,
+        # Local scratch for the coordinator/main process
+        local_storage_prefix=local_scratch,
+        # Per-job local scratch for remote batch jobs
+        remote_job_local_storage_prefix=job_local_scratch,
+        shared_fs_usage=[SharedFSUsage.SOFTWARE_DEPLOYMENT],
+    )
+
+    logger.info(f"EFS storage configured: {efs_storage}")
+    logger.info(f"Local scratch directory: {local_scratch}")
+    logger.info(f"Remote job scratch directory: {job_local_scratch}")
+
+    return storage_settings
+
+
+def _prepare_efs_environment(workspace_id: str, unique_id: str):
+    """
+    Ensure EFS directories exist and local scratch is prepared.
+    """
+    efs_base_path = Path(f"/mnt/efs/{workspace_id}/{unique_id}")
+    local_scratch_path = Path("/tmp/snakemake_scratch")
+
+    try:
+        # Create EFS directories if they don't exist
+        efs_base_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"EFS directory prepared: {efs_base_path}")
+
+        # Create local scratch directory
+        local_scratch_path.mkdir(parents=True, exist_ok=True)
+        # Set proper permissions for scratch directory
+        os.chmod(local_scratch_path, 0o755)
+
+        logger.info(f"Local scratch directory prepared: {local_scratch_path}")
+
+        # Create subdirectories that Snakemake might need
+        (efs_base_path / "logs").mkdir(exist_ok=True)
+        (efs_base_path / "benchmarks").mkdir(exist_ok=True)
+        (efs_base_path / ".snakemake").mkdir(exist_ok=True)
+
+    except Exception as e:
+        logger.error(f"Failed to prepare EFS environment: {e}")
+        raise
+
+
+def _get_batch_container_setup_commands() -> List[str]:
+    """
+    Return setup commands that should be run in batch containers to prepare
+    the local scratch environment (EFS-specific commands).
+    """
+    return [
+        # Create local scratch with proper permissions
+        "mkdir -p /tmp/snakemake_scratch/$JOBID",
+        "chmod 755 /tmp/snakemake_scratch",
+        "chmod 755 /tmp/snakemake_scratch/$JOBID",
+        # Set environment variables for better performance
+        "export TMPDIR=/tmp/snakemake_scratch/$JOBID",
+        "export TMP=/tmp/snakemake_scratch/$JOBID",
+        # Ensure EFS mount point exists
+        "mkdir -p /mnt/efs",
+        # Optional: Set rsync options for better EFS performance
+        "export SNAKEMAKE_RSYNC_OPTS='-av --inplace --no-sparse'",
+    ]
 
 
 def snakemake_execute(workspace_id: str, unique_id: str, params: SmkParam):
@@ -171,11 +255,29 @@ def _snakemake_execute_batch(
             logger.debug("Use conda deployment method")
             deployment_methods.append(DeploymentMethod.CONDA)
 
-        s3_prefix = BATCH_CONFIG.AWS_DEFAULT_PROVIDER.lower()
-        s3_storage = (
-            f"{s3_prefix}://{BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME}"
-            f"/snakemake/{workspace_id}/{unique_id}/"
-        )
+        # Configure storage based on availability
+        storage_settings = None
+        if RemoteStorageController.is_available():
+            # Use S3 when available
+            s3_prefix = BATCH_CONFIG.AWS_DEFAULT_PROVIDER.lower()
+            s3_bucket_name = os.environ.get(
+                "S3_DEFAULT_BUCKET_NAME", BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
+            )
+            # Use bucket root to match S3StorageController path structure
+            # S3StorageController uses: input/{workspace_id}/, etc.
+            s3_storage = f"{s3_prefix}://{s3_bucket_name}/"
+            storage_settings = StorageSettings(
+                default_storage_provider=s3_prefix,
+                default_storage_prefix=s3_storage,
+            )
+            logger.debug(f"Using S3 storage: {s3_storage}")
+        else:
+            # Use optimized EFS configuration when S3 is not available
+            logger.info("S3 not available, configuring optimized EFS storage")
+            _prepare_efs_environment(workspace_id, unique_id)
+            storage_settings = _get_efs_optimized_storage_settings(
+                workspace_id, unique_id
+            )
 
         # Use context manager for proper cleanup
         with SnakemakeApi(
@@ -187,16 +289,17 @@ def _snakemake_execute_batch(
             workflow_api = snakemake_api.workflow(
                 snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
                 workdir=Path(smk_workdir),
-                storage_settings=StorageSettings(
-                    default_storage_provider=s3_prefix,
-                    default_storage_prefix=s3_storage,
-                ),
+                storage_settings=storage_settings,
                 resource_settings=ResourceSettings(
                     nodes=10,
                     cores=cores,
                     default_resources=DefaultResources(
                         [
                             "mem_mb=4096",
+                            # Add disk space for local scratch
+                            "disk_mb=10240"
+                            if not RemoteStorageController.is_available()
+                            else "mem_mb=4096",
                         ]
                     ),
                 ),
@@ -232,6 +335,18 @@ def _snakemake_execute_batch(
                 selected_job_queue = batch_executor.get_job_queue_for_user()
                 logger.info(f"Using AWS Batch job queue: {selected_job_queue}")
 
+                # Prepare environment variables for batch jobs
+                envvars = ["USE_AWS_BATCH"]
+                if RemoteStorageController.is_available():
+                    envvars.append("S3_DEFAULT_BUCKET_NAME")
+                else:
+                    envvars.extend(["EFS_MOUNT_TARGET", "TMPDIR", "TMP"])
+
+                # Prepare container setup for EFS optimization
+                container_setup = []
+                if not RemoteStorageController.is_available():
+                    container_setup = _get_batch_container_setup_commands()
+
                 dag_api.execute_workflow(
                     executor="aws-batch",
                     execution_settings=ExecutionSettings(
@@ -245,8 +360,10 @@ def _snakemake_execute_batch(
                     ),
                     remote_execution_settings=RemoteExecutionSettings(
                         container_image=batch_executor.get_container_image(),
-                        envvars=["USE_AWS_BATCH", "S3_DEFAULT_BUCKET_NAME"],
+                        envvars=envvars,
                         jobname="optinist-{rulename}-{jobid}",
+                        # Add container setup commands for EFS optimization
+                        precommand=container_setup if container_setup else None,
                     ),
                 )
                 result = True

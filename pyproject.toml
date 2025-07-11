@@ -92,6 +92,8 @@ numpydoc = "*"
 yapf = "*"
 setuptools = "<70"
 snakemake-executor-plugin-aws-batch = "^0.2.1"
+snakemake-storage-plugin-fs = "^1.1.2"
+snakemake-storage-plugin-s3 = "*"
 
 [tool.poetry.group.dev]
 optional = true

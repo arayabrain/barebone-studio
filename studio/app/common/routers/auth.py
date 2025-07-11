@@ -23,10 +23,17 @@ async def login(user_data: UserAuth, db: Session = Depends(get_db)):
 
         # Operate remote storage data.
         if RemoteStorageController.is_available():
+            # Get bucket name with fallback logic
+            from studio.app.common.core.auth.auth_dependencies import (
+                _get_user_remote_bucket_name,
+            )
+
+            remote_bucket_name = _get_user_remote_bucket_name(user)
+
             # Immediately after successful login,
             #   download all experiments metadata.
             async with RemoteStorageSimpleReader(
-                user.remote_bucket_name
+                remote_bucket_name
             ) as remote_storage_controller:
                 await remote_storage_controller.download_all_experiments_metas()
 

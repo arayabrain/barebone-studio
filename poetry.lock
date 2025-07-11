@@ -4568,6 +4568,24 @@ throttler = ">=1.2.2"
 wrapt = ">=1.15.0"
 
 [[package]]
+name = "snakemake-storage-plugin-fs"
+version = "1.1.2"
+description = " A Snakemake storage plugin that reads and writes from a locally mounted filesystem using rsync"
+optional = false
+python-versions = "<4.0,>=3.11"
+groups = ["main"]
+files = [
+    {file = "snakemake_storage_plugin_fs-1.1.2-py3-none-any.whl", hash = "sha256:ec27a890dd383a164b0e03e10129714ab332bf59b7eefff480a8f033b7d8c228"},
+    {file = "snakemake_storage_plugin_fs-1.1.2.tar.gz", hash = "sha256:3796ac89a27d4076588fc5464486c44114246612964ac08736ae5993993b6656"},
+]
+
+[package.dependencies]
+reretry = ">=0.11.8,<0.12.0"
+snakemake-interface-common = ">=1.17.0,<2.0.0"
+snakemake-interface-storage-plugins = ">=4.1.0,<5.0.0"
+sysrsync = ">=1.1.1,<2.0.0"
+
+[[package]]
 name = "snakemake-storage-plugin-s3"
 version = "0.3.3"
 description = "A Snakemake storage plugin for S3 API storage (AWS S3, MinIO, etc.)"
@@ -5002,6 +5020,21 @@ anyio = ">=3.4.0,<5"
 full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart", "pyyaml"]
 
 [[package]]
+name = "sysrsync"
+version = "1.1.1"
+description = "Simple and safe python wrapper for calling system rsync"
+optional = false
+python-versions = ">=3.6,<4.0"
+groups = ["main"]
+files = [
+    {file = "sysrsync-1.1.1-py3-none-any.whl", hash = "sha256:9c8877f162dce9c480804445fca56cd19bf41b998d2172651468ccebfdc60850"},
+    {file = "sysrsync-1.1.1.tar.gz", hash = "sha256:435f9eb620e68ffb18ca5cbad32b113396a432361c7722038eab65c97dd83bd5"},
+]
+
+[package.dependencies]
+toml = ">=0.10.0,<0.11.0"
+
+[[package]]
 name = "tabulate"
 version = "0.9.0"
 description = "Pretty-print tabular data"
@@ -5069,6 +5102,18 @@ plot = ["matplotlib"]
 test = ["cmapfile", "czifile", "dask", "defusedxml", "fsspec", "imagecodecs", "kerchunk", "lfdfiles", "lxml", "ndtiff", "oiffile", "psdtags", "pytest", "requests", "roifile", "xarray", "zarr (>=3)"]
 xml = ["defusedxml", "lxml"]
 zarr = ["fsspec", "kerchunk", "zarr (>=3)"]
+
+[[package]]
+name = "toml"
+version = "0.10.2"
+description = "Python Library for Tom's Obvious, Minimal Language"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+groups = ["main"]
+files = [
+    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
+    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
+]
 
 [[package]]
 name = "tornado"
@@ -5466,4 +5511,4 @@ pyyaml = ">=6.0,<7.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "6f10e28a48f15d06274f71ea3dbf68c2f7e5d500215ce0c789dfa42a80aa4613"
+content-hash = "ab5e2593c86350f4e8731e5664593b9a12b6e4636bcf040690f777004dc52db9"

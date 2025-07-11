@@ -17,8 +17,8 @@ from studio.app.common.core.storage.remote_storage_controller import (
     RemoteStorageReader,
     RemoteSyncStatusFileUtil,
     upload_experiment_wrapper,
-    upload_input_data_wrapper,
 )
+from studio.app.common.core.storage.s3_storage_controller import S3StorageController
 from studio.app.common.core.utils.filepath_creater import (
     create_directory,
     join_filepath,
@@ -202,28 +202,28 @@ async def import_sample_data(
         # ------------------------------------------------------------
         # Upload the input sample data to remote storage process.
         # ------------------------------------------------------------
-        sample_data_input_dir = Path(
+
+        s3_controller = S3StorageController(remote_bucket_name)
+        sample_data_dir = Path(
             join_filepath([DIRPATH.ROOT_DIR, sample_data_dir_name, category, "input"])
         )
 
-        sample_data_input_subdirs = sorted(
+        sample_data_subdir = sorted(
             [
                 p
-                for p in sample_data_input_dir.iterdir()
+                for p in sample_data_dir.iterdir()
                 if p.is_file() and p.name.startswith("sample_")
             ]
         )
 
-        logger.info(
-            f"Found {len(sample_data_input_subdirs)} sample input subdirectories."
-        )
+        logger.info(f"Found {len(sample_data_subdir)} sample input subdirectories.")
 
-        if not sample_data_input_subdirs:
+        if not sample_data_subdir:
             logger.warning("No valid sample input subdirectories found for upload.")
 
         tasks = [
-            upload_input_data_wrapper(remote_bucket_name, workspace_id, p.name)
-            for p in sample_data_input_subdirs
+            s3_controller.upload_input_data(workspace_id, filename.name)
+            for filename in sample_data_subdir
         ]
         await asyncio.gather(*tasks)
 
