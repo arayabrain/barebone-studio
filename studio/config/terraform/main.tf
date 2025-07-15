@@ -478,12 +478,8 @@ resource "aws_efs_access_point" "snmk" {
 # S3 bucket for application storage
 # =================================
 
-locals {
-  bucket_suffix = formatdate("YYYY-MM-DD", timestamp())
-}
-
 resource "aws_s3_bucket" "app_storage" {
-  bucket = "subscr-optinist-app-storage-${local.bucket_suffix}"
+  bucket = "subscr-optinist-app-storage"
   force_destroy = true
 
   tags = {
@@ -493,7 +489,7 @@ resource "aws_s3_bucket" "app_storage" {
 }
 
 resource "aws_s3_bucket" "user_data" {
-  bucket = "subscr-optinist-user-data-${local.bucket_suffix}"
+  bucket = "subscr-optinist-user-data"
   force_destroy = true
 
   tags = {
@@ -1073,6 +1069,26 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy" "ecs_secrets_policy" {
+  name = "ecs-secrets-policy"
+  role = aws_iam_role.ecs_task_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          aws_secretsmanager_secret.aws_credentials.arn
+        ]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "batch_service_additional" {
   name = "subscr-batch-service-additional"
   role = aws_iam_role.batch_service.id
@@ -1523,12 +1539,26 @@ resource "aws_iam_policy" "subscr_optinist_cloud_user_policy" {
           "batch:DescribeJobs",
           "batch:ListJobs",
           "batch:CancelJob",
+          "batch:TerminateJob",
           "batch:RegisterJobDefinition",
+          "batch:DeregisterJobDefinition",
+          "batch:DescribeJobQueues",
+          "batch:DescribeComputeEnvironments",
+          "batch:UpdateComputeEnvironment",
+          "batch:TagResource",
+          "batch:UntagResource",
+          "batch:DescribeJobDefinitions",
+          "logs:GetLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
           "iam:PassRole",
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "ec2:DescribeInstances",
+          "ecs:DescribeTasks",
+          "ecs:DescribeContainerInstances"
         ]
         Resource = "*"
       }
@@ -1612,6 +1642,20 @@ resource "aws_iam_role_policy" "ecs_task_ecr_access" {
         Resource = "*"
       }
     ]
+  })
+}
+
+# Store AWS credentials in Secrets Manager
+resource "aws_secretsmanager_secret" "aws_credentials" {
+  name = "subscr-optinist-cloud-aws-credentials"
+  description = "AWS credentials for optinist cloud user"
+}
+
+resource "aws_secretsmanager_secret_version" "aws_credentials" {
+  secret_id = aws_secretsmanager_secret.aws_credentials.id
+  secret_string = jsonencode({
+    AWS_ACCESS_KEY_ID = aws_iam_access_key.subscr_optinist_cloud_user_access_key.id
+    AWS_SECRET_ACCESS_KEY = aws_iam_access_key.subscr_optinist_cloud_user_access_key.secret
   })
 }
 
@@ -2413,7 +2457,7 @@ resource "aws_ecs_task_definition" "app" {
         },
         {
           name  = "AWS_BATCH_JOB_ROLE"
-          value = aws_iam_role.ecs_task.arn
+          value = aws_iam_role.batch_job.arn
         },
         {
           name  = "AWS_BATCH_JOB_DEFINITION"
@@ -2425,11 +2469,11 @@ resource "aws_ecs_task_definition" "app" {
         },
         {
           name  = "AWS_ACCESS_KEY_ID"
-          value = aws_iam_access_key.subscr_optinist_cloud_user_access_key.id
+          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_ACCESS_KEY_ID::"
         },
         {
           name  = "AWS_SECRET_ACCESS_KEY"
-          value = aws_iam_access_key.subscr_optinist_cloud_user_access_key.secret
+          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_SECRET_ACCESS_KEY::"
         },
         {
           name  = "AWS_BATCH_FREE_QUEUE"
@@ -2615,7 +2659,7 @@ resource "aws_batch_job_definition" "optinist" {
     image = "${var.ecr_repository_url}:latest"
     vcpus = 2
     memory = 4096
-    jobRoleArn = aws_iam_role.ecs_task.arn
+    jobRoleArn = aws_iam_role.batch_job.arn
 
     command = ["python", "/app/studio/app/common/core/rules/func.py"]
 
@@ -2804,7 +2848,7 @@ output "backend_config" {
 output "aws_batch_config" {
   description = "AWS Batch configuration values for batch_config"
   value = {
-    AWS_BATCH_JOB_ROLE = aws_iam_role.ecs_task.arn
+    AWS_BATCH_JOB_ROLE = aws_iam_role.batch_job.arn
     AWS_BATCH_S3_BUCKET_NAME = aws_s3_bucket.app_storage.id
     AWS_BATCH_S3_USER_DATA_BUCKET = aws_s3_bucket.user_data.id
     AWS_BATCH_FREE_QUEUE = aws_batch_job_queue.free_tier.name

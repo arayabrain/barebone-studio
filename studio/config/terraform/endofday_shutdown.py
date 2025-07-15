@@ -503,38 +503,77 @@ def validate_capacity_provider() -> bool:
     return exists
 
 
-def shutdown_batch_environments() -> bool:
-    """Disable and clean up Batch compute environments"""
-    print(f"{Colors.YELLOW}Shutting down AWS Batch environments...{Colors.NC}")
+def cleanup_orphaned_batch_instances() -> bool:
+    """Clean up orphaned AWS Batch compute environment instances"""
+    print(f"{Colors.YELLOW}Cleaning up orphaned Batch instances...{Colors.NC}")
 
-    # Disable job queues first
-    for queue_name in ["subscr-optinist-free-queue", "subscr-optinist-paid-queue"]:
-        print(f"{Colors.YELLOW}Disabling Batch job queue: {queue_name}{Colors.NC}")
-        run_command(
-            [
-                "aws",
-                "batch",
-                "update-job-queue",
-                "--job-queue",
-                queue_name,
-                "--state",
-                "DISABLED",
-            ],
-            check=False,
-        )
+    # Get instances with Batch-related names that are running
+    orphaned_instances = run_command(
+        [
+            "aws",
+            "ec2",
+            "describe-instances",
+            "--filters",
+            "Name=instance-state-name,Values=running",
+            "Name=tag:Name,Values=*Batch*",
+            "--query",
+            "Reservations[].Instances[].InstanceId",
+            "--output",
+            "text",
+        ]
+    )
 
-    # Wait a bit for queues to disable
-    time.sleep(30)
-
-    # Disable compute environments
-    for env_name in [
-        "subscr-optinist-cloud-batch-free-tier",
-        "subscr-optinist-cloud-batch-paid-tier",
-    ]:
+    if orphaned_instances and orphaned_instances.strip():
+        instance_list = orphaned_instances.split()
         print(
-            f"{Colors.YELLOW}Disabling Batch compute environment: {env_name}"
-            f"{Colors.NC}"
+            f"{Colors.YELLOW}Found {len(instance_list)}{Colors.NC} "
+            f"{Colors.YELLOW}orphaned Batch instances{Colors.NC}"
         )
+
+        for instance_id in instance_list:
+            print(
+                f"{Colors.YELLOW}Terminating orphaned instance: {Colors.NC}"
+                f"{instance_id}"
+            )
+            run_command(
+                [
+                    "aws",
+                    "ec2",
+                    "terminate-instances",
+                    "--instance-ids",
+                    instance_id,
+                ],
+                check=False,
+            )
+    else:
+        print(f"{Colors.GREEN}No orphaned Batch instances found{Colors.NC}")
+
+    return True
+
+
+def shutdown_batch_environments() -> bool:
+    """Disable all AWS Batch compute environments to prevent new jobs"""
+    print(f"{Colors.YELLOW}Disabling AWS Batch compute environments...{Colors.NC}")
+
+    # Get all compute environments
+    environments = run_command(
+        [
+            "aws",
+            "batch",
+            "describe-compute-environments",
+            "--query",
+            "computeEnvironments[].computeEnvironmentName",
+            "--output",
+            "text",
+        ]
+    )
+
+    if not environments:
+        print(f"{Colors.YELLOW}No compute environments found{Colors.NC}")
+        return True
+
+    for env_name in environments.split():
+        print(f"{Colors.YELLOW}Disabling environment: {env_name}{Colors.NC}")
         run_command(
             [
                 "aws",
@@ -547,6 +586,9 @@ def shutdown_batch_environments() -> bool:
             ],
             check=False,
         )
+
+    # Clean up any orphaned instances after disabling environments
+    cleanup_orphaned_batch_instances()
 
     print(f"{Colors.GREEN}Batch environments shutdown initiated{Colors.NC}")
     return True

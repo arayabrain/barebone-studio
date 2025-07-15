@@ -342,6 +342,9 @@ def _snakemake_execute_batch(
                 else:
                     envvars.extend(["EFS_MOUNT_TARGET", "TMPDIR", "TMP"])
 
+                # Exclude AWS credentials from batch jobs - use IAM roles instead
+                envvars.extend(["-AWS_ACCESS_KEY_ID", "-AWS_SECRET_ACCESS_KEY"])
+
                 # Prepare container setup for EFS optimization
                 container_setup = []
                 if not RemoteStorageController.is_available():
