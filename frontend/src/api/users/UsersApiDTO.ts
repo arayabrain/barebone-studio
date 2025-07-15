@@ -9,6 +9,9 @@ export type UserDTO = {
     name: string
   }
   role_id?: number
+  attributes?: {
+    remote_bucket_name?: string
+  }
   created_at?: string
   updated_at?: string
 }

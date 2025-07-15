@@ -217,6 +217,10 @@ const Account = () => {
         <TitleData>Data size</TitleData>
         <BoxData>{convertBytes(user?.data_usage || 0)}</BoxData>
       </BoxFlex>
+      <BoxFlex>
+        <TitleData>Bucket name</TitleData>
+        <BoxData>{user?.attributes?.remote_bucket_name || "-"}</BoxData>
+      </BoxFlex>
       <BoxFlex sx={{ justifyContent: "space-between", mt: 10, maxWidth: 600 }}>
         <Button variant="contained" color="primary" onClick={onChangePwClick}>
           Change Password
