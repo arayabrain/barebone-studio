@@ -2468,14 +2468,6 @@ resource "aws_ecs_task_definition" "app" {
           value = var.aws_region
         },
         {
-          name  = "AWS_ACCESS_KEY_ID"
-          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_ACCESS_KEY_ID::"
-        },
-        {
-          name  = "AWS_SECRET_ACCESS_KEY"
-          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_SECRET_ACCESS_KEY::"
-        },
-        {
           name  = "AWS_BATCH_FREE_QUEUE"
           value = aws_batch_job_queue.free_tier.name
         },
@@ -2518,6 +2510,16 @@ resource "aws_ecs_task_definition" "app" {
         {
           name  = "OPTINIST_DIR"
           value = "/app/studio_data"
+        },
+      ]
+      secrets = [
+        {
+          name      = "AWS_ACCESS_KEY_ID"
+          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_ACCESS_KEY_ID::"
+        },
+        {
+          name      = "AWS_SECRET_ACCESS_KEY"
+          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_SECRET_ACCESS_KEY::"
         },
       ]
 
