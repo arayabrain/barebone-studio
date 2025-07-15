@@ -44,16 +44,20 @@ class Runner:
             workflow_dirpath = str(Path(__rule.output).parent.parent)
             cls.write_pid_file(workflow_dirpath, __rule.type, run_script_path)
 
-            input_info = cls.read_input_info(__rule.input)
-            cls.__change_dict_key_exist(input_info, __rule)
+            # read & construct input_info
+            orig_input_info = cls.__read_input_info(__rule.input)
+            input_info = cls.__align_input_info_content_keys(orig_input_info, __rule)
+            del orig_input_info
+
             nwbfile = input_info["nwbfile"]
 
-            # input_info
+            # construct input_info
+            # - Remove data that will not be used later here
             for key in list(input_info):
                 if key not in __rule.return_arg.values():
                     input_info.pop(key)
 
-            # output_info
+            # construct output_info
             output_info = cls.__execute_function(
                 __rule.path,
                 __rule.params,
@@ -226,32 +230,66 @@ class Runner:
         return output_info
 
     @classmethod
-    def __change_dict_key_exist(cls, input_info, rule_config: Rule):
-        for return_arg_key, arg_name in rule_config.return_arg.items():
-            return_name = return_arg_key.split(SmkRule.RETURN_ARG_KEY_DELIMITER)[0]
-            if return_name in input_info:
-                input_info[arg_name] = input_info.pop(return_name)
+    def __read_input_info(cls, input_files: list) -> dict:
+        """
+        Read input files (.pkl) and construct data for further processing
+        """
 
-    @classmethod
-    def read_input_info(cls, input_files):
-        input_info = {}
-        for filepath in input_files:
-            load_data = PickleReader.read(filepath)
+        result_input_info = {}
 
-            # validate load_data content
+        for input_file in input_files:
+            ids = ExptOutputPathIds(os.path.dirname(input_file))
+
+            # Read & validate load_data content
+            load_data = PickleReader.read(input_file)
             assert PickleReader.check_is_valid_node_pickle(
                 load_data
-            ), f"Invalid node input data content. [{filepath}]"
+            ), f"Invalid node input data content. [{input_file}]"
 
-            merged_nwb = cls.__deep_merge(
-                load_data.pop("nwbfile", {}), input_info.pop("nwbfile", {})
-            )
-            input_info = dict(list(load_data.items()) + list(input_info.items()))
-            input_info["nwbfile"] = merged_nwb
-        return input_info
+            # Store input data for each function_id (node id)
+            single_input_info = load_data.copy()  # sharrow copy
+            result_input_info[ids.function_id] = single_input_info
+
+        return result_input_info
 
     @classmethod
-    def __deep_merge(cls, dict1, dict2):
+    def __align_input_info_content_keys(
+        cls, orig_input_info: dict, rule_config: Rule
+    ) -> dict:
+        """
+        Aligns the keys in the input_info data for further processing.
+        """
+
+        result_input_info = {}
+        merged_nwb = {}
+
+        for return_arg_key, arg_name in rule_config.return_arg.items():
+            return_name, function_id = return_arg_key.split(
+                SmkRule.RETURN_ARG_KEY_DELIMITER
+            )
+            single_input_info = orig_input_info[function_id]
+
+            if return_name in single_input_info:
+                # Rename the key of the matching element and store it again
+                #  (for further processing)
+                single_input_info[arg_name] = single_input_info.pop(return_name)
+
+                # Store in return value
+                # (At this stage, expand input_info split by function_id into flat)
+                result_input_info = cls.__deep_merge(
+                    result_input_info, single_input_info
+                )
+
+                merged_nwb = cls.__deep_merge(
+                    merged_nwb, single_input_info.pop("nwbfile", {})
+                )
+
+        result_input_info["nwbfile"] = merged_nwb
+
+        return result_input_info
+
+    @classmethod
+    def __deep_merge(cls, dict1: dict, dict2: dict) -> dict:
         if not isinstance(dict1, dict) or not isinstance(dict2, dict):
             return dict2
         merged = dict1.copy()
@@ -263,7 +301,7 @@ class Runner:
         return merged
 
     @classmethod
-    def __dict2leaf(cls, root_dict: dict, path_list):
+    def __dict2leaf(cls, root_dict: dict, path_list: list) -> dict:
         path = path_list.pop(0)
         if len(path_list) > 0:
             return cls.__dict2leaf(root_dict[path], path_list)
