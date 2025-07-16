@@ -239,7 +239,16 @@ def data_slice(
         )
         info.update(output_data)
 
-        return info
+        main_data_object = list(output_data.values())[0]
+        # Build the result dictionary with the main output
+        result = {"sliced_data": main_data_object}
+        # Add any additional outputs
+        if "mean_timeseries" in info:
+            result["mean_timeseries"] = info["mean_timeseries"]
+        if "mean_image" in info:
+            result["mean_image"] = info["mean_image"]
+
+        return result
 
     except Exception as e:
         logger.error(f"Error during data slicing: {str(e)}")
