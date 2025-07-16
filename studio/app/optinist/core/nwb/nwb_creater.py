@@ -98,7 +98,7 @@ class NWBCreater:
                 external_file=image_path if not save_raw_image_to_nwb else None,
                 imaging_plane=imaging_plane,
                 starting_time=float(config[NWBDATASET.IMAGE_SERIES]["starting_time"]),
-                rate=1.0,
+                rate=float(config["imaging_plane"]["imaging_rate"]),
                 unit="normalized amplitude",
                 data=external_file.data if save_raw_image_to_nwb else None,
             )
@@ -162,7 +162,7 @@ class NWBCreater:
             unit="na",
             format="external",
             starting_time=0.0,
-            rate=1.0,
+            rate=float(nwbfile.imaging_planes["ImagingPlane"].imaging_rate),
         )
 
         xy_translation = TimeSeries(
@@ -170,7 +170,7 @@ class NWBCreater:
             data=xy_trans_data,
             unit="pixels",
             starting_time=0.0,
-            rate=1.0,
+            rate=float(nwbfile.imaging_planes["ImagingPlane"].imaging_rate),
         )
 
         corrected_image_stack = CorrectedImageStack(
