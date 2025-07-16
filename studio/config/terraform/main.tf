@@ -380,6 +380,63 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
+# Security Group for VPC Endpoints
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "subscr-optinist-vpc-endpoints-sg"
+  description = "Security group for VPC endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+  }
+
+  tags = {
+    Name = "subscr-optinist-vpc-endpoints-sg"
+  }
+}
+
+# ECR API endpoint
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.ap-northeast-1.ecr.api"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.private1.id, aws_subnet.private2.id]
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name = "subscr-optinist-ecr-api-endpoint"
+  }
+}
+
+# ECR Docker endpoint
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.ap-northeast-1.ecr.dkr"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.private1.id, aws_subnet.private2.id]
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name = "subscr-optinist-ecr-dkr-endpoint"
+  }
+}
+
+# CloudWatch Logs endpoint
+resource "aws_vpc_endpoint" "logs" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.ap-northeast-1.logs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.private1.id, aws_subnet.private2.id]
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name = "subscr-optinist-logs-endpoint"
+  }
+}
+
 # ===
 # RDS
 # ===
@@ -1118,6 +1175,7 @@ resource "aws_iam_role_policy" "batch_service_additional" {
   })
 }
 
+
 resource "time_sleep" "batch_role_propagation" {
   depends_on = [
     aws_iam_role_policy_attachment.batch_service_role,
@@ -1619,6 +1677,49 @@ resource "aws_iam_role_policy" "batch_job_s3" {
           aws_s3_bucket.app_storage.arn,
           "${aws_s3_bucket.app_storage.arn}/*"
         ]
+      }
+    ]
+  })
+}
+
+# Add ECR access to batch job role
+resource "aws_iam_role_policy" "batch_job_ecr_access" {
+  name = "subscr-batch-job-ecr-access"
+  role = aws_iam_role.batch_job.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Add CloudWatch logs permissions for batch jobs
+resource "aws_iam_role_policy" "batch_job_logs" {
+  name = "subscr-batch-job-logs-access"
+  role = aws_iam_role.batch_job.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:CreateLogGroup"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
       }
     ]
   })

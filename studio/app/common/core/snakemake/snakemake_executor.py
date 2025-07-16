@@ -249,7 +249,8 @@ def _snakemake_execute_batch(
         logger.debug("Prepare batch workspace")
         batch_executor.prepare_batch_workspace()
 
-        cores = getattr(params, "cores", 1)
+        # cores = getattr(params, "cores", 2)
+        cores = 2  # Set consistent cores for debugging
         deployment_methods = []
         if getattr(params, "use_conda", True):
             logger.debug("Use conda deployment method")
@@ -293,15 +294,7 @@ def _snakemake_execute_batch(
                 resource_settings=ResourceSettings(
                     nodes=10,
                     cores=cores,
-                    default_resources=DefaultResources(
-                        [
-                            "mem_mb=4096",
-                            # Add disk space for local scratch
-                            "disk_mb=10240"
-                            if not RemoteStorageController.is_available()
-                            else "mem_mb=4096",
-                        ]
-                    ),
+                    default_resources=DefaultResources(["mem_mb=4096"]),
                 ),
                 deployment_settings=DeploymentSettings(
                     deployment_method=deployment_methods,
@@ -335,49 +328,96 @@ def _snakemake_execute_batch(
                 selected_job_queue = batch_executor.get_job_queue_for_user()
                 logger.info(f"Using AWS Batch job queue: {selected_job_queue}")
 
-                # Prepare environment variables for batch jobs
-                envvars = ["USE_AWS_BATCH"]
-                if RemoteStorageController.is_available():
-                    envvars.append("S3_DEFAULT_BUCKET_NAME")
-                else:
-                    envvars.extend(["EFS_MOUNT_TARGET", "TMPDIR", "TMP"])
+                # Temporarily remove AWS credentials from environment for batch jobs
+                # Forces batch jobs to use IAM roles instead of hardcoded credentials
+                aws_access_key = os.environ.pop("AWS_ACCESS_KEY_ID", None)
+                aws_secret_key = os.environ.pop("AWS_SECRET_ACCESS_KEY", None)
 
-                # Exclude AWS credentials from batch jobs - use IAM roles instead
-                envvars.extend(["-AWS_ACCESS_KEY_ID", "-AWS_SECRET_ACCESS_KEY"])
+                try:
+                    # Prepare environment variables for batch jobs
+                    envvars = ["USE_AWS_BATCH"]
+                    if RemoteStorageController.is_available():
+                        envvars.extend(
+                            [
+                                "S3_DEFAULT_BUCKET_NAME",
+                                "AWS_DEFAULT_REGION",
+                                "PYTHONPATH",
+                            ]
+                        )
+                        logger.info("Using S3 storage for batch jobs")
+                    else:
+                        envvars.extend(["EFS_MOUNT_TARGET", "TMPDIR", "TMP"])
 
-                # Prepare container setup for EFS optimization
-                container_setup = []
-                if not RemoteStorageController.is_available():
-                    container_setup = _get_batch_container_setup_commands()
+                    # Prepare container setup for EFS optimization
+                    container_setup = []
+                    if not RemoteStorageController.is_available():
+                        container_setup = _get_batch_container_setup_commands()
 
-                dag_api.execute_workflow(
-                    executor="aws-batch",
-                    execution_settings=ExecutionSettings(
-                        retries=3,
-                        keep_going=False,
-                    ),
-                    executor_settings=ExecutorSettings(
-                        region=BATCH_CONFIG.AWS_DEFAULT_REGION,
-                        job_queue=selected_job_queue,
-                        job_role=BATCH_CONFIG.AWS_BATCH_JOB_ROLE,
-                    ),
-                    remote_execution_settings=RemoteExecutionSettings(
-                        container_image=batch_executor.get_container_image(),
-                        envvars=envvars,
-                        jobname="optinist-{rulename}-{jobid}",
-                        # Add container setup commands for EFS optimization
-                        precommand=container_setup if container_setup else None,
-                    ),
-                )
-                result = True
-                logger.info("AWS Batch workflow execution succeeded.")
+                    logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
+                    logger.debug(f"Job Queue: {selected_job_queue}")
+                    logger.debug(f"Job Role: {BATCH_CONFIG.AWS_BATCH_JOB_ROLE}")
+                    logger.debug(
+                        f"Container Image: {batch_executor.get_container_image()}"
+                    )
+                    logger.debug(f"Environment Variables: {envvars}")
+                    logger.debug(
+                        f"S3 Available: {RemoteStorageController.is_available()}"
+                    )
+                    logger.debug(f"Container Setup Commands: {container_setup}")
+                    logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
+
+                    dag_api.execute_workflow(
+                        executor="aws-batch",
+                        execution_settings=ExecutionSettings(
+                            retries=3,
+                            keep_going=False,
+                        ),
+                        executor_settings=ExecutorSettings(
+                            region=BATCH_CONFIG.AWS_DEFAULT_REGION,
+                            job_queue=selected_job_queue,
+                            job_role=BATCH_CONFIG.AWS_BATCH_JOB_ROLE,
+                        ),
+                        remote_execution_settings=RemoteExecutionSettings(
+                            container_image=batch_executor.get_container_image(),
+                            envvars=envvars,
+                            jobname="optinist-{rulename}-{jobid}",
+                            # Add container setup commands for EFS optimization
+                            precommand=container_setup if container_setup else None,
+                        ),
+                    )
+                    result = True
+                    logger.info("AWS Batch workflow execution succeeded.")
+                finally:
+                    # Restore AWS credentials to environment
+                    if aws_access_key is not None:
+                        os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key
+                    if aws_secret_key is not None:
+                        os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key
             except Exception as e:
                 result = False
                 logger.error(f"AWS Batch workflow execution failed: {e}")
+                logger.error(f"Exception details: {str(e)}")
+                import traceback
+
+                logger.error(f"Full traceback: {traceback.format_exc()}")
             finally:
                 smk_logger.extract_errors_from_snakemake_log(smk_workdir)
                 # Sync results back from batch execution
                 # batch_executor.sync_batch_results()
+
+                if not result:
+                    logger.error(
+                        "AWS Batch execution failed - attempting to retrieve job logs"
+                    )
+                    try:
+                        # Get recent failed jobs and their logs
+                        recent_jobs = batch_executor.get_recent_failed_jobs()
+                        for job_id in recent_jobs[:3]:  # Only check last 3 failed jobs
+                            job_logs = batch_executor.get_job_logs(job_id)
+                            if job_logs:
+                                logger.error(f"Batch Job {job_id} logs:\n{job_logs}")
+                    except Exception as log_error:
+                        logger.error(f"Failed to retrieve batch job logs: {log_error}")
 
     except Exception as e:
         logger.error(f"Failed to setup AWS Batch execution: {e}")

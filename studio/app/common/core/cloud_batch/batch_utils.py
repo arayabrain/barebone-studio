@@ -1,7 +1,7 @@
 import asyncio
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -379,3 +379,29 @@ class BatchUtils:
             batch_resources["gpu"] = resources["gpu"]
 
         return batch_resources
+
+    def get_recent_failed_jobs(self, limit: int = 5) -> List[str]:
+        """
+        Get recent failed batch jobs for debugging.
+
+        Args:
+            limit: Maximum number of failed jobs to return
+
+        Returns:
+            List of job IDs for recently failed jobs
+        """
+        try:
+            # List jobs in FAILED state from the last hour
+            response = self.batch_client.list_jobs(
+                jobQueue=self.get_job_queue_for_user(),
+                jobStatus="FAILED",
+                maxResults=limit,
+            )
+
+            failed_jobs = [job["jobId"] for job in response.get("jobList", [])]
+            logger.info(f"Found {len(failed_jobs)} recent failed jobs")
+            return failed_jobs
+
+        except ClientError as e:
+            logger.error(f"Failed to list recent failed jobs: {e}")
+            return []
