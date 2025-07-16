@@ -35,7 +35,7 @@ class RoiData(BaseData):
         _dir = join_filepath([output_dir, "tiff", file_name])
         create_directory(_dir)
         self.path = join_filepath([_dir, f"{file_name}.tif"])
-        tifffile.imsave(self.path, images)
+        tifffile.imwrite(self.path, images)
 
         del images, data
         gc.collect()
