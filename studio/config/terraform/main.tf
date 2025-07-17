@@ -1616,7 +1616,14 @@ resource "aws_iam_policy" "subscr_optinist_cloud_user_policy" {
           "s3:ListBucket",
           "ec2:DescribeInstances",
           "ecs:DescribeTasks",
-          "ecs:DescribeContainerInstances"
+          "ecs:DescribeContainerInstances",
+          "ecr:GetAuthorizationToken",
+          "ecr:DescribeRepositories",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "cloudwatch:ListMetrics",
+          "cloudwatch:GetMetricStatistics"
         ]
         Resource = "*"
       }
