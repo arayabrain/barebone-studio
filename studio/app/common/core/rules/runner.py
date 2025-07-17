@@ -264,10 +264,23 @@ class Runner:
         merged_nwb = {}
 
         for return_arg_key, arg_name in rule_config.return_arg.items():
-            return_name, function_id = return_arg_key.split(
-                SmkRule.RETURN_ARG_KEY_DELIMITER
-            )
-            single_input_info = orig_input_info[function_id]
+            # RETURN_ARG_KEY includes key delimiter (standard)
+            if SmkRule.RETURN_ARG_KEY_DELIMITER in return_arg_key:
+                return_name, function_id = return_arg_key.split(
+                    SmkRule.RETURN_ARG_KEY_DELIMITER
+                )
+
+                # Get input_info corresponding to function_id
+                single_input_info = orig_input_info[function_id]
+            # RETURN_ARG_KEY does not include a delimiter (old version: v2.3 or earlier)
+            else:
+                return_name, function_id = (return_arg_key, None)
+
+                # Merge input_info for all function_ids
+                single_input_info = {}
+                for tmp_value in orig_input_info.values():
+                    single_input_info.update(tmp_value)
+                del tmp_value
 
             if return_name in single_input_info:
                 # Rename the key of the matching element and store it again
