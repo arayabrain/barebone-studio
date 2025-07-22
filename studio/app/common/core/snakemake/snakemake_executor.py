@@ -875,12 +875,8 @@ def _snakemake_execute_batch(
         logger.debug("Prepare batch workspace")
         batch_executor.prepare_batch_workspace()
 
-        # cores = getattr(params, "cores", 2)
         cores = 2  # Set consistent cores for debugging
-        deployment_methods = []
-        if getattr(params, "use_conda", True):
-            logger.debug("Use conda deployment method")
-            deployment_methods.append(DeploymentMethod.CONDA)
+        deployment_methods = [DeploymentMethod.CONDA]  # Set consistent for debugging
 
         # Configure storage based on availability
         storage_settings = None
@@ -905,6 +901,19 @@ def _snakemake_execute_batch(
             storage_settings = _get_efs_optimized_storage_settings(
                 workspace_id, unique_id
             )
+        batch_workdir = Path("/app")
+        config_source = join_filepath([smk_workdir, DIRPATH.SNAKEMAKE_CONFIG_YML])
+        config_dest = join_filepath([str(batch_workdir), DIRPATH.SNAKEMAKE_CONFIG_YML])
+
+        # Copy config file to batch workdir
+        import shutil
+
+        if os.path.exists(config_source):
+            shutil.copy2(config_source, config_dest)
+            logger.debug(f"Copied config from {config_source} to {config_dest}")
+        else:
+            logger.error(f"Config file not found at {config_source}")
+            return False
 
         # Use context manager for proper cleanup
         with SnakemakeApi(
@@ -915,7 +924,7 @@ def _snakemake_execute_batch(
         ) as snakemake_api:
             workflow_api = snakemake_api.workflow(
                 snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
-                workdir=Path(smk_workdir),
+                workdir=batch_workdir,
                 storage_settings=storage_settings,
                 resource_settings=ResourceSettings(
                     nodes=10,
@@ -1157,6 +1166,13 @@ def _snakemake_execute_batch(
                         os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key
                     if aws_secret_key is not None:
                         os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key
+
+                    try:
+                        if os.path.exists(config_dest):
+                            os.remove(config_dest)
+                            logger.debug(f"Cleaned up copied config: {config_dest}")
+                    except Exception as e:
+                        logger.warning(f"Failed to cleanup config {config_dest}: {e}")
             except Exception as e:
                 result = False
                 logger.error(f"AWS Batch workflow execution failed: {e}")

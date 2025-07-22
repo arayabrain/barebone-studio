@@ -1622,6 +1622,8 @@ resource "aws_iam_policy" "subscr_optinist_cloud_user_policy" {
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
+          "ecr:DescribeImages",
+          "ecr:GetRepositoryPolicy",
           "cloudwatch:ListMetrics",
           "cloudwatch:GetMetricStatistics"
         ]
@@ -1703,7 +1705,9 @@ resource "aws_iam_role_policy" "batch_job_ecr_access" {
           "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage"
+          "ecr:BatchGetImage",
+          "ecr:DescribeImages",
+          "ecr:GetRepositoryPolicy"
         ]
         Resource = "*"
       }
@@ -2771,7 +2775,6 @@ resource "aws_batch_job_definition" "optinist" {
     memory = 4096
     jobRoleArn = aws_iam_role.batch_job.arn
 
-    command = ["python", "/app/studio/app/common/core/rules/func.py"]
 
     mountPoints = [
         {
@@ -2839,7 +2842,11 @@ resource "aws_batch_job_definition" "optinist" {
       {
         name = "USE_AWS_BATCH"
         value = "true"
-      }
+      },
+      {
+        name = "PYTHONPATH"
+        value = "/app"
+      },
     ]
   })
 }
