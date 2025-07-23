@@ -40,24 +40,24 @@ class Runner:
         try:
             logger.info("start rule runner")
 
-            # write pid file
+            # Write pid file
             workflow_dirpath = str(Path(__rule.output).parent.parent)
             cls.write_pid_file(workflow_dirpath, __rule.type, run_script_path)
 
-            # read & construct input_info
+            # Read & construct input_info
             orig_input_info = cls.__read_input_info(__rule.input)
             input_info = cls.__align_input_info_content_keys(orig_input_info, __rule)
             del orig_input_info
 
             nwbfile = input_info["nwbfile"]
 
-            # construct input_info
+            # Construct input_info
             # - Remove data that will not be used later here
             for key in list(input_info):
                 if key not in __rule.return_arg.values():
                     input_info.pop(key)
 
-            # construct output_info
+            # Construct output_info
             output_info = cls.__execute_function(
                 __rule.path,
                 __rule.params,
@@ -66,7 +66,7 @@ class Runner:
                 input_info,
             )
 
-            # nwbfileの設定
+            # Save NWB data of Function(Node)
             output_info["nwbfile"] = cls.__save_func_nwb(
                 f"{__rule.output.split('.')[0]}.nwb",
                 __rule.type,
@@ -74,18 +74,18 @@ class Runner:
                 output_info,
             )
 
-            # 各関数での結果を保存
+            # Save the processing result of the Function(Node) (.pkl)
             PickleWriter.write(__rule.output, output_info)
 
-            # NWB全体保存
+            # Save NWB data through Workflow
             if __rule.output in last_output:
-                # 全体の結果を保存する
                 path = join_filepath(os.path.dirname(os.path.dirname(__rule.output)))
                 path = join_filepath([path, "whole.nwb"])
                 cls.save_all_nwb(path, output_info["nwbfile"])
 
             logger.info("rule output: %s", __rule.output)
 
+            # Free up resources
             del input_info, output_info
             gc.collect()
 
