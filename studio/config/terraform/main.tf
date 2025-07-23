@@ -99,6 +99,11 @@ variable "ecr_repository_url" {
   type        = string
 }
 
+variable "ecr_batch_repository_url" {
+  description = "ECR repository URL for OptiNiSt Batch Docker image"
+  type        = string
+}
+
 variable "asg_min_size" {
   description = "Minimum number of instances in ASG"
   type        = number
@@ -2593,7 +2598,7 @@ resource "aws_ecs_task_definition" "app" {
         },
         {
           name  = "AWS_ECR_REPOSITORY"
-          value = "${var.ecr_repository_url}:latest"
+          value = "${var.ecr_batch_repository_url}:latest"
         },
         {
           name  = "AWS_BATCH_LOG_GROUP"
@@ -2841,11 +2846,47 @@ resource "aws_batch_job_definition" "optinist" {
       },
       {
         name = "USE_AWS_BATCH"
-        value = "true"
+        value = "false"
       },
       {
         name = "PYTHONPATH"
         value = "/app"
+      },
+      {
+        name = "EFS_MOUNT_TARGET"
+        value = "/mnt/efs"
+      },
+      {
+        name = "TMPDIR"
+        value = "/tmp"
+      },
+      {
+        name = "TMP"
+        value = "/tmp"
+      },
+      {
+        name = "IS_STANDALONE"
+        value = "true"
+      },
+      {
+        name = "USE_FIREBASE_TOKEN"
+        value = "false"
+      },
+      {
+        name = "REMOTE_STORAGE_TYPE"
+        value = "0"
+      },
+      {
+        name = "TZ"
+        value = "Asia/Tokyo"
+      },
+      {
+        name = "PYTHONUNBUFFERED"
+        value = "1"
+      },
+      {
+        name = "OPTINIST_DIR"
+        value = "/app/studio_data"
       },
     ]
   })

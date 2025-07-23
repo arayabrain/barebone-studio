@@ -876,8 +876,6 @@ def _snakemake_execute_batch(
         batch_executor.prepare_batch_workspace()
 
         cores = 2  # Set consistent cores for debugging
-        deployment_methods = [DeploymentMethod.CONDA]  # Set consistent for debugging
-
         # Configure storage based on availability
         storage_settings = None
         if RemoteStorageController.is_available():
@@ -932,7 +930,7 @@ def _snakemake_execute_batch(
                     default_resources=DefaultResources(["mem_mb=4096"]),
                 ),
                 deployment_settings=DeploymentSettings(
-                    deployment_method=deployment_methods,
+                    deployment_method={DeploymentMethod.CONDA},
                     conda_frontend="conda",
                     conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
                 ),
@@ -1034,6 +1032,7 @@ def _snakemake_execute_batch(
                             execution_settings=ExecutionSettings(
                                 retries=3,
                                 keep_going=False,
+                                latency_wait=10,
                             ),
                             executor_settings=ExecutorSettings(
                                 region=BATCH_CONFIG.AWS_DEFAULT_REGION,

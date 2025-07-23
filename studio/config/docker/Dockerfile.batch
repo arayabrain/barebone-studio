@@ -1,0 +1,90 @@
+FROM --platform=linux/amd64 python:3.11-slim
+
+WORKDIR /app
+
+# Install essential system packages for compute workloads
+RUN apt-get --allow-releaseinfo-change update && \
+    apt-get install --no-install-recommends -y \
+        procps curl wget unzip git \
+        gcc g++ libgl1 libgl1-mesa-dev libopencv-dev \
+        default-mysql-client && \
+    apt-get autoremove -y && apt-get clean
+
+# Install conda for package management (smaller installation than main Dockerfile)
+RUN mkdir -p /opt/miniforge && \
+    curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" -o /opt/miniforge/Miniforge3.sh && \
+    bash /opt/miniforge/Miniforge3.sh -b -u -p /opt/miniforge && \
+    rm /opt/miniforge/Miniforge3.sh && \
+    export PATH="$PATH:/opt/miniforge/bin" && \
+    conda upgrade -y --all && \
+    conda config --set channel_priority flexible && \
+    conda clean -y --all
+ENV PATH $PATH:/opt/miniforge/bin
+
+# Install AWS CLI (required for S3 access)
+RUN cd /tmp && \
+    wget https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip && \
+    unzip awscli-exe-linux-x86_64.zip && \
+    sh ./aws/install && \
+    rm -rf awscli-exe-linux-x86_64.zip aws
+
+# Install Python dependencies
+COPY pyproject.toml poetry.lock ./
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install poetry && \
+    poetry config virtualenvs.create false
+
+# Install core dependencies (without dev/doc groups)
+RUN poetry install --no-root --only main
+
+# Explicitly install storage plugins to prevent auto-installation issues
+RUN pip install --no-cache-dir \
+    snakemake-storage-plugin-fs \
+    snakemake-storage-plugin-s3 \
+    snakemake-executor-plugin-aws-batch
+
+# Download CaIman model files (required for some workflows)
+COPY studio/app/optinist/wrappers/caiman/run_download_model_files.sh ./
+RUN bash run_download_model_files.sh && rm run_download_model_files.sh
+
+# Copy only necessary application files (exclude frontend build)
+COPY studio /app/studio
+COPY sample_data /app/sample_data
+COPY main.py alembic.ini ./
+
+# Create necessary directories for batch execution
+RUN mkdir -p /app/studio_data/input && \
+    mkdir -p /app/studio_data/output && \
+    mkdir -p /app/.snakemake && \
+    mkdir -p /app/.snakemake/pip-deployments && \
+    mkdir -p /tmp/snakemake_scratch && \
+    chmod 755 /tmp/snakemake_scratch
+
+# Create a wrapper pip script that handles malformed calls gracefully
+RUN echo '#!/bin/bash' > /usr/local/bin/pip-wrapper && \
+    echo 'if [[ "$*" == *"--target"* ]] && [[ "$*" == "install --target"* ]]; then' >> /usr/local/bin/pip-wrapper && \
+    echo '  echo "Skipping malformed pip install - storage plugins already installed"' >> /usr/local/bin/pip-wrapper && \
+    echo '  exit 0' >> /usr/local/bin/pip-wrapper && \
+    echo 'else' >> /usr/local/bin/pip-wrapper && \
+    echo '  exec /usr/local/bin/pip-original "$@"' >> /usr/local/bin/pip-wrapper && \
+    echo 'fi' >> /usr/local/bin/pip-wrapper && \
+    chmod +x /usr/local/bin/pip-wrapper
+
+# Replace pip with our wrapper
+RUN mv /usr/local/bin/pip /usr/local/bin/pip-original && \
+    ln -s /usr/local/bin/pip-wrapper /usr/local/bin/pip
+
+# Set up environment for batch execution
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV OPTINIST_DIR=/app/studio_data
+
+# Batch-specific environment variables (baked into image)
+ENV IS_STANDALONE=true
+ENV USE_FIREBASE_TOKEN=false
+ENV USE_AWS_BATCH=false
+ENV REMOTE_STORAGE_TYPE=0
+ENV TZ=Asia/Tokyo
+
+# Default command for batch jobs (will be overridden by AWS Batch)
+CMD ["python", "-c", "print('OptiNiSt Batch Container Ready')"]
