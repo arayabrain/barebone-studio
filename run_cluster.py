@@ -2,6 +2,8 @@ import argparse
 import shutil
 import tempfile
 from pathlib import Path
+import tempfile
+from pathlib import Path
 
 from snakemake.api import (
     DAGSettings,
@@ -90,6 +92,12 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="optinist")
     parser.add_argument("--cores", type=int, default=2)
+    parser.add_argument(  # Default true, use --no-forceall to disable forceall
+        "--forceall", default=True, action=argparse.BooleanOptionalAction
+    )
+    parser.add_argument(  # Default true, use --no-use_conda to disable conda usage
+        "--use_conda", default=True, action=argparse.BooleanOptionalAction
+    )
     parser.add_argument(  # Default true, use --no-forceall to disable forceall
         "--forceall", default=True, action=argparse.BooleanOptionalAction
     )
