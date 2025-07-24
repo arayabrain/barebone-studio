@@ -230,6 +230,13 @@ class Runner:
         return output_info
 
     @classmethod
+    def read_input_info(cls, input_files: list) -> dict:
+        """
+        A wrapper for external access to __read_input_info
+        """
+        return cls.__read_input_info(input_files)
+
+    @classmethod
     def __read_input_info(cls, input_files: list) -> dict:
         """
         Read input files (.pkl) and construct data for further processing
