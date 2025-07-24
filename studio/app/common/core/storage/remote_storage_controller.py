@@ -57,6 +57,13 @@ class RemoteStorageLockError(Exception):
         message = "Remote data is temporary locked. " f"[{workspace_id}/{unique_id}]"
         super().__init__(message)
 
+    def __reduce__(self):
+        """
+        Code required to unpack pickled data on multiprocessing
+        (specifying the unpacking process)
+        """
+        return (self.__class__, (self.workspace_id, self.unique_id))
+
 
 class RemoteSyncStatusFileUtil:
     REMOTE_SYNC_STATUS_FILE = "remote_sync_stat.json"
