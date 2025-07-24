@@ -765,9 +765,6 @@ def snakemake_execute(workspace_id: str, unique_id: str, params: SmkParam):
 def _snakemake_execute_process(
     workspace_id: str, unique_id: str, params: SmkParam
 ) -> bool:
-    """
-    Local Snakemake execution process.
-    """
     # ------------------------------------------------------------
     # Snakemake execution process
     # ------------------------------------------------------------
@@ -806,37 +803,47 @@ def _snakemake_execute_process(
                 conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
             ),
         )
+
         logger.info("Workflow API created successfully")
         logger.info("Creating DAG...")
 
         forceall = getattr(params, "forceall", False)
 
-        dag_settings = DAGSettings(
-            forceall=forceall,
+        dag_api = workflow_api.dag(
+            dag_settings=DAGSettings(
+                forceall=forceall,
+            )
         )
 
-        dag_api = workflow_api.dag(
-            dag_settings=dag_settings,
-        )
         logger.info("DAG created successfully")
         logger.info("Starting workflow execution...")
 
+        snakemake_result = False
+
         try:
             dag_api.execute_workflow()
-            result = True
+
+            snakemake_result = True
             logger.info("snakemake_execute succeeded.")
         except Exception as e:
-            result = False
+            snakemake_result = False
             logger.error(f"snakemake_execute failed: {e}")
-        finally:
-            smk_logger.extract_errors_from_snakemake_log(smk_workdir)
+
+            # Logging errors via SmkStatusLogger to notify
+            #   the monitoring process (WorkflowMonitor) of the error occurrence
+            smk_logger.logger.error(e)
+
+    if snakemake_result:
+        logger.info("snakemake_execute succeeded.")
+    else:
+        logger.error("snakemake_execute failed..")
 
     smk_logger.clean_up()
 
     # Post-processing
-    _post_process_workflow(workspace_id, unique_id, result)
+    _post_process_workflow(workspace_id, unique_id, snakemake_result)
 
-    return result
+    return snakemake_result
 
 
 def _snakemake_execute_batch(
