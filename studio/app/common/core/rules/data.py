@@ -16,6 +16,8 @@ logger = AppLogger.get_logger()
 
 def main():
     try:
+        import os
+
         from studio.app.common.core.rules.file_writer import FileWriter
         from studio.app.common.core.snakemake.smk_utils import SmkUtils
         from studio.app.common.core.snakemake.snakemake_reader import RuleConfigReader
@@ -23,10 +25,20 @@ def main():
         from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil
         from studio.app.const import FILETYPE
 
+        logger.info(f"=== DATA RULE DEBUG INFO ===")
+        logger.info(f"Current working directory: {os.getcwd()}")
+        logger.info(f"Snakemake config keys: {list(snakemake.config.keys())}")
+        logger.info(f"Snakemake params: {snakemake.params}")
+        logger.info(
+            f"Environment variables: AWS_BATCH_JOB_ID={os.environ.get('AWS_BATCH_JOB_ID')}"
+        )
+
         last_output = snakemake.config["last_output"]
 
+        logger.info(f"Reading rule config for: {snakemake.params.name}")
         rule_config = RuleConfigReader.read(snakemake.params.name)
 
+        logger.info(f"Resolving NWB file reference...")
         rule_config = SmkUtils.resolve_nwbfile_reference(rule_config)
 
         if NodeTypeUtil.check_nodetype_from_filetype(rule_config.type) == NodeType.DATA:

@@ -43,8 +43,20 @@ class SmkConfigReader:
 
     @classmethod
     def read(cls, workspace_id: str, unique_id: str) -> dict:
+        import os
+
+        from studio.app.common.core.logger import AppLogger
+
+        logger = AppLogger.get_logger()
         filepath = cls.get_config_yaml_path(workspace_id, unique_id)
+
+        logger.debug(f"Reading config from: {filepath}")
+        logger.debug(f"File exists: {os.path.exists(filepath)}")
+        if os.path.exists(filepath):
+            logger.debug(f"File size: {os.path.getsize(filepath)} bytes")
         config = ConfigReader.read(filepath)
+        logger.debug(f"Read config: {config}")
+
         assert config, f"Invalid config yaml file: [{filepath}] [{config}]"
 
         return config

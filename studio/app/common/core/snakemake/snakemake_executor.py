@@ -909,6 +909,23 @@ def _snakemake_execute_batch(
         if os.path.exists(config_source):
             shutil.copy2(config_source, config_dest)
             logger.debug(f"Copied config from {config_source} to {config_dest}")
+
+            # Also ensure config is uploaded to S3 for batch job access
+            if RemoteStorageController.is_available():
+                try:
+                    # Upload config file to S3 location where batch jobs expect it
+                    s3_config_path = join_filepath(
+                        [
+                            DIRPATH.OUTPUT_DIR,
+                            workspace_id,
+                            unique_id,
+                            DIRPATH.SNAKEMAKE_CONFIG_YML,
+                        ]
+                    )
+                    RemoteStorageController.upload_file(config_source, s3_config_path)
+                    logger.debug(f"Uploaded config file to S3: {s3_config_path}")
+                except Exception as e:
+                    logger.error(f"Failed to upload config to S3: {e}")
         else:
             logger.error(f"Config file not found at {config_source}")
             return False
@@ -968,7 +985,7 @@ def _snakemake_execute_batch(
 
                 try:
                     # Prepare environment variables for batch jobs
-                    envvars = ["USE_AWS_BATCH"]
+                    envvars = ["USE_AWS_BATCH", "OPTINIST_DIR"]
                     if RemoteStorageController.is_available():
                         envvars.extend(
                             [
