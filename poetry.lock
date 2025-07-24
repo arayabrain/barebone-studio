@@ -4462,8 +4462,10 @@ tabulate = "*"
 throttler = "*"
 wrapt = "*"
 yte = ">=1.5.5,<2.0"
+yte = ">=1.5.5,<2.0"
 
 [package.extras]
+all = ["eido", "peppy", "pygments"]
 all = ["eido", "peppy", "pygments"]
 pep = ["eido", "peppy"]
 reports = ["pygments"]
