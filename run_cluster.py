@@ -2,8 +2,6 @@ import argparse
 import shutil
 import tempfile
 from pathlib import Path
-import tempfile
-from pathlib import Path
 
 from snakemake.api import (
     DAGSettings,
