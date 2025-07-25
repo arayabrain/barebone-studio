@@ -645,9 +645,8 @@ class S3StorageController(BaseRemoteStorageController):
                 # Use synchronous boto3 to avoid aioboto3 asyncio compatibility issues
                 # Run in thread pool to maintain async interface
                 def upload_file(local_path, s3_path):
-                    return boto3.client("s3").upload_file(
-                        local_path, self.bucket_name, s3_path
-                    )
+                    s3_client = boto3.client("s3")
+                    return s3_client.upload_file(local_path, self.bucket_name, s3_path)
 
                 await loop.run_in_executor(
                     None, upload_file, local_abs_path, s3_file_path

@@ -1050,6 +1050,10 @@ def _snakemake_execute_batch(
                     execution_start_time = time.time()
                     logger.info(f"Starting DAG execution at {execution_start_time}")
 
+                    # Start job monitoring before execution
+                    logger.info("Starting enhanced job monitoring...")
+                    batch_executor.start_job_monitoring()
+
                     try:
                         dag_api.execute_workflow(
                             executor="aws-batch",
@@ -1087,96 +1091,68 @@ def _snakemake_execute_batch(
 
                         # Try to get more detailed job information
                         try:
-                            recent_jobs = batch_executor.get_recent_failed_jobs(limit=3)
+                            recent_jobs = batch_executor.get_recent_failed_jobs(
+                                limit=3, include_context=True
+                            )
                             if recent_jobs:
                                 logger.error(
-                                    f"Found {len(recent_jobs)} recent failed jobs"
+                                    f"Found {len(recent_jobs)} recent failed jobs "
+                                    "with detailed context"
                                 )
 
-                                for i, job_id in enumerate(recent_jobs):
+                                for i, job_context in enumerate(recent_jobs):
+                                    job_id = job_context.get("job_id", "Unknown")
                                     logger.error(f"Failed job {i+1}: {job_id}")
 
-                                    # Get detailed job information
-                                    job_details = (
-                                        batch_executor.batch_client.describe_jobs(
-                                            jobs=[job_id]
-                                        )
+                                    # Show quick failure summary
+                                    exit_code = job_context.get("exit_code")
+                                    exit_reason = job_context.get(
+                                        "exit_reason", "Unknown"
                                     )
-                                    if job_details and job_details.get("jobs"):
-                                        job = job_details["jobs"][0]
-                                        logger.error(f"  Status: {job.get('status')}")
-                                        logger.error(
-                                            f"Status Reason:{job.get('statusReason')}"
-                                        )
-                                        logger.error(f"Created: {job.get('createdAt')}")
-                                        logger.error(f"Started: {job.get('startedAt')}")
-                                        logger.error(f"Stopped: {job.get('stoppedAt')}")
+                                    logger.error(
+                                        f"  Exit Code: {exit_code},  "
+                                        f"Reason: {exit_reason}"
+                                    )
 
-                                        # Container details
-                                        container = job.get("container", {})
+                                    # Show failure analysis summary
+                                    failure_analysis = job_context.get(
+                                        "failure_analysis", {}
+                                    )
+                                    if failure_analysis.get("likely_causes"):
                                         logger.error(
-                                            f"Exit Code: {container.get('exitCode')}"
+                                            f"  Likely Cause: "
+                                            f"{failure_analysis['likely_causes'][0]}"
                                         )
+                                    if failure_analysis.get("recommendations"):
                                         logger.error(
-                                            f"Exit Reason: {container.get('reason')}"
-                                        )
-                                        logger.error(
-                                            f"Log Stream: "
-                                            f"{container.get('logStreamName')}"
+                                            f"  Recommendation: "
+                                            f"{failure_analysis['recommendations'][0]}"
                                         )
 
-                                        # Attempts details
-                                        attempts = job.get("attempts", [])
-                                        logger.error(f"  Attempts: {len(attempts)}")
-                                        if attempts:
-                                            latest_attempt = attempts[-1]
+                                    # Enhanced context already provides detailed info
+                                    # Show sample log errors if available
+                                    logs = job_context.get("logs", {})
+                                    if logs and logs.get("error_patterns"):
+                                        logger.error("  Error Patterns:")
+                                        for pattern in logs["error_patterns"][
+                                            :2
+                                        ]:  # First 2 patterns
                                             logger.error(
-                                                f"Latest attempt started: "
-                                                f"{latest_attempt.get('startedAt')}"
-                                            )
-                                            logger.error(
-                                                f"Latest attempt stopped: "
-                                                f"{latest_attempt.get('stoppedAt')}"
-                                            )
-                                            logger.error(
-                                                f"Latest attempt reason: "
-                                                f"{latest_attempt.get('statusReason')}"
+                                                f"    - {pattern['pattern']}: "
+                                                f"{pattern['message'][:80]}..."
                                             )
 
-                                        # Job definition details
-                                        job_def = job.get("jobDefinition")
-                                        if job_def:
-                                            logger.error(f"  Job Definition: {job_def}")
+                                    # Show monitoring insights if available
+                                    mon_cntx = job_context.get("monitoring_context", {})
+                                    if mon_cntx and mon_cntx.get("monitoring_duration"):
+                                        duration = mon_cntx["monitoring_duration"]
+                                        logger.error(f"  Monitored for: {duration}")
 
-                                        # Platform capabilities
-                                        platform_caps = job.get(
-                                            "platformCapabilities", []
-                                        )
-                                        logger.error(
-                                            f"  Platform Capabilities: {platform_caps}"
-                                        )
-
-                                        # Get logs if available
-                                        log_stream = container.get("logStreamName")
-                                        if log_stream:
-                                            try:
-                                                job_logs = batch_executor.get_job_logs(
-                                                    job_id
-                                                )
-                                                if job_logs:
-                                                    # Only show last few lines
-                                                    log_lines = job_logs.split("\n")[
-                                                        -10:
-                                                    ]
-                                                    logger.error("Recent log lines:")
-                                                    for line in log_lines:
-                                                        if line.strip():
-                                                            logger.error(f"{line}")
-                                            except Exception as log_error:
-                                                logger.error(
-                                                    f"  Could not retrieve logs: "
-                                                    f"{log_error}"
-                                                )
+                                        if mon_cntx.get("log_snapshots"):
+                                            logger.error(
+                                                f"{len(mon_cntx['log_snapshots'])}"
+                                                "log snapshots during monitoring"
+                                            )
                         except Exception as detail_error:
                             logger.error(f"Failed to get job details: {detail_error}")
 
@@ -1204,23 +1180,94 @@ def _snakemake_execute_batch(
 
                 logger.error(f"Full traceback: {traceback.format_exc()}")
             finally:
+                # Stop job monitoring
+                logger.info("Stopping enhanced job monitoring...")
+                batch_executor.stop_job_monitoring()
+
                 smk_logger.extract_errors_from_snakemake_log(smk_workdir)
                 # Sync results back from batch execution
                 # batch_executor.sync_batch_results()
 
                 if not result:
                     logger.error(
-                        "AWS Batch execution failed - attempting to retrieve job logs"
+                        "AWS Batch execution failed - "
+                        "attempting to retrieve enhanced job logs"
                     )
                     try:
-                        # Get recent failed jobs and their logs
-                        recent_jobs = batch_executor.get_recent_failed_jobs()
-                        for job_id in recent_jobs[:3]:  # Only check last 3 failed jobs
-                            job_logs = batch_executor.get_job_logs(job_id)
-                            if job_logs:
-                                logger.error(f"Batch Job {job_id} logs:\n{job_logs}")
+                        # Get recent failed jobs with enhanced context
+                        recent_jobs = batch_executor.get_recent_failed_jobs(
+                            limit=3, include_context=True
+                        )
+
+                        if recent_jobs:
+                            logger.error(
+                                f"Found {len(recent_jobs)} recent "
+                                "failed jobs with enhanced context:"
+                            )
+
+                            for i, job_context in enumerate(recent_jobs, 1):
+                                logger.error(f"\n=== FAILED JOB {i} ANALYSIS ===")
+                                logger.error(f"Job ID: {job_context.get('job_id')}")
+                                logger.error(f"Job Name: {job_context.get('job_name')}")
+                                logger.error(
+                                    f"Exit Code: {job_context.get('exit_code')}"
+                                )
+                                logger.error(
+                                    f"Exit Reason: {job_context.get('exit_reason')}"
+                                )
+                                logger.error(
+                                    f"Status Reason: {job_context.get('status_reason')}"
+                                )
+
+                                # Show failure analysis
+                                failure_analysis = job_context.get(
+                                    "failure_analysis", {}
+                                )
+                                if failure_analysis:
+                                    logger.error("Likely Causes:")
+                                    for cause in failure_analysis.get(
+                                        "likely_causes", []
+                                    ):
+                                        logger.error(f"  - {cause}")
+
+                                    logger.error("Recommendations:")
+                                    for rec in failure_analysis.get(
+                                        "recommendations", []
+                                    ):
+                                        logger.error(f"  - {rec}")
+
+                                # Show monitoring context if available
+                                mon_cntx = job_context.get("monitoring_context", {})
+                                if mon_cntx and mon_cntx.get("log_snapshots"):
+                                    logger.error(
+                                        f"Monitoring captured "
+                                        f"{len(mon_cntx['log_snapshots'])} "
+                                        "log snapshots"
+                                    )
+
+                                # Show key log errors
+                                logs = job_context.get("logs", {})
+                                if logs and logs.get("error_patterns"):
+                                    logger.error("Error Patterns Found:")
+                                    for pattern in logs["error_patterns"][
+                                        :3
+                                    ]:  # First 3 patterns
+                                        logger.error(
+                                            f"  - {pattern['pattern']}: "
+                                            f"{pattern['message'][:100]}..."
+                                        )
+
+                                logger.error("=== END JOB ANALYSIS ===\n")
+                        else:
+                            logger.error(
+                                "No recent failed jobs found "
+                                "(they may have been cleaned up)"
+                            )
+
                     except Exception as log_error:
-                        logger.error(f"Failed to retrieve batch job logs: {log_error}")
+                        logger.error(
+                            f"Failed to retrieve enhanced batch job logs: {log_error}"
+                        )
 
     except Exception as e:
         logger.error(f"Failed to setup AWS Batch execution: {e}")
