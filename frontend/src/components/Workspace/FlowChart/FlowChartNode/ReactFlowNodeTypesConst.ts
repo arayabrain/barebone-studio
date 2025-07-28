@@ -10,10 +10,7 @@ import { HDF5FileNode } from "components/Workspace/FlowChart/FlowChartNode/HDF5F
 import { ImageFileNode } from "components/Workspace/FlowChart/FlowChartNode/ImageFileNode"
 import { MatlabFileNode } from "components/Workspace/FlowChart/FlowChartNode/MatlabFileNode"
 import { MicroscopeFileNode } from "components/Workspace/FlowChart/FlowChartNode/MicroscopeFileNode"
-import {
-  getAllFileTypeConfigs,
-  COMPONENT_MAPPING,
-} from "config/fileTypes.config"
+import { getAllFileTypeConfigs } from "config/fileTypes.config"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ComponentType = React.ComponentType<NodeProps<any>>
@@ -24,15 +21,15 @@ const createNodeTypesFromConfig = () => {
     AlgorithmNode, // Algorithm node is not part of file types
   }
 
-  // Create component map from imported components and config
+  // Dynamic component mapping from config
   const componentMap: Record<string, ComponentType> = {
-    [COMPONENT_MAPPING.ImageFileNode]: ImageFileNode,
-    [COMPONENT_MAPPING.CsvFileNode]: CsvFileNode,
-    [COMPONENT_MAPPING.MatlabFileNode]: MatlabFileNode,
-    [COMPONENT_MAPPING.HDF5FileNode]: HDF5FileNode,
-    [COMPONENT_MAPPING.FluoFileNode]: FluoFileNode,
-    [COMPONENT_MAPPING.BehaviorFileNode]: BehaviorFileNode,
-    [COMPONENT_MAPPING.MicroscopeFileNode]: MicroscopeFileNode,
+    ImageFileNode,
+    CsvFileNode,
+    MatlabFileNode,
+    HDF5FileNode,
+    FluoFileNode,
+    BehaviorFileNode,
+    MicroscopeFileNode,
   }
 
   getAllFileTypeConfigs().forEach((config) => {
