@@ -100,6 +100,7 @@ export const inputNodeSlice = createSlice({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             state[node.id] = FileNodeFactory.createInputNode(fileType) as any
           } catch (error) {
+            // eslint-disable-next-line no-console
             console.warn(`Unsupported file type: ${fileType}`, error)
           }
         }

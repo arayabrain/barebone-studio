@@ -3,6 +3,7 @@ import { enqueueSnackbar } from "notistack"
 import { createSlice } from "@reduxjs/toolkit"
 
 import { FILE_TREE_TYPE_SET } from "api/files/Files"
+import { FileNodeFactory } from "factories/FileNodeFactory"
 import { getFilesTree, deleteFile } from "store/slice/FilesTree/FilesTreeAction"
 import {
   FilesTree,
@@ -11,7 +12,7 @@ import {
 import { convertToTreeNodeType } from "store/slice/FilesTree/FilesTreeUtils"
 import { uploadFile } from "store/slice/FileUploader/FileUploaderActions"
 import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
-import { importSampleData } from "store/slice/Workflow/WorkflowActions"
+// importSampleData available if needed for future workflow features
 
 export const initialState: FilesTree = {}
 export const filesTreeSlice = createSlice({
@@ -104,12 +105,19 @@ export const filesTreeSlice = createSlice({
       })
       .addCase(uploadFile.fulfilled, (state, action) => {
         const { fileType } = action.meta.arg
-        if (fileType === FILE_TYPE_SET.IMAGE) {
-          state[FILE_TREE_TYPE_SET.IMAGE].isLatest = false
-        } else if (fileType === FILE_TYPE_SET.CSV) {
-          state[FILE_TREE_TYPE_SET.CSV].isLatest = false
-        } else if (fileType === FILE_TYPE_SET.HDF5) {
-          state[FILE_TREE_TYPE_SET.HDF5].isLatest = false
+
+        // Use FileNodeFactory to get tree type dynamically
+        if (fileType) {
+          try {
+            const config = FileNodeFactory.getFileTypeConfig(fileType)
+            if (config && config.treeType && state[config.treeType]) {
+              state[config.treeType].isLatest = false
+            } else {
+              state[FILE_TREE_TYPE_SET.ALL].isLatest = false
+            }
+          } catch {
+            state[FILE_TREE_TYPE_SET.ALL].isLatest = false
+          }
         } else {
           state[FILE_TREE_TYPE_SET.ALL].isLatest = false
         }

@@ -5,6 +5,7 @@ import {
   HDF5InputNode,
   InputNodeType,
   FILE_TYPE_SET,
+  FILE_TYPE,
   MatlabInputNode,
   MicroscopeInputNode,
 } from "store/slice/InputNode/InputNodeType"
@@ -48,4 +49,21 @@ export function getSpecialPathName(
   inputNode: InputNodeType,
 ): string | undefined {
   return FileNodeFactory.getSpecialPathName(inputNode.fileType)
+}
+
+// Config-driven dynamic type checking factory
+export function createInputNodeTypePredicate(targetFileType: FILE_TYPE) {
+  return (inputNode: InputNodeType): boolean => {
+    return inputNode.fileType === targetFileType
+  }
+}
+
+// Generate type predicates dynamically for new file types
+export function generateTypePredicateFunction(fileType: FILE_TYPE): string {
+  const config = FileNodeFactory.getFileTypeConfig(fileType)
+  if (!config) return "isGenericInputNode"
+
+  const capitalizedName =
+    config.key.charAt(0).toUpperCase() + config.key.slice(1)
+  return `is${capitalizedName}InputNode`
 }

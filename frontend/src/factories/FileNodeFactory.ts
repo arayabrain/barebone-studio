@@ -88,4 +88,24 @@ export class FileNodeFactory {
     const config = getFileTypeConfig(fileType)
     return config?.filePathType || "single"
   }
+
+  static getDataType(fileType: FILE_TYPE): string {
+    const config = getFileTypeConfig(fileType)
+    return config?.dataType || "csv"
+  }
+
+  static getFileTypeConfig(fileType: FILE_TYPE): FileTypeConfig | undefined {
+    return getFileTypeConfig(fileType)
+  }
+
+  // Generate selector function names dynamically
+  static generateSelectorName(fileType: FILE_TYPE, suffix: string): string {
+    const config = getFileTypeConfig(fileType)
+    if (!config) return `selectGeneric${suffix}`
+
+    // Capitalize first letter for function name
+    const capitalizedName =
+      config.key.charAt(0).toUpperCase() + config.key.slice(1)
+    return `select${capitalizedName}InputNode${suffix}`
+  }
 }

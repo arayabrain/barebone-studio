@@ -1,3 +1,4 @@
+// FILE_TYPE, InputNodeType available for extensions if needed
 import {
   isHDF5InputNode,
   isCsvInputNode,
@@ -6,6 +7,10 @@ import {
   isMicroscopeInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import { RootState } from "store/store"
+// getAllFileTypeConfigs available for dynamic selector generation if needed
+
+// Generic selector factory available for future extensions if needed
+// function createTypedFilePathSelector(fileType: FILE_TYPE, typePredicate: (node: InputNodeType) => boolean) {...}
 
 export const selectInputNode = (state: RootState) => state.inputNode
 
@@ -23,11 +28,12 @@ export const selectInputNodeSelectedFilePath =
     return selectInputNodeById(nodeId)(state).selectedFilePath
   }
 
+// Create typed selectors with specific return types
 export const selectCsvInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
     if (isCsvInputNode(node)) {
-      return node.selectedFilePath
+      return node.selectedFilePath as string | undefined
     } else {
       throw new Error("invalid input node type")
     }
@@ -37,7 +43,7 @@ export const selectImageInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
     if (isImageInputNode(node)) {
-      return node.selectedFilePath
+      return node.selectedFilePath as string[] | undefined
     } else {
       throw new Error("invalid input node type")
     }
@@ -47,7 +53,7 @@ export const selectHDF5InputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
     if (isHDF5InputNode(node)) {
-      return node.selectedFilePath
+      return node.selectedFilePath as string | undefined
     } else {
       throw new Error("invalid input node type")
     }
@@ -57,7 +63,7 @@ export const selectMatlabInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
     if (isMatlabInputNode(node)) {
-      return node.selectedFilePath
+      return node.selectedFilePath as string | undefined
     } else {
       throw new Error("invalid input node type")
     }
@@ -67,11 +73,13 @@ export const selectMicroscopeInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
     if (isMicroscopeInputNode(node)) {
-      return node.selectedFilePath
+      return node.selectedFilePath as string | undefined
     } else {
       throw new Error("invalid input node type")
     }
   }
+
+// Dynamic selectors generation capability is available for future extensions via getAllFileTypeConfigs()
 
 export const selectFilePathIsUndefined = (state: RootState) =>
   Object.keys(state.inputNode).length === 0 ||
