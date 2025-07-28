@@ -34,7 +34,7 @@ const initialState: InputNode = {
     fileType: FILE_TYPE_SET.IMAGE,
     param: {},
   },
-}
+} as InputNode
 
 export const inputNodeSlice = createSlice({
   name: INPUT_NODE_SLICE_NAME,
@@ -141,32 +141,28 @@ export const inputNodeSlice = createSlice({
         Object.values(action.payload.nodeDict)
           .filter(isInputNodePostData)
           .forEach((node) => {
-            if (node.data != null) {
-              if (node.data.fileType === FILE_TYPE_SET.IMAGE) {
+            if (node.data?.fileType != null) {
+              try {
+                const baseNode = FileNodeFactory.createInputNode(
+                  node.data.fileType,
+                )
+                // Use specific param for CSV nodes
+                const param =
+                  node.data.fileType === FILE_TYPE_SET.CSV
+                    ? (node.data.param as CsvInputParamType)
+                    : baseNode.param
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 newState[node.id] = {
-                  fileType: FILE_TYPE_SET.IMAGE,
-                  param: {},
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.CSV) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.CSV,
-                  param: node.data.param as CsvInputParamType,
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.MATLAB) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.MATLAB,
-                  param: {},
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.HDF5) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.HDF5,
-                  param: {},
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.MICROSCOPE) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.MICROSCOPE,
-                  param: {},
-                }
+                  ...baseNode,
+                  param,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                } as any
+              } catch (error) {
+                // eslint-disable-next-line no-console
+                console.warn(
+                  `Unsupported file type: ${node.data.fileType}`,
+                  error,
+                )
               }
             }
           })
@@ -179,39 +175,56 @@ export const inputNodeSlice = createSlice({
           Object.values(action.payload.nodeDict)
             .filter(isInputNodePostData)
             .forEach((node) => {
-              if (node.data != null) {
-                if (node.data.fileType === FILE_TYPE_SET.IMAGE) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.IMAGE,
-                    selectedFilePath: node.data.path as string[],
-                    param: {},
+              if (node.data?.fileType != null) {
+                try {
+                  const baseNode = FileNodeFactory.createInputNode(
+                    node.data.fileType,
+                  )
+                  const filePathType = FileNodeFactory.getFilePathType(
+                    node.data.fileType,
+                  )
+                  const specialPath = FileNodeFactory.getSpecialPathConfig(
+                    node.data.fileType,
+                  )
+
+                  // Use specific param for CSV nodes
+                  const param =
+                    node.data.fileType === FILE_TYPE_SET.CSV
+                      ? (node.data.param as CsvInputParamType)
+                      : baseNode.param
+
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const nodeState: any = {
+                    ...baseNode,
+                    param,
+                    selectedFilePath:
+                      filePathType === "array"
+                        ? (node.data.path as string[])
+                        : (node.data.path as string),
                   }
-                } else if (node.data.fileType === FILE_TYPE_SET.CSV) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.CSV,
-                    selectedFilePath: node.data.path as string,
-                    param: node.data.param as CsvInputParamType,
+
+                  // Add special path properties if configured
+                  if (specialPath) {
+                    if (
+                      specialPath.type === "hdf5Path" &&
+                      "hdf5Path" in node.data
+                    ) {
+                      nodeState.hdf5Path = node.data.hdf5Path
+                    } else if (
+                      specialPath.type === "matPath" &&
+                      "matPath" in node.data
+                    ) {
+                      nodeState.matPath = node.data.matPath
+                    }
                   }
-                } else if (node.data.fileType === FILE_TYPE_SET.MATLAB) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.MATLAB,
-                    matPath: node.data.matPath,
-                    selectedFilePath: node.data.path as string,
-                    param: {},
-                  }
-                } else if (node.data.fileType === FILE_TYPE_SET.HDF5) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.HDF5,
-                    hdf5Path: node.data.hdf5Path,
-                    selectedFilePath: node.data.path as string,
-                    param: {},
-                  }
-                } else if (node.data.fileType === FILE_TYPE_SET.MICROSCOPE) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.MICROSCOPE,
-                    selectedFilePath: node.data.path as string,
-                    param: {},
-                  }
+
+                  newState[node.id] = nodeState
+                } catch (error) {
+                  // eslint-disable-next-line no-console
+                  console.warn(
+                    `Unsupported file type: ${node.data.fileType}`,
+                    error,
+                  )
                 }
               }
             })

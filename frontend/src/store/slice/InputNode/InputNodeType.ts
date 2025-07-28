@@ -1,17 +1,10 @@
+import { FILE_TYPE_SET, FILE_TYPE } from "config/fileTypes.config"
+
 export const INPUT_NODE_SLICE_NAME = "inputNode"
 
-// Keep original definition for compatibility
-export const FILE_TYPE_SET = {
-  CSV: "csv",
-  IMAGE: "image",
-  HDF5: "hdf5",
-  FLUO: "fluo",
-  BEHAVIOR: "behavior",
-  MATLAB: "matlab",
-  MICROSCOPE: "microscope",
-} as const
-
-export type FILE_TYPE = (typeof FILE_TYPE_SET)[keyof typeof FILE_TYPE_SET]
+// Re-export for backward compatibility
+export { FILE_TYPE_SET }
+export type { FILE_TYPE }
 
 export type InputNode = {
   [nodeId: string]: InputNodeType

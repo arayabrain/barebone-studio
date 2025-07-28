@@ -1,8 +1,6 @@
 export interface FileTypeConfig {
   key: string
   displayName: string
-  reactFlowNodeType: string
-  treeType: string
   hasFilePath: boolean
   filePathType: "single" | "array"
   hasSpecialPath?: {
@@ -10,30 +8,34 @@ export interface FileTypeConfig {
     type: "matPath" | "hdf5Path"
   }
   defaultParam: Record<string, unknown>
-  nodeComponent: string
   stateFileType?: string // For special cases like FLUO/BEHAVIOR stored as CSV
-  dataType: string // Mapping to DATA_TYPE for visualization
-  componentPath: string // Path for dynamic component import
+  // Optional overrides - defaults to generated from key
+  treeType?: string
+  dataType?: string
+  nodeComponent?: string
+  reactFlowNodeType?: string
+  componentPath?: string
 }
 
+// Enhanced config with computed properties
+export interface EnhancedFileTypeConfig
+  extends Required<Omit<FileTypeConfig, "hasSpecialPath" | "stateFileType">> {
+  hasSpecialPath?: FileTypeConfig["hasSpecialPath"]
+  stateFileType?: string
+}
+
+// Simplified config - values auto-generated when not specified
 export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
   IMAGE: {
     key: "image",
     displayName: "imageData",
-    reactFlowNodeType: "ImageFileNode",
-    treeType: "image",
     hasFilePath: true,
     filePathType: "array",
     defaultParam: {},
-    nodeComponent: "ImageFileNode",
-    dataType: "image",
-    componentPath: "components/Workspace/FlowChart/FlowChartNode/ImageFileNode",
   },
   CSV: {
     key: "csv",
     displayName: "csvData",
-    reactFlowNodeType: "CsvFileNode",
-    treeType: "csv",
     hasFilePath: true,
     filePathType: "single",
     defaultParam: {
@@ -41,15 +43,10 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       setIndex: false,
       transpose: false,
     },
-    nodeComponent: "CsvFileNode",
-    dataType: "csv",
-    componentPath: "components/Workspace/FlowChart/FlowChartNode/CsvFileNode",
   },
   HDF5: {
     key: "hdf5",
     displayName: "hdf5Data",
-    reactFlowNodeType: "HDF5FileNode",
-    treeType: "hdf5",
     hasFilePath: true,
     filePathType: "single",
     hasSpecialPath: {
@@ -57,15 +54,10 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       type: "hdf5Path",
     },
     defaultParam: {},
-    nodeComponent: "HDF5FileNode",
-    dataType: "hdf5",
-    componentPath: "components/Workspace/FlowChart/FlowChartNode/HDF5FileNode",
   },
   FLUO: {
     key: "fluo",
     displayName: "fluoData",
-    reactFlowNodeType: "FluoFileNode",
-    treeType: "fluo",
     hasFilePath: true,
     filePathType: "single",
     defaultParam: {
@@ -73,17 +65,11 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       setIndex: false,
       transpose: false,
     },
-    nodeComponent: "FluoFileNode",
-    // Special handling: stored as CSV in state
-    stateFileType: "csv",
-    dataType: "fluo",
-    componentPath: "components/Workspace/FlowChart/FlowChartNode/FluoFileNode",
+    stateFileType: "csv", // Special: stored as CSV in state
   },
   BEHAVIOR: {
     key: "behavior",
     displayName: "behaviorData",
-    reactFlowNodeType: "BehaviorFileNode",
-    treeType: "behavior",
     hasFilePath: true,
     filePathType: "single",
     defaultParam: {
@@ -91,18 +77,11 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       setIndex: false,
       transpose: false,
     },
-    nodeComponent: "BehaviorFileNode",
-    // Special handling: stored as CSV in state
-    stateFileType: "csv",
-    dataType: "behavior",
-    componentPath:
-      "components/Workspace/FlowChart/FlowChartNode/BehaviorFileNode",
+    stateFileType: "csv", // Special: stored as CSV in state
   },
   MATLAB: {
     key: "matlab",
     displayName: "matlabData",
-    reactFlowNodeType: "MatlabFileNode",
-    treeType: "matlab",
     hasFilePath: true,
     filePathType: "single",
     hasSpecialPath: {
@@ -110,25 +89,48 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       type: "matPath",
     },
     defaultParam: {},
-    nodeComponent: "MatlabFileNode",
-    dataType: "matlab",
-    componentPath:
-      "components/Workspace/FlowChart/FlowChartNode/MatlabFileNode",
   },
   MICROSCOPE: {
     key: "microscope",
     displayName: "microscopeData",
-    reactFlowNodeType: "MicroscopeFileNode",
-    treeType: "microscope",
     hasFilePath: true,
     filePathType: "single",
     defaultParam: {},
-    nodeComponent: "MicroscopeFileNode",
-    dataType: "matlab",
-    componentPath:
-      "components/Workspace/FlowChart/FlowChartNode/MicroscopeFileNode",
+    dataType: "matlab", // Special: uses matlab data type
   },
 } as const
+
+// Helper functions for generating component properties
+function generateComponentName(key: string): string {
+  return key.charAt(0).toUpperCase() + key.slice(1) + "FileNode"
+}
+
+function generateComponentPath(componentName: string): string {
+  return `components/Workspace/FlowChart/FlowChartNode/${componentName}`
+}
+
+// Enhanced configs with auto-generated properties
+export const ENHANCED_FILE_TYPE_CONFIGS: Record<
+  string,
+  EnhancedFileTypeConfig
+> = Object.fromEntries(
+  Object.entries(FILE_TYPE_CONFIGS).map(([configKey, config]) => [
+    configKey,
+    {
+      ...config,
+      treeType: config.treeType || config.key,
+      dataType: config.dataType || config.key,
+      nodeComponent: config.nodeComponent || generateComponentName(config.key),
+      reactFlowNodeType:
+        config.reactFlowNodeType || generateComponentName(config.key),
+      componentPath:
+        config.componentPath ||
+        generateComponentPath(
+          config.nodeComponent || generateComponentName(config.key),
+        ),
+    },
+  ]),
+) as Record<string, EnhancedFileTypeConfig>
 
 // 自動生成される型定義
 export type FILE_TYPE_KEY = keyof typeof FILE_TYPE_CONFIGS
@@ -139,19 +141,14 @@ export const FILE_TYPE_SET = Object.fromEntries(
   Object.entries(FILE_TYPE_CONFIGS).map(([key, config]) => [key, config.key]),
 ) as Record<FILE_TYPE_KEY, string>
 
-// より具体的な型定義
-export const FILE_TYPES = {
-  CSV: "csv" as const,
-  IMAGE: "image" as const,
-  HDF5: "hdf5" as const,
-  FLUO: "fluo" as const,
-  BEHAVIOR: "behavior" as const,
-  MATLAB: "matlab" as const,
-  MICROSCOPE: "microscope" as const,
-} as const
+// Auto-generated from FILE_TYPE_CONFIGS
+export const FILE_TYPES = Object.fromEntries(
+  Object.entries(FILE_TYPE_CONFIGS).map(([key, config]) => [key, config.key]),
+) as Record<string, string>
 
 export type FILE_TYPE_LITERAL = (typeof FILE_TYPES)[keyof typeof FILE_TYPES]
 
+// Manually defined to maintain type compatibility
 export const FILE_TREE_TYPE_SET = {
   IMAGE: "image",
   CSV: "csv",
@@ -163,6 +160,7 @@ export const FILE_TREE_TYPE_SET = {
   ALL: "all",
 } as const
 
+// Manually defined to maintain type compatibility
 export const REACT_FLOW_NODE_TYPE_KEY = {
   ImageFileNode: "ImageFileNode",
   CsvFileNode: "CsvFileNode",
@@ -174,21 +172,23 @@ export const REACT_FLOW_NODE_TYPE_KEY = {
   AlgorithmNode: "AlgorithmNode",
 } as const
 
-// ヘルパー関数
+// ヘルパー関数 - Enhanced configs使用
 export function getFileTypeConfig(
   fileType: FILE_TYPE,
-): FileTypeConfig | undefined {
-  return Object.values(FILE_TYPE_CONFIGS).find(
+): EnhancedFileTypeConfig | undefined {
+  return Object.values(ENHANCED_FILE_TYPE_CONFIGS).find(
     (config) => config.key === fileType,
   )
 }
 
-export function getFileTypeConfigByKey(key: FILE_TYPE_KEY): FileTypeConfig {
-  return FILE_TYPE_CONFIGS[key]
+export function getFileTypeConfigByKey(
+  key: FILE_TYPE_KEY,
+): EnhancedFileTypeConfig {
+  return ENHANCED_FILE_TYPE_CONFIGS[key]
 }
 
-export function getAllFileTypeConfigs(): FileTypeConfig[] {
-  return Object.values(FILE_TYPE_CONFIGS)
+export function getAllFileTypeConfigs(): EnhancedFileTypeConfig[] {
+  return Object.values(ENHANCED_FILE_TYPE_CONFIGS)
 }
 
 // Type generation helpers for new file types
@@ -238,23 +238,18 @@ export function generateNewFileTypeCode(newConfig: FileTypeConfig): {
   }
 }
 
-// Component mapping for ReactFlowNodeTypesConst
-export const COMPONENT_MAPPING = {
-  ImageFileNode: "ImageFileNode",
-  CsvFileNode: "CsvFileNode",
-  HDF5FileNode: "HDF5FileNode",
-  FluoFileNode: "FluoFileNode",
-  BehaviorFileNode: "BehaviorFileNode",
-  MatlabFileNode: "MatlabFileNode",
-  MicroscopeFileNode: "MicroscopeFileNode",
-} as const
+// Auto-generated component mapping from ENHANCED_FILE_TYPE_CONFIGS
+export const COMPONENT_MAPPING = Object.fromEntries(
+  Object.values(ENHANCED_FILE_TYPE_CONFIGS).map((config) => [
+    config.nodeComponent,
+    config.nodeComponent,
+  ]),
+) as Record<string, string>
 
-// Data type mapping for DataTypeUtils - maps config dataType to DATA_TYPE_SET values
-export const DATA_TYPE_MAPPING = {
-  image: "image",
-  csv: "csv",
-  hdf5: "hdf5",
-  fluo: "fluo",
-  behavior: "behavior",
-  matlab: "matlab",
-} as const
+// Auto-generated data type mapping from ENHANCED_FILE_TYPE_CONFIGS
+export const DATA_TYPE_MAPPING = Object.fromEntries(
+  Object.values(ENHANCED_FILE_TYPE_CONFIGS).map((config) => [
+    config.dataType,
+    config.dataType,
+  ]),
+) as Record<string, string>

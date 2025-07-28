@@ -11,8 +11,24 @@ import {
 } from "store/slice/FilesTree/FilesTreeType"
 import { convertToTreeNodeType } from "store/slice/FilesTree/FilesTreeUtils"
 import { uploadFile } from "store/slice/FileUploader/FileUploaderActions"
-import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 // importSampleData available if needed for future workflow features
+
+// Helper function to update file tree state
+function updateFileTreeState(
+  state: FilesTree,
+  treeType: string,
+  isLatest: boolean = false,
+) {
+  if (state[treeType] != null) {
+    state[treeType].isLatest = isLatest
+  } else {
+    state[treeType] = {
+      isLoading: false,
+      isLatest,
+      tree: [],
+    }
+  }
+}
 
 export const initialState: FilesTree = {}
 export const filesTreeSlice = createSlice({
@@ -61,46 +77,15 @@ export const filesTreeSlice = createSlice({
       })
       .addCase(uploadFile.pending, (state, action) => {
         const { fileType } = action.meta.arg
-        if (fileType === FILE_TYPE_SET.IMAGE) {
-          if (state[FILE_TREE_TYPE_SET.IMAGE] != null) {
-            state[FILE_TREE_TYPE_SET.IMAGE].isLatest = false
-          } else {
-            state[FILE_TREE_TYPE_SET.IMAGE] = {
-              isLoading: false,
-              isLatest: false,
-              tree: [],
-            }
-          }
-        } else if (fileType === FILE_TYPE_SET.CSV) {
-          if (state[FILE_TREE_TYPE_SET.CSV] != null) {
-            state[FILE_TREE_TYPE_SET.CSV].isLatest = false
-          } else {
-            state[FILE_TREE_TYPE_SET.CSV] = {
-              isLoading: false,
-              isLatest: false,
-              tree: [],
-            }
-          }
-        } else if (fileType === FILE_TYPE_SET.HDF5) {
-          if (state[FILE_TREE_TYPE_SET.HDF5] != null) {
-            state[FILE_TREE_TYPE_SET.HDF5].isLatest = false
-          } else {
-            state[FILE_TREE_TYPE_SET.HDF5] = {
-              isLoading: false,
-              isLatest: false,
-              tree: [],
-            }
-          }
-        } else {
-          if (state[FILE_TREE_TYPE_SET.ALL] != null) {
-            state[FILE_TREE_TYPE_SET.ALL].isLatest = false
-          } else {
-            state[FILE_TREE_TYPE_SET.ALL] = {
-              isLoading: false,
-              isLatest: false,
-              tree: [],
-            }
-          }
+        // Get tree type from FileNodeFactory, fallback to ALL
+        try {
+          const treeType = fileType
+            ? FileNodeFactory.getTreeType(fileType)
+            : FILE_TREE_TYPE_SET.ALL
+          updateFileTreeState(state, treeType, false)
+        } catch (error) {
+          // Fallback to ALL type for unknown file types
+          updateFileTreeState(state, FILE_TREE_TYPE_SET.ALL, false)
         }
       })
       .addCase(uploadFile.fulfilled, (state, action) => {

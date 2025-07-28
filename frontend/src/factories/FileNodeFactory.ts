@@ -1,4 +1,8 @@
-import { FileTypeConfig, getFileTypeConfig } from "config/fileTypes.config"
+import {
+  EnhancedFileTypeConfig,
+  FileTypeConfig,
+  getFileTypeConfig,
+} from "config/fileTypes.config"
 import { NODE_TYPE_SET } from "store/slice/FlowElement/FlowElementType"
 import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 import { getNanoId } from "utils/nanoid/NanoIdUtils"
@@ -47,9 +51,17 @@ export class FileNodeFactory {
     config: FileTypeConfig,
     position?: { x: number; y: number },
   ): CreateReactFlowNodeResult {
+    // Convert to enhanced config if needed
+    const enhancedConfig = getFileTypeConfig(config.key)
+    if (!enhancedConfig) {
+      throw new Error(
+        `Cannot find enhanced config for file type: ${config.key}`,
+      )
+    }
+
     return {
       id: `input_${getNanoId()}`,
-      type: config.reactFlowNodeType,
+      type: enhancedConfig.reactFlowNodeType,
       data: {
         label: nodeName,
         type: NODE_TYPE_SET.INPUT,
@@ -89,12 +101,26 @@ export class FileNodeFactory {
     return config?.filePathType || "single"
   }
 
+  static getSpecialPathConfig(
+    fileType: FILE_TYPE,
+  ): EnhancedFileTypeConfig["hasSpecialPath"] {
+    const config = getFileTypeConfig(fileType)
+    return config?.hasSpecialPath
+  }
+
   static getDataType(fileType: FILE_TYPE): string {
     const config = getFileTypeConfig(fileType)
     return config?.dataType || "csv"
   }
 
-  static getFileTypeConfig(fileType: FILE_TYPE): FileTypeConfig | undefined {
+  static getTreeType(fileType: FILE_TYPE): string {
+    const config = getFileTypeConfig(fileType)
+    return config?.treeType || "csv"
+  }
+
+  static getFileTypeConfig(
+    fileType: FILE_TYPE,
+  ): EnhancedFileTypeConfig | undefined {
     return getFileTypeConfig(fileType)
   }
 
