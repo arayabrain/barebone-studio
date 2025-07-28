@@ -1,3 +1,4 @@
+import { FileNodeFactory } from "factories/FileNodeFactory"
 import {
   CsvInputNode,
   ImageInputNode,
@@ -36,4 +37,15 @@ export function isMicroscopeInputNode(
   inputNode: InputNodeType,
 ): inputNode is MicroscopeInputNode {
   return inputNode.fileType === FILE_TYPE_SET.MICROSCOPE
+}
+
+// Helper functions using factory
+export function hasSpecialPath(inputNode: InputNodeType): boolean {
+  return FileNodeFactory.hasSpecialPath(inputNode.fileType)
+}
+
+export function getSpecialPathName(
+  inputNode: InputNodeType,
+): string | undefined {
+  return FileNodeFactory.getSpecialPathName(inputNode.fileType)
 }

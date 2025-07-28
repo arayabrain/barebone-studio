@@ -20,7 +20,9 @@ import {
   TreeItemDragObject,
   TreeItemDropResult,
 } from "components/Workspace/FlowChart/DnDItemType"
-import { REACT_FLOW_NODE_TYPE, REACT_FLOW_NODE_TYPE_KEY } from "const/flowchart"
+import { getAllFileTypeConfigs } from "config/fileTypes.config"
+import { REACT_FLOW_NODE_TYPE_KEY } from "const/flowchart"
+import { FileNodeFactory } from "factories/FileNodeFactory"
 import { getAlgoList } from "store/slice/AlgorithmList/AlgorithmListActions"
 import {
   selectAlgorithmListIsLatest,
@@ -39,7 +41,7 @@ import {
   NODE_TYPE,
   NODE_TYPE_SET,
 } from "store/slice/FlowElement/FlowElementType"
-import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
+import { FILE_TYPE } from "store/slice/InputNode/InputNodeType"
 import { selectPipelineLatestUid } from "store/slice/Pipeline/PipelineSelectors"
 import { AppDispatch } from "store/store"
 import { getNanoId } from "utils/nanoid/NanoIdUtils"
@@ -92,41 +94,15 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
       defaultExpandIcon={<ChevronRightIcon />}
     >
       <TreeItem nodeId="Data" label="Data">
-        <InputNodeComponent
-          fileName={"image"}
-          nodeName={"imageData"}
-          fileType={FILE_TYPE_SET.IMAGE}
-        />
-        <InputNodeComponent
-          fileName={"csv"}
-          nodeName={"csvData"}
-          fileType={FILE_TYPE_SET.CSV}
-        />
-        <InputNodeComponent
-          fileName={"hdf5"}
-          nodeName={"hdf5Data"}
-          fileType={FILE_TYPE_SET.HDF5}
-        />
-        <InputNodeComponent
-          fileName={"fluo"}
-          nodeName={"fluoData"}
-          fileType={FILE_TYPE_SET.FLUO}
-        />
-        <InputNodeComponent
-          fileName={"behavior"}
-          nodeName={"behaviorData"}
-          fileType={FILE_TYPE_SET.BEHAVIOR}
-        />
-        <InputNodeComponent
-          fileName={"matlab"}
-          nodeName={"matlabData"}
-          fileType={FILE_TYPE_SET.MATLAB}
-        />
-        <InputNodeComponent
-          fileName={"microscope"}
-          nodeName={"microscopeData"}
-          fileType={FILE_TYPE_SET.MICROSCOPE}
-        />
+        {getAllFileTypeConfigs().map((config) => (
+          <InputNodeComponent
+            key={config.key}
+            fileName={config.key}
+            nodeName={config.displayName}
+            fileType={config.key as FILE_TYPE}
+            config={config}
+          />
+        ))}
       </TreeItem>
       <TreeItem nodeId="Algorithm" label="Algorithm">
         {Object.entries(algoList).map(([name, node], i) => (
@@ -146,12 +122,14 @@ interface InputNodeComponentProps {
   fileName: string
   nodeName: string
   fileType: FILE_TYPE
+  config: import("config/fileTypes.config").FileTypeConfig
 }
 
 const InputNodeComponent = memo(function InputNodeComponent({
   fileName,
   nodeName,
   fileType,
+  config,
 }: InputNodeComponentProps) {
   const dispatch = useDispatch()
 
@@ -162,45 +140,17 @@ const InputNodeComponent = memo(function InputNodeComponent({
       fileType: FILE_TYPE,
       position?: { x: number; y: number },
     ) => {
-      let reactFlowNodeType: REACT_FLOW_NODE_TYPE | "" = ""
-      switch (fileType) {
-        case FILE_TYPE_SET.CSV:
-          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.CsvFileNode
-          break
-        case FILE_TYPE_SET.IMAGE:
-          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.ImageFileNode
-          fileType = FILE_TYPE_SET.IMAGE
-          break
-        case FILE_TYPE_SET.HDF5:
-          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.HDF5FileNode
-          fileType = FILE_TYPE_SET.HDF5
-          break
-        case FILE_TYPE_SET.FLUO:
-          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.FluoFileNode
-          fileType = FILE_TYPE_SET.FLUO
-          break
-        case FILE_TYPE_SET.BEHAVIOR:
-          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.BehaviorFileNode
-          fileType = FILE_TYPE_SET.BEHAVIOR
-          break
-        case FILE_TYPE_SET.MATLAB:
-          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.MatlabFileNode
-          fileType = FILE_TYPE_SET.MATLAB
-          break
-        case FILE_TYPE_SET.MICROSCOPE:
-          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.MicroscopeFileNode
-          fileType = FILE_TYPE_SET.MICROSCOPE
-          break
-      }
-      const newNode = {
-        id: `input_${getNanoId()}`,
-        type: reactFlowNodeType,
-        data: { label: nodeName, type: nodeType },
+      const newNode = FileNodeFactory.createReactFlowNode(
+        nodeName,
+        config,
         position,
-      }
-      dispatch(addInputNode({ node: newNode, fileType }))
+      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      newNode.data.type = nodeType as any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      dispatch(addInputNode({ node: newNode as any, fileType }))
     },
-    [dispatch],
+    [dispatch, config],
   )
 
   const { isDragging, dragRef } = useLeafItemDrag(

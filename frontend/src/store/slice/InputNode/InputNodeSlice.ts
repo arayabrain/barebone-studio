@@ -2,6 +2,7 @@ import { createSlice, isAnyOf, PayloadAction } from "@reduxjs/toolkit"
 
 import { isInputNodePostData } from "api/run/RunUtils"
 import { INITIAL_IMAGE_ELEMENT_ID } from "const/flowchart"
+import { FileNodeFactory } from "factories/FileNodeFactory"
 import { uploadFile } from "store/slice/FileUploader/FileUploaderActions"
 import { addInputNode } from "store/slice/FlowElement/FlowElementActions"
 import {
@@ -95,61 +96,11 @@ export const inputNodeSlice = createSlice({
       .addCase(addInputNode, (state, action) => {
         const { node, fileType } = action.payload
         if (node.data?.type === NODE_TYPE_SET.INPUT) {
-          switch (fileType) {
-            case FILE_TYPE_SET.CSV:
-              state[node.id] = {
-                fileType,
-                param: {
-                  setHeader: null,
-                  setIndex: false,
-                  transpose: false,
-                },
-              }
-              break
-            case FILE_TYPE_SET.IMAGE:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
-            case FILE_TYPE_SET.HDF5:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
-            case FILE_TYPE_SET.FLUO:
-              state[node.id] = {
-                fileType: FILE_TYPE_SET.CSV,
-                param: {
-                  setHeader: null,
-                  setIndex: false,
-                  transpose: false,
-                },
-              }
-              break
-            case FILE_TYPE_SET.BEHAVIOR:
-              state[node.id] = {
-                fileType: FILE_TYPE_SET.CSV,
-                param: {
-                  setHeader: null,
-                  setIndex: false,
-                  transpose: false,
-                },
-              }
-              break
-            case FILE_TYPE_SET.MATLAB:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
-            case FILE_TYPE_SET.MICROSCOPE:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            state[node.id] = FileNodeFactory.createInputNode(fileType) as any
+          } catch (error) {
+            console.warn(`Unsupported file type: ${fileType}`, error)
           }
         }
       })
@@ -171,10 +122,15 @@ export const inputNodeSlice = createSlice({
         if (nodeId != null) {
           const { resultPath } = action.payload
           const target = state[nodeId]
-          if (target.fileType === FILE_TYPE_SET.IMAGE) {
-            target.selectedFilePath = [resultPath]
-          } else {
-            target.selectedFilePath = resultPath
+          if (target) {
+            const filePathType = FileNodeFactory.getFilePathType(
+              target.fileType,
+            )
+            if (filePathType === "array") {
+              target.selectedFilePath = [resultPath]
+            } else {
+              target.selectedFilePath = resultPath
+            }
           }
         }
       })

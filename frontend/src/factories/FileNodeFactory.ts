@@ -1,0 +1,91 @@
+import { FileTypeConfig, getFileTypeConfig } from "config/fileTypes.config"
+import { NODE_TYPE_SET } from "store/slice/FlowElement/FlowElementType"
+import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
+import { getNanoId } from "utils/nanoid/NanoIdUtils"
+
+export interface CreateInputNodeResult {
+  fileType: FILE_TYPE
+  param: Record<string, unknown>
+}
+
+export interface CreateReactFlowNodeResult {
+  id: string
+  type: string
+  data: {
+    label: string
+    type: string
+  }
+  position?: { x: number; y: number }
+}
+
+export class FileNodeFactory {
+  static createInputNode(fileType: FILE_TYPE): CreateInputNodeResult {
+    const config = getFileTypeConfig(fileType)
+    if (!config) {
+      throw new Error(`Unsupported file type: ${fileType}`)
+    }
+
+    // Map special cases
+    let actualFileType: FILE_TYPE
+    switch (fileType) {
+      case FILE_TYPE_SET.FLUO:
+      case FILE_TYPE_SET.BEHAVIOR:
+        actualFileType = FILE_TYPE_SET.CSV
+        break
+      default:
+        actualFileType = fileType
+    }
+
+    return {
+      fileType: actualFileType,
+      param: { ...config.defaultParam },
+    }
+  }
+
+  static createReactFlowNode(
+    nodeName: string,
+    config: FileTypeConfig,
+    position?: { x: number; y: number },
+  ): CreateReactFlowNodeResult {
+    return {
+      id: `input_${getNanoId()}`,
+      type: config.reactFlowNodeType,
+      data: {
+        label: nodeName,
+        type: NODE_TYPE_SET.INPUT,
+      },
+      position,
+    }
+  }
+
+  static getReactFlowNodeType(fileType: FILE_TYPE): string {
+    const config = getFileTypeConfig(fileType)
+    if (!config) {
+      throw new Error(`Unsupported file type: ${fileType}`)
+    }
+    return config.reactFlowNodeType
+  }
+
+  static getDefaultParam(fileType: FILE_TYPE): Record<string, unknown> {
+    const config = getFileTypeConfig(fileType)
+    if (!config) {
+      throw new Error(`Unsupported file type: ${fileType}`)
+    }
+    return { ...config.defaultParam }
+  }
+
+  static hasSpecialPath(fileType: FILE_TYPE): boolean {
+    const config = getFileTypeConfig(fileType)
+    return Boolean(config?.hasSpecialPath)
+  }
+
+  static getSpecialPathName(fileType: FILE_TYPE): string | undefined {
+    const config = getFileTypeConfig(fileType)
+    return config?.hasSpecialPath?.name
+  }
+
+  static getFilePathType(fileType: FILE_TYPE): "single" | "array" {
+    const config = getFileTypeConfig(fileType)
+    return config?.filePathType || "single"
+  }
+}

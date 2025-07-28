@@ -1,5 +1,6 @@
 export const INPUT_NODE_SLICE_NAME = "inputNode"
 
+// Keep original definition for compatibility
 export const FILE_TYPE_SET = {
   CSV: "csv",
   IMAGE: "image",
