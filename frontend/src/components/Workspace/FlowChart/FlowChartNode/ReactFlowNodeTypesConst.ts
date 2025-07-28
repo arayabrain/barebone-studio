@@ -1,5 +1,6 @@
 import { CustomEdge } from "components/Workspace/FlowChart/CustomEdge"
 import { AlgorithmNode } from "components/Workspace/FlowChart/FlowChartNode/AlgorithmNode"
+import { BatchImageFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchImageFileNode"
 import { BehaviorFileNode } from "components/Workspace/FlowChart/FlowChartNode/BehaviorFileNode"
 import { CsvFileNode } from "components/Workspace/FlowChart/FlowChartNode/CsvFileNode"
 import { FluoFileNode } from "components/Workspace/FlowChart/FlowChartNode/FluoFileNode"
@@ -17,6 +18,7 @@ export const reactFlowNodeTypes = {
   FluoFileNode,
   BehaviorFileNode,
   MicroscopeFileNode,
+  BatchImageFileNode,
 } as const
 
 export const reactFlowEdgeTypes = {

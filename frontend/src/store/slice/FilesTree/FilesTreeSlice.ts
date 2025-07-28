@@ -90,6 +90,16 @@ export const filesTreeSlice = createSlice({
               tree: [],
             }
           }
+        } else if (fileType === FILE_TYPE_SET.BATCH_IMAGE) {
+          if (state[FILE_TREE_TYPE_SET.BATCH_IMAGE] != null) {
+            state[FILE_TREE_TYPE_SET.BATCH_IMAGE].isLatest = false
+          } else {
+            state[FILE_TREE_TYPE_SET.BATCH_IMAGE] = {
+              isLoading: false,
+              isLatest: false,
+              tree: [],
+            }
+          }
         } else {
           if (state[FILE_TREE_TYPE_SET.ALL] != null) {
             state[FILE_TREE_TYPE_SET.ALL].isLatest = false
@@ -110,6 +120,8 @@ export const filesTreeSlice = createSlice({
           state[FILE_TREE_TYPE_SET.CSV].isLatest = false
         } else if (fileType === FILE_TYPE_SET.HDF5) {
           state[FILE_TREE_TYPE_SET.HDF5].isLatest = false
+        } else if (fileType === FILE_TYPE_SET.BATCH_IMAGE) {
+          state[FILE_TREE_TYPE_SET.BATCH_IMAGE].isLatest = false
         } else {
           state[FILE_TREE_TYPE_SET.ALL].isLatest = false
         }

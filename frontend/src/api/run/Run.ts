@@ -65,7 +65,13 @@ export async function runApi(
   workspaceId: number,
   data: RunPostData,
 ): Promise<string> {
-  const response = await axios.post(`${BASE_URL}/run/${workspaceId}`, data)
+  const response = await axios.post(
+    // TODO: batch_run 検証コード @2025/07/24
+    // `${BASE_URL}/run/${workspaceId}`,
+    `${BASE_URL}/run/util/batch_run/${workspaceId}`,
+    data,
+  )
+
   return response.data
 }
 

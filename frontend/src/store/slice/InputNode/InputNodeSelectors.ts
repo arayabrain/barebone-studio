@@ -4,6 +4,7 @@ import {
   isImageInputNode,
   isMatlabInputNode,
   isMicroscopeInputNode,
+  isBatchImageInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import { RootState } from "store/store"
 
@@ -16,17 +17,18 @@ export const selectInputNodeDefined = (nodeId: string) => (state: RootState) =>
   Object.keys(state.inputNode).includes(nodeId)
 
 export const selectInputNodeFileType = (nodeId: string) => (state: RootState) =>
-  selectInputNodeById(nodeId)(state).fileType
+  selectInputNodeById(nodeId)(state)?.fileType
 
 export const selectInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
-    return selectInputNodeById(nodeId)(state).selectedFilePath
+    const inputNode = selectInputNodeById(nodeId)(state)
+    return inputNode?.selectedFilePath
   }
 
 export const selectCsvInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
-    if (isCsvInputNode(node)) {
+    if (node && isCsvInputNode(node)) {
       return node.selectedFilePath
     } else {
       throw new Error("invalid input node type")
@@ -36,7 +38,7 @@ export const selectCsvInputNodeSelectedFilePath =
 export const selectImageInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
-    if (isImageInputNode(node)) {
+    if (node && isImageInputNode(node)) {
       return node.selectedFilePath
     } else {
       throw new Error("invalid input node type")
@@ -46,7 +48,7 @@ export const selectImageInputNodeSelectedFilePath =
 export const selectHDF5InputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
-    if (isHDF5InputNode(node)) {
+    if (node && isHDF5InputNode(node)) {
       return node.selectedFilePath
     } else {
       throw new Error("invalid input node type")
@@ -56,7 +58,7 @@ export const selectHDF5InputNodeSelectedFilePath =
 export const selectMatlabInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
-    if (isMatlabInputNode(node)) {
+    if (node && isMatlabInputNode(node)) {
       return node.selectedFilePath
     } else {
       throw new Error("invalid input node type")
@@ -66,7 +68,17 @@ export const selectMatlabInputNodeSelectedFilePath =
 export const selectMicroscopeInputNodeSelectedFilePath =
   (nodeId: string) => (state: RootState) => {
     const node = selectInputNodeById(nodeId)(state)
-    if (isMicroscopeInputNode(node)) {
+    if (node && isMicroscopeInputNode(node)) {
+      return node.selectedFilePath
+    } else {
+      throw new Error("invalid input node type")
+    }
+  }
+
+export const selectBatchImageInputNodeSelectedFilePath =
+  (nodeId: string) => (state: RootState) => {
+    const node = selectInputNodeById(nodeId)(state)
+    if (node && isBatchImageInputNode(node)) {
       return node.selectedFilePath
     } else {
       throw new Error("invalid input node type")
@@ -89,11 +101,11 @@ export const selectFilePathIsUndefined = (state: RootState) =>
   }).length > 0
 
 export const selectInputNodeParam = (nodeId: string) => (state: RootState) =>
-  selectInputNodeById(nodeId)(state).param
+  selectInputNodeById(nodeId)(state)?.param
 
 const selectCsvInputNodeParam = (nodeId: string) => (state: RootState) => {
   const inputNode = selectInputNodeById(nodeId)(state)
-  if (isCsvInputNode(inputNode)) {
+  if (inputNode && isCsvInputNode(inputNode)) {
     return inputNode.param
   } else {
     throw new Error(`The InputNode is not CsvInputNode. (nodeId: ${nodeId})`)
@@ -115,7 +127,7 @@ export const selectCsvInputNodeParamTranspose =
 export const selectInputNodeHDF5Path =
   (nodeId: string) => (state: RootState) => {
     const item = selectInputNodeById(nodeId)(state)
-    if (isHDF5InputNode(item)) {
+    if (item && isHDF5InputNode(item)) {
       return item.hdf5Path
     } else {
       return undefined
@@ -125,7 +137,7 @@ export const selectInputNodeHDF5Path =
 export const selectInputNodeMatlabPath =
   (nodeId: string) => (state: RootState) => {
     const item = selectInputNodeById(nodeId)(state)
-    if (isMatlabInputNode(item)) {
+    if (item && isMatlabInputNode(item)) {
       return item.matPath
     } else {
       return undefined

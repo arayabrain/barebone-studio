@@ -22,7 +22,7 @@ import { LinearProgressWithLabel } from "components/Workspace/FlowChart/FlowChar
 import { getFilesTree } from "store/slice/FilesTree/FilesTreeAction"
 import { useFileUploader } from "store/slice/FileUploader/FileUploaderHook"
 import { getLabelByPath } from "store/slice/FlowElement/FlowElementUtils"
-import { FILE_TYPE } from "store/slice/InputNode/InputNodeType"
+import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 import {
   selectPipelineIsStartedSuccess,
   selectPipelineLatestUid,
@@ -61,6 +61,15 @@ export const FileSelect = memo(function FileSelect({
   const onUploadFileHandle = (formData: FormData, fileName: string) => {
     onUploadFile(formData, fileName)
   }
+
+  // BATCH_IMAGEの場合はIMAGEと同じファイルリストを表示する
+  const getFileTreeType = (fileType: FILE_TYPE): FILE_TREE_TYPE => {
+    if (fileType === FILE_TYPE_SET.BATCH_IMAGE) {
+      return FILE_TREE_TYPE_SET.IMAGE
+    }
+    return fileType as FILE_TREE_TYPE
+  }
+
   return (
     <>
       {!uninitialized && pending && progress != null && (
@@ -74,7 +83,7 @@ export const FileSelect = memo(function FileSelect({
         filePath={filePath}
         onSelectFile={onChangeFilePath}
         onUploadFile={onUploadFileHandle}
-        fileTreeType={fileType}
+        fileTreeType={getFileTreeType(fileType)}
         selectButtonLabel={<ChecklistRtlIcon />}
         uploadViaUrl={<AddLinkIcon />}
         nodeId={nodeId}

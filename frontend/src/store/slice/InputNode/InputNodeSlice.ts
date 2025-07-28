@@ -150,6 +150,12 @@ export const inputNodeSlice = createSlice({
                 param: {},
               }
               break
+            case FILE_TYPE_SET.BATCH_IMAGE:
+              state[node.id] = {
+                fileType,
+                param: {},
+              }
+              break
           }
         }
       })
@@ -171,7 +177,10 @@ export const inputNodeSlice = createSlice({
         if (nodeId != null) {
           const { resultPath } = action.payload
           const target = state[nodeId]
-          if (target.fileType === FILE_TYPE_SET.IMAGE) {
+          if (
+            target.fileType === FILE_TYPE_SET.IMAGE ||
+            target.fileType === FILE_TYPE_SET.BATCH_IMAGE
+          ) {
             target.selectedFilePath = [resultPath]
           } else {
             target.selectedFilePath = resultPath
@@ -208,6 +217,11 @@ export const inputNodeSlice = createSlice({
               } else if (node.data.fileType === FILE_TYPE_SET.MICROSCOPE) {
                 newState[node.id] = {
                   fileType: FILE_TYPE_SET.MICROSCOPE,
+                  param: {},
+                }
+              } else if (node.data.fileType === FILE_TYPE_SET.BATCH_IMAGE) {
+                newState[node.id] = {
+                  fileType: FILE_TYPE_SET.BATCH_IMAGE,
                   param: {},
                 }
               }
@@ -253,6 +267,12 @@ export const inputNodeSlice = createSlice({
                   newState[node.id] = {
                     fileType: FILE_TYPE_SET.MICROSCOPE,
                     selectedFilePath: node.data.path as string,
+                    param: {},
+                  }
+                } else if (node.data.fileType === FILE_TYPE_SET.BATCH_IMAGE) {
+                  newState[node.id] = {
+                    fileType: FILE_TYPE_SET.BATCH_IMAGE,
+                    selectedFilePath: node.data.path as string[],
                     param: {},
                   }
                 }

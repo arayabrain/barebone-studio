@@ -128,6 +128,13 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
           fileType={FILE_TYPE_SET.MICROSCOPE}
         />
       </TreeItem>
+      <TreeItem nodeId="BatchData" label="Batch Data">
+        <InputNodeComponent
+          fileName={"Batch Image"}
+          nodeName={"batchImageData"}
+          fileType={FILE_TYPE_SET.BATCH_IMAGE}
+        />
+      </TreeItem>
       <TreeItem nodeId="Algorithm" label="Algorithm">
         {Object.entries(algoList).map(([name, node], i) => (
           <AlgoNodeComponentRecursive
@@ -190,6 +197,10 @@ const InputNodeComponent = memo(function InputNodeComponent({
         case FILE_TYPE_SET.MICROSCOPE:
           reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.MicroscopeFileNode
           fileType = FILE_TYPE_SET.MICROSCOPE
+          break
+        case FILE_TYPE_SET.BATCH_IMAGE:
+          reactFlowNodeType = REACT_FLOW_NODE_TYPE_KEY.BatchImageFileNode
+          fileType = FILE_TYPE_SET.BATCH_IMAGE
           break
       }
       const newNode = {

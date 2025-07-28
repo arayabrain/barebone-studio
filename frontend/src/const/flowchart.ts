@@ -35,6 +35,7 @@ export const REACT_FLOW_NODE_TYPE_KEY = {
   BehaviorFileNode: "BehaviorFileNode",
   MatlabFileNode: "MatlabFileNode",
   MicroscopeFileNode: "MicroscopeFileNode",
+  BatchImageFileNode: "BatchImageFileNode",
 } as const
 
 export type REACT_FLOW_NODE_TYPE =

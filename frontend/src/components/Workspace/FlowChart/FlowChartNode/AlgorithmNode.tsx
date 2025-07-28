@@ -118,7 +118,7 @@ const AlgorithmNodeImple = memo(function AlgorithmNodeImple({
         "suite2p_roi",
         "caiman_cnmf",
         "lccd_cell_detection",
-	"vacant_roi",
+        "vacant_roi",
         "caiman_cnmfe",
         "cnmf_multisession",
       ].includes(data.label),

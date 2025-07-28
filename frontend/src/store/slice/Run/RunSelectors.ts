@@ -80,6 +80,12 @@ const selectNodeDictForRun = (state: RootState): NodeDict => {
       const param = selectInputNodeParam(node.id)(state)
       const hdf5Path = selectInputNodeHDF5Path(node.id)(state)
       const matPath = selectInputNodeMatlabPath(node.id)(state)
+
+      // InputNodeが存在しない場合はスキップ
+      if (!fileType) {
+        return
+      }
+
       const inputNodePosyData: Node<InputNodePostData> = {
         ...node,
         data: {
@@ -87,7 +93,7 @@ const selectNodeDictForRun = (state: RootState): NodeDict => {
           label: node.data?.label ?? "",
           type: NODE_TYPE_SET.INPUT,
           path: filePath ?? "",
-          param,
+          param: param ?? {},
           matPath: matPath,
           hdf5Path: hdf5Path,
           fileType,
