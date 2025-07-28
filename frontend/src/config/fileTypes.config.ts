@@ -9,11 +9,10 @@ export interface FileTypeConfig {
   }
   defaultParam: Record<string, unknown>
   stateFileType?: string // For special cases like FLUO/BEHAVIOR stored as CSV
-  // Optional overrides - defaults to generated from key
+  // Optional overrides - defaults to generated from key or REACT_FLOW_NODE_TYPE_KEY
   treeType?: string
   dataType?: string
-  nodeComponent?: string
-  reactFlowNodeType?: string
+  nodeType?: string // Unified: replaces nodeComponent and reactFlowNodeType
   componentPath?: string
 }
 
@@ -22,9 +21,36 @@ export interface EnhancedFileTypeConfig
   extends Required<Omit<FileTypeConfig, "hasSpecialPath" | "stateFileType">> {
   hasSpecialPath?: FileTypeConfig["hasSpecialPath"]
   stateFileType?: string
+  // Backward compatibility properties
+  nodeComponent: string // Same as nodeType for compatibility
+  reactFlowNodeType: string // Same as nodeType for compatibility
 }
 
-// Simplified config - values auto-generated when not specified
+// Define file tree types to maintain type compatibility
+export const FILE_TREE_TYPE_SET = {
+  IMAGE: "image",
+  CSV: "csv",
+  HDF5: "hdf5",
+  FLUO: "fluo",
+  BEHAVIOR: "behavior",
+  MATLAB: "matlab",
+  MICROSCOPE: "microscope",
+  ALL: "all",
+} as const
+
+// Define node types first to avoid circular dependencies
+export const REACT_FLOW_NODE_TYPE_KEY = {
+  ImageFileNode: "ImageFileNode",
+  CsvFileNode: "CsvFileNode",
+  HDF5FileNode: "HDF5FileNode",
+  FluoFileNode: "FluoFileNode",
+  BehaviorFileNode: "BehaviorFileNode",
+  MatlabFileNode: "MatlabFileNode",
+  MicroscopeFileNode: "MicroscopeFileNode",
+  AlgorithmNode: "AlgorithmNode",
+} as const
+
+// Streamlined config - nodeType references REACT_FLOW_NODE_TYPE_KEY
 export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
   IMAGE: {
     key: "image",
@@ -32,6 +58,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     hasFilePath: true,
     filePathType: "array",
     defaultParam: {},
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.ImageFileNode,
   },
   CSV: {
     key: "csv",
@@ -43,6 +70,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       setIndex: false,
       transpose: false,
     },
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.CsvFileNode,
   },
   HDF5: {
     key: "hdf5",
@@ -54,6 +82,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       type: "hdf5Path",
     },
     defaultParam: {},
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.HDF5FileNode,
   },
   FLUO: {
     key: "fluo",
@@ -66,6 +95,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       transpose: false,
     },
     stateFileType: "csv", // Special: stored as CSV in state
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.FluoFileNode,
   },
   BEHAVIOR: {
     key: "behavior",
@@ -78,6 +108,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       transpose: false,
     },
     stateFileType: "csv", // Special: stored as CSV in state
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BehaviorFileNode,
   },
   MATLAB: {
     key: "matlab",
@@ -89,6 +120,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
       type: "matPath",
     },
     defaultParam: {},
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.MatlabFileNode,
   },
   MICROSCOPE: {
     key: "microscope",
@@ -97,43 +129,40 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     filePathType: "single",
     defaultParam: {},
     dataType: "matlab", // Special: uses matlab data type
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.MicroscopeFileNode,
   },
 } as const
 
-// Helper functions for generating component properties
-function generateComponentName(key: string): string {
-  return key.charAt(0).toUpperCase() + key.slice(1) + "FileNode"
-}
+// Enhanced configs with computed properties
+const ENHANCED_FILE_TYPE_CONFIGS: Record<string, EnhancedFileTypeConfig> =
+  Object.fromEntries(
+    Object.entries(FILE_TYPE_CONFIGS).map(([configKey, config]) => {
+      // Get nodeType from config or generate from key
+      const nodeType =
+        config.nodeType ||
+        `${config.key.charAt(0).toUpperCase() + config.key.slice(1)}FileNode`
 
-function generateComponentPath(componentName: string): string {
-  return `components/Workspace/FlowChart/FlowChartNode/${componentName}`
-}
+      return [
+        configKey,
+        {
+          ...config,
+          // Auto-generate missing properties
+          treeType: config.treeType || config.key,
+          dataType: config.dataType || config.key,
+          nodeType,
+          // Backward compatibility - both point to the same nodeType
+          nodeComponent: nodeType,
+          reactFlowNodeType: nodeType,
+          componentPath:
+            config.componentPath ||
+            `components/Workspace/FlowChart/FlowChartNode/${nodeType}`,
+        },
+      ]
+    }),
+  ) as Record<string, EnhancedFileTypeConfig>
 
-// Enhanced configs with auto-generated properties
-export const ENHANCED_FILE_TYPE_CONFIGS: Record<
-  string,
-  EnhancedFileTypeConfig
-> = Object.fromEntries(
-  Object.entries(FILE_TYPE_CONFIGS).map(([configKey, config]) => [
-    configKey,
-    {
-      ...config,
-      treeType: config.treeType || config.key,
-      dataType: config.dataType || config.key,
-      nodeComponent: config.nodeComponent || generateComponentName(config.key),
-      reactFlowNodeType:
-        config.reactFlowNodeType || generateComponentName(config.key),
-      componentPath:
-        config.componentPath ||
-        generateComponentPath(
-          config.nodeComponent || generateComponentName(config.key),
-        ),
-    },
-  ]),
-) as Record<string, EnhancedFileTypeConfig>
-
-// 自動生成される型定義
-export type FILE_TYPE_KEY = keyof typeof FILE_TYPE_CONFIGS
+// Auto-generated type definitions
+type FILE_TYPE_KEY = keyof typeof FILE_TYPE_CONFIGS
 export type FILE_TYPE = (typeof FILE_TYPE_CONFIGS)[FILE_TYPE_KEY]["key"]
 
 // 既存のコンスタントと互換性を保つ
@@ -141,38 +170,6 @@ export const FILE_TYPE_SET = Object.fromEntries(
   Object.entries(FILE_TYPE_CONFIGS).map(([key, config]) => [key, config.key]),
 ) as Record<FILE_TYPE_KEY, string>
 
-// Auto-generated from FILE_TYPE_CONFIGS
-export const FILE_TYPES = Object.fromEntries(
-  Object.entries(FILE_TYPE_CONFIGS).map(([key, config]) => [key, config.key]),
-) as Record<string, string>
-
-export type FILE_TYPE_LITERAL = (typeof FILE_TYPES)[keyof typeof FILE_TYPES]
-
-// Manually defined to maintain type compatibility
-export const FILE_TREE_TYPE_SET = {
-  IMAGE: "image",
-  CSV: "csv",
-  HDF5: "hdf5",
-  FLUO: "fluo",
-  BEHAVIOR: "behavior",
-  MATLAB: "matlab",
-  MICROSCOPE: "microscope",
-  ALL: "all",
-} as const
-
-// Manually defined to maintain type compatibility
-export const REACT_FLOW_NODE_TYPE_KEY = {
-  ImageFileNode: "ImageFileNode",
-  CsvFileNode: "CsvFileNode",
-  HDF5FileNode: "HDF5FileNode",
-  FluoFileNode: "FluoFileNode",
-  BehaviorFileNode: "BehaviorFileNode",
-  MatlabFileNode: "MatlabFileNode",
-  MicroscopeFileNode: "MicroscopeFileNode",
-  AlgorithmNode: "AlgorithmNode",
-} as const
-
-// ヘルパー関数 - Enhanced configs使用
 export function getFileTypeConfig(
   fileType: FILE_TYPE,
 ): EnhancedFileTypeConfig | undefined {
@@ -181,68 +178,15 @@ export function getFileTypeConfig(
   )
 }
 
-export function getFileTypeConfigByKey(
-  key: FILE_TYPE_KEY,
-): EnhancedFileTypeConfig {
-  return ENHANCED_FILE_TYPE_CONFIGS[key]
-}
-
 export function getAllFileTypeConfigs(): EnhancedFileTypeConfig[] {
   return Object.values(ENHANCED_FILE_TYPE_CONFIGS)
-}
-
-// Type generation helpers for new file types
-export function generateFileTypeInterface(config: FileTypeConfig): string {
-  const interfaceName = `${config.key.charAt(0).toUpperCase() + config.key.slice(1)}InputNode`
-  const fileType = config.stateFileType || config.key
-
-  let specialPathProperty = ""
-  if (config.hasSpecialPath) {
-    specialPathProperty = `\n  ${config.hasSpecialPath.name}?: string`
-  }
-
-  return `
-export interface ${interfaceName}
-  extends InputNodeBaseType<"${fileType}", Record<string, unknown>> {
-  selectedFilePath?: ${config.filePathType === "array" ? "string[]" : "string"}${specialPathProperty}
-}`
-}
-
-export function generateTypePredicateFunction(config: FileTypeConfig): string {
-  const functionName = `is${config.key.charAt(0).toUpperCase() + config.key.slice(1)}InputNode`
-  const interfaceName = `${config.key.charAt(0).toUpperCase() + config.key.slice(1)}InputNode`
-
-  return `
-export function ${functionName}(
-  inputNode: InputNodeType,
-): inputNode is ${interfaceName} {
-  return inputNode.fileType === FILE_TYPE_SET.${config.key.toUpperCase()}
-}`
-}
-
-// Development helper: Generate code snippets for new file types
-export function generateNewFileTypeCode(newConfig: FileTypeConfig): {
-  interface: string
-  predicate: string
-  selector: string
-  import: string
-} {
-  const capitalizedName =
-    newConfig.key.charAt(0).toUpperCase() + newConfig.key.slice(1)
-
-  return {
-    interface: generateFileTypeInterface(newConfig),
-    predicate: generateTypePredicateFunction(newConfig),
-    selector: `export const select${capitalizedName}InputNodeSelectedFilePath = createTypedFilePathSelector("${newConfig.key}", is${capitalizedName}InputNode)`,
-    import: `import { ${capitalizedName}FileNode } from "${newConfig.componentPath}"`,
-  }
 }
 
 // Auto-generated component mapping from ENHANCED_FILE_TYPE_CONFIGS
 export const COMPONENT_MAPPING = Object.fromEntries(
   Object.values(ENHANCED_FILE_TYPE_CONFIGS).map((config) => [
-    config.nodeComponent,
-    config.nodeComponent,
+    config.nodeType,
+    config.nodeType,
   ]),
 ) as Record<string, string>
 
