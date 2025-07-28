@@ -9,19 +9,16 @@ import ListSubheader from "@mui/material/ListSubheader"
 import MenuItem from "@mui/material/MenuItem"
 import Select from "@mui/material/Select"
 
-import {
-  DATA_TYPE,
-  DATA_TYPE_SET,
-} from "store/slice/DisplayData/DisplayDataType"
+import { DATA_TYPE } from "store/slice/DisplayData/DisplayDataType"
 import { selectNodeLabelById } from "store/slice/FlowElement/FlowElementSelectors"
 import { getFileName } from "store/slice/FlowElement/FlowElementUtils"
 import { selectInputNode } from "store/slice/InputNode/InputNodeSelectors"
-import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 import {
   selectPipelineLatestUid,
   selectPipelineNodeResultSuccessList,
 } from "store/slice/Pipeline/PipelineSelectors"
 import { RootState } from "store/store"
+import { toDataTypeFromFileType } from "utils/DataTypeUtils"
 
 export const FilePathSelect: FC<{
   dataType?: DATA_TYPE
@@ -213,22 +210,4 @@ export const FilePathSelect: FC<{
         0 && <FormHelperText error={true}>no data</FormHelperText>}
     </FormControl>
   )
-}
-
-function toDataTypeFromFileType(fileType: FILE_TYPE) {
-  switch (fileType) {
-    case FILE_TYPE_SET.IMAGE:
-      return DATA_TYPE_SET.IMAGE
-    case FILE_TYPE_SET.CSV:
-      return DATA_TYPE_SET.CSV
-    case FILE_TYPE_SET.HDF5:
-      return DATA_TYPE_SET.HDF5
-    case FILE_TYPE_SET.FLUO:
-      return DATA_TYPE_SET.FLUO
-    case FILE_TYPE_SET.BEHAVIOR:
-      return DATA_TYPE_SET.BEHAVIOR
-    case FILE_TYPE_SET.MATLAB:
-    case FILE_TYPE_SET.MICROSCOPE:
-      return DATA_TYPE_SET.MATLAB
-  }
 }
