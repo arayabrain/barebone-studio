@@ -893,7 +893,8 @@ def _snakemake_execute_batch(
             )
             # Use bucket root to match S3StorageController path structure
             # S3StorageController uses: input/{workspace_id}/, etc.
-            s3_storage = f"{s3_prefix}://{s3_bucket_name}/"
+            # Ensure no double slashes in S3 path construction
+            s3_storage = f"{s3_prefix}://{s3_bucket_name}"
             storage_settings = StorageSettings(
                 default_storage_provider=s3_prefix,
                 default_storage_prefix=s3_storage,
@@ -920,19 +921,42 @@ def _snakemake_execute_batch(
             # Also ensure config is uploaded to S3 for batch job access
             if RemoteStorageController.is_available():
                 try:
-                    # Upload config file to S3 location where batch jobs expect it
-                    s3_config_path = join_filepath(
-                        [
-                            DIRPATH.OUTPUT_DIR,
-                            workspace_id,
-                            unique_id,
-                            DIRPATH.SNAKEMAKE_CONFIG_YML,
-                        ]
+                    # Upload just the snakemake.yaml config file to S3
+                    # using proper async interface
+                    # According to RemoteStorageController docs, target_files
+                    # list specifies specific files
+                    remote_controller = RemoteStorageController(
+                        BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
                     )
-                    RemoteStorageController.upload_file(config_source, s3_config_path)
-                    logger.debug(f"Uploaded config file to S3: {s3_config_path}")
+
+                    # Use asyncio to run the async upload method
+                    # This uploads only the snakemake.yaml file,
+                    # not the entire experiment
+                    import asyncio
+
+                    try:
+                        # Try to get the current event loop
+                        asyncio.get_running_loop()
+                        logger.warning(
+                            "Cannot upload config in async context - skipping"
+                        )
+                        logger.debug("Config will be available via S3 storage plugin")
+                    except RuntimeError:
+                        # No running loop, safe to create a new one
+                        asyncio.run(
+                            remote_controller.upload_experiment(
+                                workspace_id,
+                                unique_id,
+                                target_files=[DIRPATH.SNAKEMAKE_CONFIG_YML],
+                            )
+                        )
+                        logger.debug(
+                            f"Uploaded config file to S3 for "
+                            f"workspace {workspace_id}/{unique_id}"
+                        )
                 except Exception as e:
-                    logger.error(f"Failed to upload config to S3: {e}")
+                    logger.warning(f"Failed to upload config to S3 (not critical): {e}")
+                    logger.debug("Snakemake will access config via S3 storage plugin")
         else:
             logger.error(f"Config file not found at {config_source}")
             return False
@@ -1044,6 +1068,27 @@ def _snakemake_execute_batch(
                     logger.debug(f"Resource settings - nodes: 10, cores: {cores}")
                     logger.debug("Default resources: mem_mb=4096")
 
+                    logger.info("=== CONTAINER COMMAND DEBUG ===")
+                    logger.info(
+                        f"Container Image: {batch_executor.get_container_image()}"
+                    )
+                    logger.info(f"Precommand Setup: {container_setup}")
+                    logger.info(
+                        "Note: Using script-based Snakemake rules with ENTRYPOINT fix"
+                    )
+                    logger.info(
+                        "If 'Shell command: None' persists, check container ENTRYPOINT"
+                    )
+                    logger.info("=== END CONTAINER COMMAND DEBUG ===")
+
+                    # Debug S3 storage configuration - critical for file latency issues
+                    logger.info("=== S3 STORAGE DEBUG ===")
+                    logger.info(f"S3 Storage Prefix: {s3_storage}")
+                    logger.info(f"S3 Bucket: {s3_bucket_name}")
+                    logger.info(f"S3 Provider: {s3_prefix}")
+                    logger.info("Increased latency_wait to 60s for S3 consistency")
+                    logger.info("=== END S3 STORAGE DEBUG ===")
+
                     logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
 
                     # Store start time for monitoring
@@ -1060,7 +1105,7 @@ def _snakemake_execute_batch(
                             execution_settings=ExecutionSettings(
                                 retries=3,
                                 keep_going=False,
-                                latency_wait=10,
+                                latency_wait=60,
                             ),
                             executor_settings=ExecutorSettings(
                                 region=BATCH_CONFIG.AWS_DEFAULT_REGION,
@@ -1091,16 +1136,16 @@ def _snakemake_execute_batch(
 
                         # Try to get more detailed job information
                         try:
-                            recent_jobs = batch_executor.get_recent_failed_jobs(
+                            recent_failed = batch_executor.get_recent_failed_jobs(
                                 limit=3, include_context=True
                             )
-                            if recent_jobs:
+                            if recent_failed:
                                 logger.error(
-                                    f"Found {len(recent_jobs)} recent failed jobs "
+                                    f"Found {len(recent_failed)} recent failed jobs "
                                     "with detailed context"
                                 )
 
-                                for i, job_context in enumerate(recent_jobs):
+                                for i, job_context in enumerate(recent_failed):
                                     job_id = job_context.get("job_id", "Unknown")
                                     logger.error(f"Failed job {i+1}: {job_id}")
 
@@ -1114,45 +1159,67 @@ def _snakemake_execute_batch(
                                         f"Reason: {exit_reason}"
                                     )
 
-                                    # Show failure analysis summary
-                                    failure_analysis = job_context.get(
-                                        "failure_analysis", {}
+                            try:
+                                succeeded_jobs = batch_executor.batch_client.list_jobs(
+                                    jobQueue=batch_executor.get_job_queue_for_user(),
+                                    jobStatus="SUCCEEDED",
+                                    maxResults=5,
+                                )
+                                if succeeded_jobs.get("jobList"):
+                                    logger.info(
+                                        f"Found {len(succeeded_jobs['jobList'])} "
+                                        "recent SUCCEEDED jobs:"
                                     )
-                                    if failure_analysis.get("likely_causes"):
-                                        logger.error(
-                                            f"  Likely Cause: "
-                                            f"{failure_analysis['likely_causes'][0]}"
+                                    for job in succeeded_jobs["jobList"][:3]:
+                                        logger.info(
+                                            f"  SUCCESS: {job['jobName']} "
+                                            f"({job['jobId']})"
                                         )
-                                    if failure_analysis.get("recommendations"):
+                                else:
+                                    logger.warning("No recent SUCCEEDED jobs found")
+                            except Exception as e:
+                                logger.warning(f"Could not check succeeded jobs: {e}")
+
+                            # Show failure analysis summary for each failed job
+                            for job_context in recent_failed:
+                                failure_analysis = job_context.get(
+                                    "failure_analysis", {}
+                                )
+                                if failure_analysis.get("likely_causes"):
+                                    logger.error(
+                                        f"  Likely Cause: "
+                                        f"{failure_analysis['likely_causes'][0]}"
+                                    )
+                                if failure_analysis.get("recommendations"):
+                                    logger.error(
+                                        f"  Recommendation: "
+                                        f"{failure_analysis['recommendations'][0]}"
+                                    )
+
+                                # Enhanced context already provides detailed info
+                                # Show sample log errors if available
+                                logs = job_context.get("logs", {})
+                                if logs and logs.get("error_patterns"):
+                                    logger.error("  Error Patterns:")
+                                    for pattern in logs["error_patterns"][
+                                        :2
+                                    ]:  # First 2 patterns
                                         logger.error(
-                                            f"  Recommendation: "
-                                            f"{failure_analysis['recommendations'][0]}"
+                                            f"    - {pattern['pattern']}: "
+                                            f"{pattern['message'][:80]}..."
                                         )
 
-                                    # Enhanced context already provides detailed info
-                                    # Show sample log errors if available
-                                    logs = job_context.get("logs", {})
-                                    if logs and logs.get("error_patterns"):
-                                        logger.error("  Error Patterns:")
-                                        for pattern in logs["error_patterns"][
-                                            :2
-                                        ]:  # First 2 patterns
-                                            logger.error(
-                                                f"    - {pattern['pattern']}: "
-                                                f"{pattern['message'][:80]}..."
-                                            )
+                                # Show monitoring insights if available
+                                mon_cntx = job_context.get("monitoring_context", {})
+                                if mon_cntx and mon_cntx.get("monitoring_duration"):
+                                    duration = mon_cntx["monitoring_duration"]
+                                    logger.error(f"  Monitored for: {duration}")
 
-                                    # Show monitoring insights if available
-                                    mon_cntx = job_context.get("monitoring_context", {})
-                                    if mon_cntx and mon_cntx.get("monitoring_duration"):
-                                        duration = mon_cntx["monitoring_duration"]
-                                        logger.error(f"  Monitored for: {duration}")
-
-                                        if mon_cntx.get("log_snapshots"):
-                                            logger.error(
-                                                f"{len(mon_cntx['log_snapshots'])}"
-                                                "log snapshots during monitoring"
-                                            )
+                                    if mon_cntx.get("log_snapshots"):
+                                        logger.error(
+                                            f"{len(mon_cntx['log_snapshots'])} "
+                                            "log snapshots during monitoring"
+                                        )
                         except Exception as detail_error:
                             logger.error(f"Failed to get job details: {detail_error}")
 

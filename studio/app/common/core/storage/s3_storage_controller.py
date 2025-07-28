@@ -46,10 +46,11 @@ class S3StorageController(BaseRemoteStorageController):
 
     def _make_input_data_remote_path(self, workspace_id: str, filename: str) -> str:
         # Include app/studio_data path to match Snakemake's expected S3 structure
+        # Remove leading slash to prevent double slashes when combined with S3 prefix
         input_data_remote_path = join_filepath(
             ["app", "studio_data", __class__.S3_INPUT_DIR, workspace_id, filename]
         )
-        return input_data_remote_path
+        return input_data_remote_path.lstrip("/")
 
     def _make_experiment_local_path(self, workspace_id: str, unique_id: str) -> str:
         experiment_local_path = join_filepath(
@@ -59,10 +60,11 @@ class S3StorageController(BaseRemoteStorageController):
 
     def _make_experiment_remote_path(self, workspace_id: str, unique_id: str) -> str:
         # Include app/studio_data path to match Snakemake's expected S3 structure
+        # Remove leading slash to prevent double slashes when combined with S3 prefix
         experiment_remote_path = join_filepath(
             ["app", "studio_data", __class__.S3_OUTPUT_DIR, workspace_id, unique_id]
         )
-        return experiment_remote_path
+        return experiment_remote_path.lstrip("/")
 
     @property
     def bucket_name(self) -> str:

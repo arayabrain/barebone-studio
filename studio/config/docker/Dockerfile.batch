@@ -86,5 +86,7 @@ ENV USE_AWS_BATCH=false
 ENV REMOTE_STORAGE_TYPE=0
 ENV TZ=Asia/Tokyo
 
-# Default command for batch jobs (will be overridden by AWS Batch)
-CMD ["python", "-c", "print('OptiNiSt Batch Container Ready')"]
+# Default entrypoint for batch jobs - ensures proper command execution
+# This allows AWS Batch to override the command while maintaining shell access
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["echo 'OptiNiSt Batch Container Ready - awaiting command'"]
