@@ -1,10 +1,17 @@
 import argparse
-import os
 import shutil
 import tempfile
 from pathlib import Path
 
-from snakemake import snakemake
+from snakemake.api import (
+    DAGSettings,
+    DeploymentMethod,
+    DeploymentSettings,
+    OutputSettings,
+    ResourceSettings,
+    SnakemakeApi,
+    StorageSettings,
+)
 
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.dir_path import DIRPATH
@@ -40,35 +47,55 @@ def main(args):
             )
             print(f"Config file copied from {config_file_path} to {temp_workdir}")
 
-        snakemake_args = {
-            "snakefile": DIRPATH.SNAKEMAKE_FILEPATH,
-            "forceall": args.forceall,
-            "cores": args.cores,
-            "use_conda": args.use_conda,
-            "workdir": f"{os.path.dirname(DIRPATH.STUDIO_DIR)}",
-        }
+        # Determine deployment methods
+        deployment_methods = []
+        deployment_methods.append(DeploymentMethod.CONDA)
 
-        if config_file_path is not None:
-            snakemake_args["configfiles"] = [str(config_file_path)]
+        # Use new SnakemakeApi pattern
+        with SnakemakeApi(
+            OutputSettings(
+                verbose=True,
+                show_failed_logs=True,
+            ),
+        ) as snakemake_api:
+            workflow_api = snakemake_api.workflow(
+                snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
+                workdir=temp_workdir,
+                storage_settings=StorageSettings(),
+                resource_settings=ResourceSettings(cores=args.cores),
+                deployment_settings=DeploymentSettings(
+                    deployment_method=deployment_methods,
+                    conda_frontend="conda",
+                    conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
+                ),
+            )
 
-        if args.use_conda:
-            snakemake_args["conda_prefix"] = DIRPATH.SNAKEMAKE_CONDA_ENV_DIR
+            dag_settings = DAGSettings(
+                forceall=args.forceall,
+            )
 
-        print(f"Snakemake arguments: {snakemake_args}")
+            dag_api = workflow_api.dag(
+                dag_settings=dag_settings,
+            )
 
-        result = snakemake(**snakemake_args)
-
-        if result:
-            print("snakemake execution succeeded.")
-        else:
-            print("snakemake execution failed.")
-
-        return result
+            try:
+                dag_api.execute_workflow()
+                print("Workflow execution completed successfully")
+                return True
+            except Exception as e:
+                print(f"Workflow execution failed: {e}")
+                return False
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="optinist")
     parser.add_argument("--cores", type=int, default=2)
+    parser.add_argument(  # Default true, use --no-forceall to disable forceall
+        "--forceall", default=True, action=argparse.BooleanOptionalAction
+    )
+    parser.add_argument(  # Default true, use --no-use_conda to disable conda usage
+        "--use_conda", default=True, action=argparse.BooleanOptionalAction
+    )
     parser.add_argument(  # Default true, use --no-forceall to disable forceall
         "--forceall", default=True, action=argparse.BooleanOptionalAction
     )
