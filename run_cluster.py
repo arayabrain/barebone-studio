@@ -96,6 +96,12 @@ if __name__ == "__main__":
     parser.add_argument(  # Default true, use --no-use_conda to disable conda usage
         "--use_conda", default=True, action=argparse.BooleanOptionalAction
     )
+    parser.add_argument(  # Default true, use --no-forceall to disable forceall
+        "--forceall", default=True, action=argparse.BooleanOptionalAction
+    )
+    parser.add_argument(  # Default true, use --no-use_conda to disable conda usage
+        "--use_conda", default=True, action=argparse.BooleanOptionalAction
+    )
     parser.add_argument("--config", type=str, default=None)
 
     main(parser.parse_args())

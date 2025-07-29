@@ -611,7 +611,7 @@ const AccountManager = () => {
       headerName: "ID",
       field: "id",
       filterable: false,
-      minWidth: 100,
+      minWidth: 80,
       flex: 1,
     },
     {
@@ -694,6 +694,16 @@ const AccountManager = () => {
       field: "data_usage",
       renderCell: (params: GridRenderCellParams<GridValidRowModel>) => {
         return convertBytes(params.value)
+      },
+    },
+    {
+      headerName: "Bucket name",
+      field: "remote_bucket_name",
+      minWidth: 200,
+      sortable: false,
+      filterable: false,
+      renderCell: (params: GridRenderCellParams<GridValidRowModel>) => {
+        return params.row?.attributes?.remote_bucket_name || "-"
       },
     },
     {

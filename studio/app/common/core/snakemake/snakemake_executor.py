@@ -4,6 +4,7 @@ import time
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+from pathlib import Path
 from typing import Dict, List
 
 from snakemake.api import (
@@ -668,7 +669,7 @@ def _post_process_workflow(workspace_id: str, unique_id: str, result: bool = Fal
     WorkspaceDataCapacityService.update_experiment_data_usage(workspace_id, unique_id)
 
     # result error handling
-    if not result:
+    if not snakemake_result:
         # Operate remote storage.
         if RemoteStorageController.is_available():
             # force delete sync lock file
@@ -686,7 +687,7 @@ def _post_process_workflow(workspace_id: str, unique_id: str, result: bool = Fal
                 RemoteSyncAction.UPLOAD,
             )
 
-    return result
+    return snakemake_result
 
 
 def delete_dependencies(
