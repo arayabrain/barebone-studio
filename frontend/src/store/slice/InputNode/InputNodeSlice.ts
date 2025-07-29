@@ -2,6 +2,7 @@ import { createSlice, isAnyOf, PayloadAction } from "@reduxjs/toolkit"
 
 import { isInputNodePostData } from "api/run/RunUtils"
 import { INITIAL_IMAGE_ELEMENT_ID } from "const/flowchart"
+import { FileNodeFactory } from "factories/FileNodeFactory"
 import { uploadFile } from "store/slice/FileUploader/FileUploaderActions"
 import { addInputNode } from "store/slice/FlowElement/FlowElementActions"
 import {
@@ -14,8 +15,11 @@ import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
   CsvInputParamType,
   FILE_TYPE_SET,
+  HDF5InputNode,
   InputNode,
+  InputNodeType,
   INPUT_NODE_SLICE_NAME,
+  MatlabInputNode,
 } from "store/slice/InputNode/InputNodeType"
 import {
   isCsvInputNode,
@@ -33,7 +37,7 @@ const initialState: InputNode = {
     fileType: FILE_TYPE_SET.IMAGE,
     param: {},
   },
-}
+} as InputNode
 
 export const inputNodeSlice = createSlice({
   name: INPUT_NODE_SLICE_NAME,
@@ -95,61 +99,12 @@ export const inputNodeSlice = createSlice({
       .addCase(addInputNode, (state, action) => {
         const { node, fileType } = action.payload
         if (node.data?.type === NODE_TYPE_SET.INPUT) {
-          switch (fileType) {
-            case FILE_TYPE_SET.CSV:
-              state[node.id] = {
-                fileType,
-                param: {
-                  setHeader: null,
-                  setIndex: false,
-                  transpose: false,
-                },
-              }
-              break
-            case FILE_TYPE_SET.IMAGE:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
-            case FILE_TYPE_SET.HDF5:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
-            case FILE_TYPE_SET.FLUO:
-              state[node.id] = {
-                fileType: FILE_TYPE_SET.CSV,
-                param: {
-                  setHeader: null,
-                  setIndex: false,
-                  transpose: false,
-                },
-              }
-              break
-            case FILE_TYPE_SET.BEHAVIOR:
-              state[node.id] = {
-                fileType: FILE_TYPE_SET.CSV,
-                param: {
-                  setHeader: null,
-                  setIndex: false,
-                  transpose: false,
-                },
-              }
-              break
-            case FILE_TYPE_SET.MATLAB:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
-            case FILE_TYPE_SET.MICROSCOPE:
-              state[node.id] = {
-                fileType,
-                param: {},
-              }
-              break
+          try {
+            const inputNode = FileNodeFactory.createInputNode(fileType)
+            state[node.id] = inputNode
+          } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn(`Unsupported file type: ${fileType}`, error)
           }
         }
       })
@@ -171,10 +126,15 @@ export const inputNodeSlice = createSlice({
         if (nodeId != null) {
           const { resultPath } = action.payload
           const target = state[nodeId]
-          if (target.fileType === FILE_TYPE_SET.IMAGE) {
-            target.selectedFilePath = [resultPath]
-          } else {
-            target.selectedFilePath = resultPath
+          if (target) {
+            const filePathType = FileNodeFactory.getFilePathType(
+              target.fileType,
+            )
+            if (filePathType === "array") {
+              target.selectedFilePath = [resultPath]
+            } else {
+              target.selectedFilePath = resultPath
+            }
           }
         }
       })
@@ -184,32 +144,26 @@ export const inputNodeSlice = createSlice({
         Object.values(action.payload.nodeDict)
           .filter(isInputNodePostData)
           .forEach((node) => {
-            if (node.data != null) {
-              if (node.data.fileType === FILE_TYPE_SET.IMAGE) {
+            if (node.data?.fileType != null) {
+              try {
+                const baseNode = FileNodeFactory.createInputNode(
+                  node.data.fileType,
+                )
+                // Use specific param for CSV nodes
+                const param =
+                  node.data.fileType === FILE_TYPE_SET.CSV
+                    ? (node.data.param as CsvInputParamType)
+                    : baseNode.param
                 newState[node.id] = {
-                  fileType: FILE_TYPE_SET.IMAGE,
-                  param: {},
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.CSV) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.CSV,
-                  param: node.data.param as CsvInputParamType,
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.MATLAB) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.MATLAB,
-                  param: {},
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.HDF5) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.HDF5,
-                  param: {},
-                }
-              } else if (node.data.fileType === FILE_TYPE_SET.MICROSCOPE) {
-                newState[node.id] = {
-                  fileType: FILE_TYPE_SET.MICROSCOPE,
-                  param: {},
-                }
+                  ...baseNode,
+                  param,
+                } as InputNodeType
+              } catch (error) {
+                // eslint-disable-next-line no-console
+                console.warn(
+                  `Unsupported file type: ${node.data.fileType}`,
+                  error,
+                )
               }
             }
           })
@@ -222,39 +176,59 @@ export const inputNodeSlice = createSlice({
           Object.values(action.payload.nodeDict)
             .filter(isInputNodePostData)
             .forEach((node) => {
-              if (node.data != null) {
-                if (node.data.fileType === FILE_TYPE_SET.IMAGE) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.IMAGE,
-                    selectedFilePath: node.data.path as string[],
-                    param: {},
+              if (node.data?.fileType != null) {
+                try {
+                  const baseNode = FileNodeFactory.createInputNode(
+                    node.data.fileType,
+                  )
+                  const filePathType = FileNodeFactory.getFilePathType(
+                    node.data.fileType,
+                  )
+                  const specialPath = FileNodeFactory.getSpecialPathConfig(
+                    node.data.fileType,
+                  )
+
+                  // Use specific param for CSV nodes
+                  const param =
+                    node.data.fileType === FILE_TYPE_SET.CSV
+                      ? (node.data.param as CsvInputParamType)
+                      : baseNode.param
+
+                  const nodeState: InputNodeType = {
+                    ...baseNode,
+                    param,
+                    selectedFilePath:
+                      filePathType === "array"
+                        ? (node.data.path as string[])
+                        : (node.data.path as string),
+                  } as InputNodeType
+
+                  // Add special path properties if configured
+                  if (specialPath) {
+                    if (
+                      specialPath.type === "hdf5Path" &&
+                      "hdf5Path" in node.data &&
+                      isHDF5InputNode(nodeState)
+                    ) {
+                      ;(nodeState as HDF5InputNode).hdf5Path =
+                        node.data.hdf5Path
+                    } else if (
+                      specialPath.type === "matPath" &&
+                      "matPath" in node.data &&
+                      isMatlabInputNode(nodeState)
+                    ) {
+                      ;(nodeState as MatlabInputNode).matPath =
+                        node.data.matPath
+                    }
                   }
-                } else if (node.data.fileType === FILE_TYPE_SET.CSV) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.CSV,
-                    selectedFilePath: node.data.path as string,
-                    param: node.data.param as CsvInputParamType,
-                  }
-                } else if (node.data.fileType === FILE_TYPE_SET.MATLAB) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.MATLAB,
-                    matPath: node.data.matPath,
-                    selectedFilePath: node.data.path as string,
-                    param: {},
-                  }
-                } else if (node.data.fileType === FILE_TYPE_SET.HDF5) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.HDF5,
-                    hdf5Path: node.data.hdf5Path,
-                    selectedFilePath: node.data.path as string,
-                    param: {},
-                  }
-                } else if (node.data.fileType === FILE_TYPE_SET.MICROSCOPE) {
-                  newState[node.id] = {
-                    fileType: FILE_TYPE_SET.MICROSCOPE,
-                    selectedFilePath: node.data.path as string,
-                    param: {},
-                  }
+
+                  newState[node.id] = nodeState
+                } catch (error) {
+                  // eslint-disable-next-line no-console
+                  console.warn(
+                    `Unsupported file type: ${node.data.fileType}`,
+                    error,
+                  )
                 }
               }
             })
