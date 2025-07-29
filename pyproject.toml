@@ -91,6 +91,7 @@ numpydoc = "*"
 yapf = "*"
 setuptools = "<70"
 aioboto3 = "^15.0.0"
+async-timeout = "^5.0.1"
 
 [tool.poetry.group.dev]
 optional = true
