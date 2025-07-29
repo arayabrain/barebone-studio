@@ -282,9 +282,9 @@ class SmkInternalUtils:
         NOTE: This determination is defined as follows:
           - snakemake.deployment.conda.Env.create
         """
-        is_conda_env_exists = os.path.exists(
-            os.path.join(conda_env_dirpath, "env_setup_start")
-        ) and os.path.exists(os.path.join(conda_env_dirpath, "env_setup_done"))
+        is_conda_env_exists = (
+            os.path.exists(os.path.join(conda_env_dirpath, "env_setup_done"))
+        ) or (os.path.exists(f"{conda_env_dirpath}.env_setup_done"))
 
         return is_conda_env_exists
 
