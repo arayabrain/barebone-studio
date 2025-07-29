@@ -14,13 +14,18 @@ export interface FileTypeConfig {
   dataType?: string
   nodeType?: string // Unified: replaces nodeComponent and reactFlowNodeType
   componentPath?: string
+  // Tree hierarchy configuration
+  treeHierarchy?: string // Parent node in tree hierarchy (e.g., "Data", "Sample Data")
 }
 
 // Enhanced config with computed properties
 export interface EnhancedFileTypeConfig
-  extends Required<Omit<FileTypeConfig, "hasSpecialPath" | "stateFileType">> {
+  extends Required<
+    Omit<FileTypeConfig, "hasSpecialPath" | "stateFileType" | "treeHierarchy">
+  > {
   hasSpecialPath?: FileTypeConfig["hasSpecialPath"]
   stateFileType?: string
+  treeHierarchy: string // Required in enhanced config with default value
   // Backward compatibility properties
   nodeComponent: string // Same as nodeType for compatibility
   reactFlowNodeType: string // Same as nodeType for compatibility
@@ -150,6 +155,7 @@ const ENHANCED_FILE_TYPE_CONFIGS: Record<string, EnhancedFileTypeConfig> =
           treeType: config.treeType || config.key,
           dataType: config.dataType || config.key,
           nodeType,
+          treeHierarchy: config.treeHierarchy || "Data", // Default to "Data" hierarchy
           // Backward compatibility - both point to the same nodeType
           nodeComponent: nodeType,
           reactFlowNodeType: nodeType,
@@ -180,6 +186,24 @@ export function getFileTypeConfig(
 
 export function getAllFileTypeConfigs(): EnhancedFileTypeConfig[] {
   return Object.values(ENHANCED_FILE_TYPE_CONFIGS)
+}
+
+// Group file type configs by tree hierarchy
+export function getFileTypeConfigsByHierarchy(): Record<
+  string,
+  EnhancedFileTypeConfig[]
+> {
+  const hierarchyGroups: Record<string, EnhancedFileTypeConfig[]> = {}
+
+  Object.values(ENHANCED_FILE_TYPE_CONFIGS).forEach((config) => {
+    const hierarchy = config.treeHierarchy
+    if (!hierarchyGroups[hierarchy]) {
+      hierarchyGroups[hierarchy] = []
+    }
+    hierarchyGroups[hierarchy].push(config)
+  })
+
+  return hierarchyGroups
 }
 
 // Auto-generated component mapping from ENHANCED_FILE_TYPE_CONFIGS

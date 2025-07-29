@@ -20,7 +20,7 @@ import {
   TreeItemDragObject,
   TreeItemDropResult,
 } from "components/Workspace/FlowChart/DnDItemType"
-import { getAllFileTypeConfigs } from "config/fileTypes.config"
+import { getFileTypeConfigsByHierarchy } from "config/fileTypes.config"
 import { REACT_FLOW_NODE_TYPE_KEY } from "const/flowchart"
 import { FileNodeFactory } from "factories/FileNodeFactory"
 import { getAlgoList } from "store/slice/AlgorithmList/AlgorithmListActions"
@@ -84,6 +84,9 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
     [dispatch, runAlready],
   )
 
+  // Get file type configs grouped by hierarchy
+  const fileTypesByHierarchy = getFileTypeConfigsByHierarchy()
+
   return (
     <TreeView
       sx={{
@@ -93,17 +96,26 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
       defaultCollapseIcon={<ExpandMoreIcon />}
       defaultExpandIcon={<ChevronRightIcon />}
     >
-      <TreeItem nodeId="Data" label="Data">
-        {getAllFileTypeConfigs().map((config) => (
-          <InputNodeComponent
-            key={config.key}
-            fileName={config.key}
-            nodeName={config.displayName}
-            fileType={config.key as FILE_TYPE}
-            config={config}
-          />
-        ))}
-      </TreeItem>
+      {/* Dynamically generate hierarchy nodes for file types */}
+      {Object.entries(fileTypesByHierarchy).map(([hierarchyName, configs]) => (
+        <TreeItem
+          key={hierarchyName}
+          nodeId={hierarchyName}
+          label={hierarchyName}
+        >
+          {configs.map((config) => (
+            <InputNodeComponent
+              key={config.key}
+              fileName={config.key}
+              nodeName={config.displayName}
+              fileType={config.key as FILE_TYPE}
+              config={config}
+            />
+          ))}
+        </TreeItem>
+      ))}
+
+      {/* Algorithm hierarchy remains static */}
       <TreeItem nodeId="Algorithm" label="Algorithm">
         {Object.entries(algoList).map(([name, node], i) => (
           <AlgoNodeComponentRecursive
