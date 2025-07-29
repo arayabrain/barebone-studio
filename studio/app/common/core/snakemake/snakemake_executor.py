@@ -4,7 +4,6 @@ import time
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from pathlib import Path
 from typing import Dict, List
 
 from snakemake.api import (
@@ -651,14 +650,14 @@ def _snakemake_execute_batch(
 
     except Exception as e:
         logger.error(f"Failed to setup AWS Batch execution: {e}")
-        result = False
+        snakemake_result = False
     finally:
         smk_logger.clean_up()
 
     # Post-processing (same for both local and batch)
-    _post_process_workflow(workspace_id, unique_id, result)
+    _post_process_workflow(workspace_id, unique_id, snakemake_result)
 
-    return result
+    return snakemake_result
 
 
 def _post_process_workflow(workspace_id: str, unique_id: str, result: bool = False):
@@ -669,7 +668,7 @@ def _post_process_workflow(workspace_id: str, unique_id: str, result: bool = Fal
     WorkspaceDataCapacityService.update_experiment_data_usage(workspace_id, unique_id)
 
     # result error handling
-    if not snakemake_result:
+    if not result:
         # Operate remote storage.
         if RemoteStorageController.is_available():
             # force delete sync lock file
@@ -687,7 +686,7 @@ def _post_process_workflow(workspace_id: str, unique_id: str, result: bool = Fal
                 RemoteSyncAction.UPLOAD,
             )
 
-    return snakemake_result
+    return result
 
 
 def delete_dependencies(
