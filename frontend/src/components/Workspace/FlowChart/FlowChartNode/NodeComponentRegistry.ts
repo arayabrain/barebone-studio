@@ -16,6 +16,7 @@ type NodeComponentType = React.ComponentType<NodeProps<NodeData>>
 
 // Component registry mapping node type names to components
 export const nodeComponentRegistry: Record<string, NodeComponentType> = {
+  AlgorithmNode,
   ImageFileNode,
   CsvFileNode,
   MatlabFileNode,
@@ -23,7 +24,6 @@ export const nodeComponentRegistry: Record<string, NodeComponentType> = {
   FluoFileNode,
   BehaviorFileNode,
   MicroscopeFileNode,
-  AlgorithmNode,
 }
 
 // Get component by node type name

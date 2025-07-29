@@ -45,6 +45,7 @@ export const FILE_TREE_TYPE_SET = {
 
 // Define node types first to avoid circular dependencies
 export const REACT_FLOW_NODE_TYPE_KEY = {
+  AlgorithmNode: "AlgorithmNode",
   ImageFileNode: "ImageFileNode",
   CsvFileNode: "CsvFileNode",
   HDF5FileNode: "HDF5FileNode",
@@ -52,7 +53,6 @@ export const REACT_FLOW_NODE_TYPE_KEY = {
   BehaviorFileNode: "BehaviorFileNode",
   MatlabFileNode: "MatlabFileNode",
   MicroscopeFileNode: "MicroscopeFileNode",
-  AlgorithmNode: "AlgorithmNode",
 } as const
 
 // Streamlined config - nodeType references REACT_FLOW_NODE_TYPE_KEY
