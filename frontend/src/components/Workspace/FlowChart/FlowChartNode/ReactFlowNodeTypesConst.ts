@@ -4,9 +4,9 @@ import { NodeProps } from "reactflow"
 import { CustomEdge } from "components/Workspace/FlowChart/CustomEdge"
 import { getNodeComponent } from "components/Workspace/FlowChart/FlowChartNode/NodeComponentRegistry"
 import { getAllFileTypeConfigs } from "config/fileTypes.config"
+import { NodeData } from "store/slice/FlowElement/FlowElementType"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ComponentType = React.ComponentType<NodeProps<any>>
+type ComponentType = React.ComponentType<NodeProps<NodeData>>
 
 // Create node types mapping from config
 const createNodeTypesFromConfig = () => {

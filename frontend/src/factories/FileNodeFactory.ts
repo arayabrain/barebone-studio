@@ -1,3 +1,5 @@
+import { Node } from "reactflow"
+
 import {
   DATA_TYPE_MAPPING,
   EnhancedFileTypeConfig,
@@ -8,24 +10,20 @@ import {
   DATA_TYPE,
   DATA_TYPE_SET,
 } from "store/slice/DisplayData/DisplayDataType"
-import { NODE_TYPE_SET } from "store/slice/FlowElement/FlowElementType"
-import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
+import {
+  InputNodeData,
+  NODE_TYPE_SET,
+} from "store/slice/FlowElement/FlowElementType"
+import {
+  FILE_TYPE,
+  FILE_TYPE_SET,
+  InputNodeType,
+} from "store/slice/InputNode/InputNodeType"
 import { getNanoId } from "utils/nanoid/NanoIdUtils"
 
-export interface CreateInputNodeResult {
-  fileType: FILE_TYPE
-  param: Record<string, unknown>
-}
+export type CreateInputNodeResult = InputNodeType
 
-export interface CreateReactFlowNodeResult {
-  id: string
-  type: string
-  data: {
-    label: string
-    type: string
-  }
-  position?: { x: number; y: number }
-}
+export type CreateReactFlowNodeResult = Node<InputNodeData>
 
 export class FileNodeFactory {
   static createInputNode(fileType: FILE_TYPE): CreateInputNodeResult {
@@ -45,10 +43,13 @@ export class FileNodeFactory {
         actualFileType = fileType
     }
 
-    return {
+    // Return proper typed InputNode based on fileType
+    const baseNode = {
       fileType: actualFileType,
       param: { ...config.defaultParam },
     }
+
+    return baseNode as CreateInputNodeResult
   }
 
   static createReactFlowNode(
@@ -64,15 +65,19 @@ export class FileNodeFactory {
       )
     }
 
-    return {
+    const nodeData: InputNodeData = {
+      label: nodeName,
+      type: NODE_TYPE_SET.INPUT,
+    }
+
+    const node = {
       id: `input_${getNanoId()}`,
       type: enhancedConfig.reactFlowNodeType,
-      data: {
-        label: nodeName,
-        type: NODE_TYPE_SET.INPUT,
-      },
-      position,
+      data: nodeData,
+      ...(position && { position }),
     }
+
+    return node as CreateReactFlowNodeResult
   }
 
   static getReactFlowNodeType(fileType: FILE_TYPE): string {

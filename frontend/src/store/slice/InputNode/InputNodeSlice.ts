@@ -15,8 +15,11 @@ import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
   CsvInputParamType,
   FILE_TYPE_SET,
+  HDF5InputNode,
   InputNode,
+  InputNodeType,
   INPUT_NODE_SLICE_NAME,
+  MatlabInputNode,
 } from "store/slice/InputNode/InputNodeType"
 import {
   isCsvInputNode,
@@ -97,8 +100,8 @@ export const inputNodeSlice = createSlice({
         const { node, fileType } = action.payload
         if (node.data?.type === NODE_TYPE_SET.INPUT) {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            state[node.id] = FileNodeFactory.createInputNode(fileType) as any
+            const inputNode = FileNodeFactory.createInputNode(fileType)
+            state[node.id] = inputNode
           } catch (error) {
             // eslint-disable-next-line no-console
             console.warn(`Unsupported file type: ${fileType}`, error)
@@ -151,12 +154,10 @@ export const inputNodeSlice = createSlice({
                   node.data.fileType === FILE_TYPE_SET.CSV
                     ? (node.data.param as CsvInputParamType)
                     : baseNode.param
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 newState[node.id] = {
                   ...baseNode,
                   param,
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } as any
+                } as InputNodeType
               } catch (error) {
                 // eslint-disable-next-line no-console
                 console.warn(
@@ -193,28 +194,31 @@ export const inputNodeSlice = createSlice({
                       ? (node.data.param as CsvInputParamType)
                       : baseNode.param
 
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const nodeState: any = {
+                  const nodeState: InputNodeType = {
                     ...baseNode,
                     param,
                     selectedFilePath:
                       filePathType === "array"
                         ? (node.data.path as string[])
                         : (node.data.path as string),
-                  }
+                  } as InputNodeType
 
                   // Add special path properties if configured
                   if (specialPath) {
                     if (
                       specialPath.type === "hdf5Path" &&
-                      "hdf5Path" in node.data
+                      "hdf5Path" in node.data &&
+                      isHDF5InputNode(nodeState)
                     ) {
-                      nodeState.hdf5Path = node.data.hdf5Path
+                      ;(nodeState as HDF5InputNode).hdf5Path =
+                        node.data.hdf5Path
                     } else if (
                       specialPath.type === "matPath" &&
-                      "matPath" in node.data
+                      "matPath" in node.data &&
+                      isMatlabInputNode(nodeState)
                     ) {
-                      nodeState.matPath = node.data.matPath
+                      ;(nodeState as MatlabInputNode).matPath =
+                        node.data.matPath
                     }
                   }
 

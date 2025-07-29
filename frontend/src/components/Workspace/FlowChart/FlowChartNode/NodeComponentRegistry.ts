@@ -10,9 +10,9 @@ import { HDF5FileNode } from "components/Workspace/FlowChart/FlowChartNode/HDF5F
 import { ImageFileNode } from "components/Workspace/FlowChart/FlowChartNode/ImageFileNode"
 import { MatlabFileNode } from "components/Workspace/FlowChart/FlowChartNode/MatlabFileNode"
 import { MicroscopeFileNode } from "components/Workspace/FlowChart/FlowChartNode/MicroscopeFileNode"
+import { NodeData } from "store/slice/FlowElement/FlowElementType"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NodeComponentType = React.ComponentType<NodeProps<any>>
+type NodeComponentType = React.ComponentType<NodeProps<NodeData>>
 
 // Component registry mapping node type names to components
 export const nodeComponentRegistry: Record<string, NodeComponentType> = {

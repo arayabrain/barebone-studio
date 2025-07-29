@@ -37,10 +37,7 @@ import {
   addAlgorithmNode,
   addInputNode,
 } from "store/slice/FlowElement/FlowElementActions"
-import {
-  NODE_TYPE,
-  NODE_TYPE_SET,
-} from "store/slice/FlowElement/FlowElementType"
+import { NODE_TYPE_SET } from "store/slice/FlowElement/FlowElementType"
 import { FILE_TYPE } from "store/slice/InputNode/InputNodeType"
 import { selectPipelineLatestUid } from "store/slice/Pipeline/PipelineSelectors"
 import { AppDispatch } from "store/store"
@@ -147,7 +144,6 @@ const InputNodeComponent = memo(function InputNodeComponent({
 
   const onAddDataNode = useCallback(
     (
-      nodeType: NODE_TYPE,
       nodeName: string,
       fileType: FILE_TYPE,
       position?: { x: number; y: number },
@@ -157,10 +153,7 @@ const InputNodeComponent = memo(function InputNodeComponent({
         config,
         position,
       )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      newNode.data.type = nodeType as any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      dispatch(addInputNode({ node: newNode as any, fileType }))
+      dispatch(addInputNode({ node: newNode, fileType }))
     },
     [dispatch, config],
   )
@@ -168,7 +161,7 @@ const InputNodeComponent = memo(function InputNodeComponent({
   const { isDragging, dragRef } = useLeafItemDrag(
     useCallback(
       (position) => {
-        onAddDataNode(NODE_TYPE_SET.INPUT, nodeName, fileType, position)
+        onAddDataNode(nodeName, fileType, position)
       },
       [onAddDataNode, nodeName, fileType],
     ),
@@ -185,7 +178,7 @@ const InputNodeComponent = memo(function InputNodeComponent({
       label={
         <AddButton
           name={fileName}
-          onClick={() => onAddDataNode(NODE_TYPE_SET.INPUT, nodeName, fileType)}
+          onClick={() => onAddDataNode(nodeName, fileType)}
         />
       }
     />
