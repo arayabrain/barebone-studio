@@ -2,9 +2,18 @@ import asyncio
 import os
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 from typing import Dict, List
 
-from snakemake import snakemake
+from snakemake.api import (
+    DAGSettings,
+    DeploymentMethod,
+    DeploymentSettings,
+    OutputSettings,
+    ResourceSettings,
+    SnakemakeApi,
+    StorageSettings,
+)
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import ForceRun, SmkParam
@@ -57,18 +66,62 @@ def _snakemake_execute_process(
         ]
     )
 
-    result = snakemake(
-        DIRPATH.SNAKEMAKE_FILEPATH,
-        forceall=params.forceall,
-        cores=params.cores,
-        use_conda=params.use_conda,
-        conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
-        workdir=smk_workdir,
-        configfiles=[SmkConfigReader.get_config_yaml_path(workspace_id, unique_id)],
-        log_handler=[smk_logger.log_handler],
-    )
+    # Use context manager for proper cleanup
+    cores = getattr(params, "cores", 1)
 
-    if result:
+    deployment_methods = []
+    if getattr(params, "use_conda", True):
+        deployment_methods.append(DeploymentMethod.CONDA)
+
+    # Use context manager for proper cleanup
+    with SnakemakeApi(
+        OutputSettings(
+            verbose=True,
+            show_failed_logs=True,
+        ),
+    ) as snakemake_api:
+        workflow_api = snakemake_api.workflow(
+            snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
+            workdir=Path(smk_workdir),
+            storage_settings=StorageSettings(),
+            resource_settings=ResourceSettings(cores=cores),
+            deployment_settings=DeploymentSettings(
+                deployment_method=deployment_methods,
+                conda_frontend="conda",
+                conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
+            ),
+        )
+
+        logger.info("Workflow API created successfully")
+        logger.info("Creating DAG...")
+
+        forceall = getattr(params, "forceall", False)
+
+        dag_api = workflow_api.dag(
+            dag_settings=DAGSettings(
+                forceall=forceall,
+            )
+        )
+
+        logger.info("DAG created successfully")
+        logger.info("Starting workflow execution...")
+
+        snakemake_result = False
+
+        try:
+            dag_api.execute_workflow()
+
+            snakemake_result = True
+            logger.info("snakemake_execute succeeded.")
+        except Exception as e:
+            snakemake_result = False
+            logger.error(f"snakemake_execute failed: {e}")
+
+            # Logging errors via SmkStatusLogger to notify
+            #   the monitoring process (WorkflowMonitor) of the error occurrence
+            smk_logger.logger.error(e)
+
+    if snakemake_result:
         logger.info("snakemake_execute succeeded.")
     else:
         logger.error("snakemake_execute failed..")
@@ -86,7 +139,7 @@ def _snakemake_execute_process(
     WorkspaceDataCapacityService.update_experiment_data_usage(workspace_id, unique_id)
 
     # result error handling
-    if not result:
+    if not snakemake_result:
         # Operate remote storage.
         if RemoteStorageController.is_available():
             # force delete sync lock file
@@ -104,7 +157,7 @@ def _snakemake_execute_process(
                 RemoteSyncAction.UPLOAD,
             )
 
-    return result
+    return snakemake_result
 
 
 def delete_dependencies(

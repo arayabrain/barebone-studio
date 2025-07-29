@@ -1,8 +1,6 @@
 import logging
 import os
-from typing import Dict
 
-from studio.app.common.core.rules.runner import Runner
 from studio.app.common.core.utils.file_reader import Reader
 from studio.app.common.core.utils.filepath_creater import (
     create_directory,
@@ -84,47 +82,6 @@ class SmkStatusLogger:
         self.workspace_id = workspace_id
         self.unique_id = unique_id
         self.logger: logging.Logger = __class__.get_logger(workspace_id, unique_id)
-
-    def log_handler(self, msg: Dict[str, str] = None):
-        """
-        msg:
-            level:
-                "job_info": jobの始まりを通知。inputやoutputがある
-                "job_finished": jobの終了を通知。
-        """
-        # pass
-        # # has error.
-        # if "exception" in msg:
-        #     self.logger.error(msg)
-
-        # Inspect log contents
-        if "level" in msg and "debug" in msg["level"]:
-            level = msg["level"]
-            if "debug" in level and "msg" in msg:
-                # Inspects for error logs
-                if "Traceback" in msg["msg"]:
-                    # check if the message is thrown by killing process action
-                    if any(
-                        err in msg["msg"]
-                        for err in ["Signals.SIGTERM", "exit status 15"]
-                    ):
-                        pid_data = Runner.read_pid_file(
-                            self.workspace_id, self.unique_id
-                        )
-
-                        # since multiple running workflow share log data,
-                        # check if message really belongs to the current workflow
-                        if (
-                            pid_data is not None
-                            and pid_data.last_script_file in msg["msg"]
-                        ):
-                            self.logger.error("Workflow cancelled")
-                        else:
-                            self.logger.error(msg)
-
-                    # for any other errors
-                    else:
-                        self.logger.error(msg)
 
     def clean_up(self):
         """
