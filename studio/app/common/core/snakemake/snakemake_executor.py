@@ -3,11 +3,9 @@ import os
 import time
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 
-import boto3
 from snakemake.api import (
     DAGSettings,
     DefaultResources,
@@ -17,14 +15,13 @@ from snakemake.api import (
     OutputSettings,
     RemoteExecutionSettings,
     ResourceSettings,
-    SharedFSUsage,
     SnakemakeApi,
     StorageSettings,
 )
 from snakemake_executor_plugin_aws_batch import ExecutorSettings
 
 from studio.app.common.core.cloud_batch.batch_config import BATCH_CONFIG
-from studio.app.common.core.cloud_batch.batch_utils import BatchUtils
+from studio.app.common.core.cloud_batch.batch_utils import BatchDebug, BatchUtils
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import ForceRun, SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
@@ -43,700 +40,6 @@ from studio.app.common.core.workspace.workspace_data_capacity_services import (
 from studio.app.dir_path import DIRPATH
 
 logger = AppLogger.get_logger()
-
-
-def _get_efs_optimized_storage_settings(
-    workspace_id: str, unique_id: str
-) -> StorageSettings:
-    """
-    Configure optimized storage settings for EFS with local scratch directories.
-    This implements the best practices for shared network filesystems.
-    """
-    # EFS mount path - should be persistent across batch jobs
-    efs_storage = f"file:///mnt/efs/{workspace_id}/{unique_id}/"
-
-    # Local scratch directory - should be fast local storage (e.g., NVMe SSD)
-    # This will be used for intermediate files and temporary storage
-    local_scratch = "/tmp/snakemake_scratch"
-
-    # Per-job scratch directory to avoid conflicts between concurrent jobs
-    job_local_scratch = "/tmp/snakemake_scratch/$JOBID"
-
-    storage_settings = StorageSettings(
-        default_storage_provider="fs",  # Use the filesystem storage plugin
-        default_storage_prefix=efs_storage,
-        # Local scratch for the coordinator/main process
-        local_storage_prefix=local_scratch,
-        # Per-job local scratch for remote batch jobs
-        remote_job_local_storage_prefix=job_local_scratch,
-        shared_fs_usage=[SharedFSUsage.SOFTWARE_DEPLOYMENT],
-    )
-
-    logger.info(f"EFS storage configured: {efs_storage}")
-    logger.info(f"Local scratch directory: {local_scratch}")
-    logger.info(f"Remote job scratch directory: {job_local_scratch}")
-
-    return storage_settings
-
-
-def _prepare_efs_environment(workspace_id: str, unique_id: str):
-    """
-    Ensure EFS directories exist and local scratch is prepared.
-    """
-    efs_base_path = Path(f"/mnt/efs/{workspace_id}/{unique_id}")
-    local_scratch_path = Path("/tmp/snakemake_scratch")
-
-    try:
-        # Create EFS directories if they don't exist
-        efs_base_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"EFS directory prepared: {efs_base_path}")
-
-        # Create local scratch directory
-        local_scratch_path.mkdir(parents=True, exist_ok=True)
-        # Set proper permissions for scratch directory
-        os.chmod(local_scratch_path, 0o755)
-
-        logger.info(f"Local scratch directory prepared: {local_scratch_path}")
-
-        # Create subdirectories that Snakemake might need
-        (efs_base_path / "logs").mkdir(exist_ok=True)
-        (efs_base_path / "benchmarks").mkdir(exist_ok=True)
-        (efs_base_path / ".snakemake").mkdir(exist_ok=True)
-
-    except Exception as e:
-        logger.error(f"Failed to prepare EFS environment: {e}")
-        raise
-
-
-def _get_batch_container_setup_commands() -> List[str]:
-    """
-    Return setup commands that should be run in batch containers to prepare
-    the local scratch environment (EFS-specific commands).
-    """
-    return [
-        # Create local scratch with proper permissions
-        "mkdir -p /tmp/snakemake_scratch/$JOBID",
-        "chmod 755 /tmp/snakemake_scratch",
-        "chmod 755 /tmp/snakemake_scratch/$JOBID",
-        # Set environment variables for better performance
-        "export TMPDIR=/tmp/snakemake_scratch/$JOBID",
-        "export TMP=/tmp/snakemake_scratch/$JOBID",
-        # Ensure EFS mount point exists
-        "mkdir -p /mnt/efs",
-        # Optional: Set rsync options for better EFS performance
-        "export SNAKEMAKE_RSYNC_OPTS='-av --inplace --no-sparse'",
-    ]
-
-
-def _test_ecr_image_pull(batch_executor) -> None:
-    """
-    Test if ECR image can be pulled by checking authentication and permissions.
-    """
-    try:
-        container_image = batch_executor.get_container_image()
-        if "ecr" not in container_image:
-            logger.debug("Not an ECR image, skipping pull test")
-            return
-
-        logger.debug("Testing ECR image pull capabilities...")
-
-        # Extract ECR details
-        image_parts = container_image.split("/")[-1]
-        repo_name = image_parts.split(":")[0]
-
-        try:
-            # Test ECR authentication by getting an authorization token
-            ecr_client = batch_executor.ecr_client
-            auth_response = ecr_client.get_authorization_token()
-
-            if auth_response.get("authorizationData"):
-                auth_data = auth_response["authorizationData"][0]
-                proxy_endpoint = auth_data.get("proxyEndpoint")
-                expires_at = auth_data.get("expiresAt")
-
-                logger.debug("ECR Authentication: SUCCESS")
-                logger.debug(f"  Proxy Endpoint: {proxy_endpoint}")
-                logger.debug(f"  Token expires: {expires_at}")
-
-                # Test repository access
-                try:
-                    ecr_client.get_repository_policy(repositoryName=repo_name)
-                    logger.debug("ECR Repository Policy: Accessible")
-                except ecr_client.exceptions.RepositoryPolicyNotFoundException:
-                    logger.debug(
-                        "ECR Repository Policy: No policy set "
-                        "(using default permissions)"
-                    )
-                except Exception as policy_error:
-                    logger.warning(
-                        f"ECR Repository Policy check failed: {policy_error}"
-                    )
-
-            else:
-                logger.warning("ECR Authentication: No authorization data received")
-
-        except Exception as auth_error:
-            logger.warning(f"ECR Authentication failed: {auth_error}")
-            logger.warning("This indicates IAM permission issues for ECR access")
-
-    except Exception as e:
-        logger.debug(f"ECR image pull test failed: {e}")
-
-
-def _check_batch_job_memory_usage(batch_executor, job_queue: str) -> None:
-    """
-    Check memory usage for currently running batch jobs.
-    """
-    try:
-        logger.debug("Checking memory usage for running jobs...")
-
-        # Get currently running jobs
-        running_jobs = batch_executor.batch_client.list_jobs(
-            jobQueue=job_queue, jobStatus="RUNNING", maxResults=10
-        )
-
-        running_job_list = running_jobs.get("jobList", [])
-        if not running_job_list:
-            logger.debug("No running jobs to check memory usage for")
-            return
-
-        logger.debug(f"Checking memory usage for {len(running_job_list)} running jobs:")
-
-        for job in running_job_list:
-            job_id = job["jobId"]
-            job_name = job.get("jobName", "Unknown")
-
-            try:
-                # Get detailed job information
-                job_details = batch_executor.batch_client.describe_jobs(jobs=[job_id])
-                if job_details.get("jobs"):
-                    job_info = job_details["jobs"][0]
-
-                    # Get memory allocation
-                    job_def = job_info.get("jobDefinition", "")
-                    container = job_info.get("container", {})
-
-                    # Memory allocation from job definition
-                    memory_requested = container.get("memory", "Unknown")
-                    vcpus_requested = container.get("vcpus", "Unknown")
-
-                    logger.debug(f" Job {job_name}:")
-                    logger.debug(f"Job Definition: {job_def}")
-                    logger.debug(
-                        f"Allocated: {memory_requested}MB memory, "
-                        f"{vcpus_requested} vCPUs"
-                    )
-
-                    # Try to get CloudWatch memory metrics if available
-                    try:
-                        cloudwatch = boto3.client(
-                            "cloudwatch", region_name=BATCH_CONFIG.AWS_DEFAULT_REGION
-                        )
-
-                        # Get memory utilization metrics
-                        end_time = datetime.now()
-                        start_time = end_time - timedelta(minutes=10)
-
-                        # Check for memory utilization metrics
-                        # Note: These require CloudWatch Container Insights
-                        try:
-                            memory_metrics = cloudwatch.get_metric_statistics(
-                                Namespace="AWS/ECS",  # ECS metrics for Batch
-                                MetricName="MemoryUtilization",
-                                Dimensions=[{"Name": "ServiceName", "Value": job_name}],
-                                StartTime=start_time,
-                                EndTime=end_time,
-                                Period=300,  # 5-minute periods
-                                Statistics=["Average", "Maximum"],
-                            )
-
-                            datapoints = memory_metrics.get("Datapoints", [])
-                            if datapoints:
-                                latest = max(datapoints, key=lambda x: x["Timestamp"])
-                                avg_mem = latest.get("Average", 0)
-                                max_mem = latest.get("Maximum", 0)
-                                logger.debug(
-                                    f"Mem Use: {avg_mem:.1f}% avg, {max_mem:.1f}% max"
-                                )
-                            else:
-                                logger.debug(
-                                    "No memory metrics available "
-                                    "(Container Insights may not be enabled)"
-                                )
-
-                        except Exception as metrics_error:
-                            logger.debug(
-                                f"    Could not get memory metrics: {metrics_error}"
-                            )
-
-                    except Exception as cw_error:
-                        logger.debug(f"    CloudWatch check failed: {cw_error}")
-
-                    # Check for OOM killer in logs if available
-                    log_stream = container.get("logStreamName")
-                    if log_stream:
-                        try:
-                            logs_client = boto3.client(
-                                "logs", region_name=BATCH_CONFIG.AWS_DEFAULT_REGION
-                            )
-
-                            # Get recent logs to check for memory issues
-                            log_events = logs_client.get_log_events(
-                                logGroupName="/aws/batch/job",
-                                logStreamName=log_stream,
-                                limit=20,
-                                startFromHead=False,
-                            )
-
-                            # Look for memory-related errors
-                            for event in log_events.get("events", []):
-                                message = event["message"].lower()
-                                if any(
-                                    keyword in message
-                                    for keyword in [
-                                        "oom",
-                                        "out of memory",
-                                        "memory",
-                                        "killed",
-                                        "exit code 137",
-                                    ]
-                                ):
-                                    logger.warning(
-                                        "    Memory issue detected: "
-                                        f"{event['message'][:100]}..."
-                                    )
-
-                        except Exception as log_error:
-                            logger.debug(
-                                "    Could not check logs for memory issues: "
-                                f"{log_error}"
-                            )
-
-            except Exception as job_error:
-                logger.warning(
-                    f"  Could not check memory for job {job_name}: {job_error}"
-                )
-
-    except Exception as e:
-        logger.debug(f"Memory usage check failed: {e}")
-
-
-def _debug_batch_environment(batch_executor) -> None:
-    """
-    Debug AWS Batch environment status and recent job failures.
-    Provides immediate visibility into batch environment health.
-    """
-    try:
-        logger.info("=== AWS BATCH ENVIRONMENT DEBUG ===")
-
-        # Get job queue for user
-        job_queue = batch_executor.get_job_queue_for_user()
-        logger.info(f"Target Job Queue: {job_queue}")
-
-        # 1. Check job queue status
-        logger.debug("Checking job queue status...")
-        queues = batch_executor.batch_client.describe_job_queues(jobQueues=[job_queue])
-        if queues.get("jobQueues"):
-            queue = queues["jobQueues"][0]
-            queue_state = queue.get("state", "UNKNOWN")
-            queue_status = queue.get("status", "UNKNOWN")
-            logger.info(f"Job Queue State: {queue_state}, Status: {queue_status}")
-
-            if queue_state != "ENABLED":
-                logger.warning(f"Job queue is not enabled: {queue_state}")
-
-            # Check compute environments
-            compute_envs = queue.get("computeEnvironmentOrder", [])
-            logger.info(f"Compute Environments: {len(compute_envs)}")
-
-            for ce in compute_envs:
-                ce_name = ce["computeEnvironment"]
-                logger.debug(f"Checking compute environment: {ce_name}")
-
-                try:
-                    ce_details = (
-                        batch_executor.batch_client.describe_compute_environments(
-                            computeEnvironments=[ce_name]
-                        )
-                    )
-                    if ce_details.get("computeEnvironments"):
-                        ce_info = ce_details["computeEnvironments"][0]
-                        ce_state = ce_info.get("state", "UNKNOWN")
-                        ce_status = ce_info.get("status", "UNKNOWN")
-                        logger.info(
-                            f"  CE {ce_name}: state={ce_state}, status={ce_status}"
-                        )
-
-                        # Check resource limits
-                        if "computeResources" in ce_info:
-                            resources = ce_info["computeResources"]
-                            max_vcpus = resources.get("maxvCpus", "N/A")
-                            desired_vcpus = resources.get("desiredvCpus", "N/A")
-                            logger.info(
-                                f"  Resources: max_vCPUs={max_vcpus}, "
-                                f"desired_vCPUs={desired_vcpus}"
-                            )
-
-                        if ce_state != "ENABLED" or ce_status not in [
-                            "VALID",
-                            "UPDATING",
-                        ]:
-                            logger.warning(
-                                f"  CE {ce_name} may have issues: "
-                                f"{ce_state}/{ce_status}"
-                            )
-                except Exception as ce_error:
-                    logger.warning(
-                        f"  Could not get details for CE {ce_name}: {ce_error}"
-                    )
-        else:
-            logger.error(f"Job queue '{job_queue}' not found!")
-            return
-
-        # 2. Check current job status
-        logger.debug("Checking current job counts...")
-        for status in ["RUNNABLE", "STARTING", "RUNNING"]:
-            try:
-                jobs = batch_executor.batch_client.list_jobs(
-                    jobQueue=job_queue, jobStatus=status, maxResults=50
-                )
-                job_count = len(jobs.get("jobList", []))
-                logger.info(f"{status} jobs: {job_count}")
-
-                # Show details for stuck STARTING jobs
-                if status == "STARTING" and job_count > 0:
-                    logger.warning(f"Found {job_count} jobs stuck in STARTING state:")
-                    for job in jobs["jobList"][:3]:  # Show first 3
-                        job_name = job.get("jobName", "Unknown")
-                        created_at = job.get("createdAt", 0)
-                        if created_at:
-                            created_time = datetime.fromtimestamp(created_at / 1000)
-                            duration = datetime.now() - created_time
-                            logger.warning(f"  {job_name}: stuck for {duration}")
-            except Exception as status_error:
-                logger.warning(f"Could not check {status} jobs: {status_error}")
-
-        # 3. Check recent failed jobs
-        logger.debug("Checking recent failed jobs...")
-        try:
-            failed_jobs = batch_executor.batch_client.list_jobs(
-                jobQueue=job_queue, jobStatus="FAILED", maxResults=5
-            )
-
-            failed_count = len(failed_jobs.get("jobList", []))
-            logger.info(f"Recent failed jobs: {failed_count}")
-
-            if failed_count > 0:
-                logger.warning("Recent failure details:")
-                for job in failed_jobs["jobList"][:3]:  # Show first 3 failures
-                    job_id = job["jobId"]
-                    job_name = job.get("jobName", "Unknown")
-
-                    # Get detailed failure info
-                    try:
-                        job_details = batch_executor.batch_client.describe_jobs(
-                            jobs=[job_id]
-                        )
-                        if job_details.get("jobs"):
-                            job_info = job_details["jobs"][0]
-                            status_reason = job_info.get("statusReason", "Unknown")
-                            container = job_info.get("container", {})
-                            exit_code = container.get("exitCode", "N/A")
-                            exit_reason = container.get("reason", "Unknown")
-
-                            logger.warning(
-                                f"  {job_name}: exit_code={exit_code}, "
-                                f"reason='{exit_reason}'"
-                            )
-                            logger.warning(f"    Status: {status_reason}")
-                    except Exception as detail_error:
-                        logger.warning(
-                            f"  {job_name}: Could not get details - {detail_error}"
-                        )
-        except Exception as failed_error:
-            logger.warning(f"Could not check failed jobs: {failed_error}")
-
-        # 4. Check ECR image accessibility and recent pulls
-        logger.debug("Checking ECR image status...")
-        try:
-            container_image = batch_executor.get_container_image()
-            logger.info(f"Container Image: {container_image}")
-
-            if "ecr" in container_image:
-                # Extract repository name and tag
-                image_parts = container_image.split("/")[-1]
-                repo_name = image_parts.split(":")[0]
-                image_tag = (
-                    image_parts.split(":")[1] if ":" in image_parts else "latest"
-                )
-
-                logger.debug(f"ECR Repository: {repo_name}, Tag: {image_tag}")
-
-                try:
-                    # Check repository existence and latest push
-                    repo_details = batch_executor.ecr_client.describe_repositories(
-                        repositoryNames=[repo_name]
-                    )
-                    if repo_details.get("repositories"):
-                        repo = repo_details["repositories"][0]
-                        created_at = repo.get("createdAt")
-                        registry_id = repo.get("registryId")
-                        logger.info(
-                            f"ECR Repository: {repo_name} exists "
-                            f"(registry: {registry_id})"
-                        )
-
-                        # Check image details
-                        try:
-                            images = batch_executor.ecr_client.describe_images(
-                                repositoryName=repo_name,
-                                imageIds=[{"imageTag": image_tag}],
-                            )
-                            if images.get("imageDetails"):
-                                image_detail = images["imageDetails"][0]
-                                image_size = image_detail.get("imageSizeInBytes", 0)
-                                pushed_at = image_detail.get("imagePushedAt")
-                                logger.info(
-                                    f"Image {image_tag}: {image_size/1024/1024:.1f}MB, "
-                                    f"pushed: {pushed_at}"
-                                )
-                            else:
-                                logger.warning(
-                                    f"Image tag '{image_tag}' not found in repository"
-                                )
-                        except Exception as img_error:
-                            logger.warning(f"Could not get image details: {img_error}")
-
-                except Exception as ecr_error:
-                    logger.warning(f"ECR check failed: {ecr_error}")
-                    # This might indicate permission issues
-
-        except Exception as container_error:
-            logger.warning(f"Container image check failed: {container_error}")
-
-        # Test ECR image pull capabilities
-        _test_ecr_image_pull(batch_executor)
-
-        # 5. Check CloudWatch metrics for compute environment instances
-        logger.debug("Checking compute environment metrics...")
-        try:
-            cloudwatch = boto3.client(
-                "cloudwatch", region_name=BATCH_CONFIG.AWS_DEFAULT_REGION
-            )
-
-            # Get compute environment names
-            for ce in compute_envs:
-                ce_name = ce["computeEnvironment"]
-                logger.debug(f"Checking metrics for CE: {ce_name}")
-
-                try:
-                    # Get EC2 instances in the compute environment
-                    # Note: This is approximate,
-                    # AWS Batch doesn't directly expose instance metrics
-                    end_time = datetime.now()
-                    start_time = end_time - timedelta(minutes=30)
-
-                    # Check for common CloudWatch metrics that might indicate issues
-                    metrics_to_check = [
-                        "AWS/Batch",  # Batch service metrics
-                        "AWS/EC2",  # EC2 instance metrics
-                    ]
-
-                    for namespace in metrics_to_check:
-                        try:
-                            # List available metrics
-                            metrics = cloudwatch.list_metrics(
-                                Namespace=namespace,
-                                Dimensions=[{"Name": "JobQueue", "Value": job_queue}],
-                            )
-
-                            if metrics.get("Metrics"):
-                                logger.info(
-                                    f"Found {len(metrics['Metrics'])} "
-                                    f"CloudWatch metrics for {namespace}"
-                                    f" at start_time={start_time}, end_time={end_time}"
-                                )
-
-                                # Check specific useful metrics
-                                for metric in metrics["Metrics"][:3]:  # First 3 metrics
-                                    metric_name = metric["MetricName"]
-                                    logger.debug(f"  Available metric: {metric_name}")
-
-                        except Exception as metric_error:
-                            logger.debug(
-                                f"Could not check {namespace} metrics: {metric_error}"
-                            )
-
-                except Exception as ce_metric_error:
-                    logger.debug(
-                        f"Could not get metrics for CE {ce_name}: {ce_metric_error}"
-                    )
-
-        except Exception as cw_error:
-            logger.debug(f"CloudWatch metrics check failed: {cw_error}")
-
-        # 6. Check for recent container startup logs
-        logger.debug("Checking recent container logs for startup issues...")
-        try:
-            logs_client = boto3.client(
-                "logs", region_name=BATCH_CONFIG.AWS_DEFAULT_REGION
-            )
-
-            # Look for recent log streams in the batch log group
-            log_group = "/aws/batch/job"
-            try:
-                log_streams = logs_client.describe_log_streams(
-                    logGroupName=log_group,
-                    orderBy="LastEventTime",
-                    descending=True,
-                    limit=5,
-                )
-
-                recent_streams = len(log_streams.get("logStreams", []))
-                logger.info(f"Recent log streams in {log_group}: {recent_streams}")
-
-                # Check the most recent log stream for container startup issues
-                if log_streams.get("logStreams"):
-                    latest_stream = log_streams["logStreams"][0]
-                    stream_name = latest_stream["logStreamName"]
-                    last_event = latest_stream.get("lastEventTime", 0)
-
-                    if last_event:
-                        last_event_time = datetime.fromtimestamp(last_event / 1000)
-                        time_ago = datetime.now() - last_event_time
-                        logger.info(
-                            f"Latest log stream: {stream_name} ({time_ago} ago)"
-                        )
-
-                        # Get recent log events to check for container issues
-                        try:
-                            log_events = logs_client.get_log_events(
-                                logGroupName=log_group,
-                                logStreamName=stream_name,
-                                limit=10,
-                                startFromHead=False,  # Get most recent
-                            )
-
-                            events = log_events.get("events", [])
-                            if events:
-                                logger.debug("Recent container log messages:")
-                                for event in events[-3:]:  # Last 3 messages
-                                    message = event["message"]
-                                    # Look for common container startup issues
-                                    if any(
-                                        keyword in message.lower()
-                                        for keyword in [
-                                            "error",
-                                            "failed",
-                                            "timeout",
-                                            "permission",
-                                            "denied",
-                                            "pull",
-                                        ]
-                                    ):
-                                        logger.warning(
-                                            f"  Issue found: {message[:100]}..."
-                                        )
-                                    else:
-                                        logger.debug(f"  {message[:80]}...")
-                        except Exception as events_error:
-                            logger.debug(f"Could not get log events: {events_error}")
-
-            except logs_client.exceptions.ResourceNotFoundException:
-                logger.warning(
-                    f"Log group {log_group} not found - no container logs available"
-                )
-            except Exception as logs_error:
-                logger.debug(f"Could not check log streams: {logs_error}")
-
-        except Exception as log_check_error:
-            logger.debug(f"Container log check failed: {log_check_error}")
-
-        # 7. Check memory usage for running jobs
-        logger.debug("Checking memory usage for running jobs...")
-        _check_batch_job_memory_usage(batch_executor, job_queue)
-
-        logger.info("=== END BATCH ENVIRONMENT DEBUG ===")
-
-    except Exception as e:
-        logger.error(f"Batch environment debug failed: {e}")
-        # Don't let debug failure break the main execution
-
-
-def _validate_batch_configuration(batch_executor) -> bool:
-    """
-    Validate AWS Batch configuration before execution.
-    Returns True if configuration is valid, False otherwise.
-    """
-    try:
-        logger.info("Validating AWS Batch configuration...")
-
-        # Check if we can access the batch service
-        job_queue = batch_executor.get_job_queue_for_user()
-
-        # Test batch client connectivity
-        logger.debug("Testing AWS Batch client connectivity...")
-        queues = batch_executor.batch_client.describe_job_queues(jobQueues=[job_queue])
-
-        if not queues.get("jobQueues"):
-            logger.error(f"Job queue '{job_queue}' not found or inaccessible")
-            return False
-
-        queue_info = queues["jobQueues"][0]
-        queue_state = queue_info.get("state", "UNKNOWN")
-        logger.info(f"Job queue '{job_queue}' state: {queue_state}")
-
-        if queue_state != "ENABLED":
-            logger.error(
-                f"Job queue '{job_queue}' is not enabled (state: {queue_state})"
-            )
-            return False
-
-        # Check compute environment status
-        compute_envs = queue_info.get("computeEnvironmentOrder", [])
-        for ce in compute_envs:
-            ce_name = ce.get("computeEnvironment")
-            logger.debug(f"Checking compute environment: {ce_name}")
-
-            ce_details = batch_executor.batch_client.describe_compute_environments(
-                computeEnvironments=[ce_name]
-            )
-
-            if ce_details.get("computeEnvironments"):
-                ce_state = ce_details["computeEnvironments"][0].get("state", "UNKNOWN")
-                ce_status = ce_details["computeEnvironments"][0].get(
-                    "status", "UNKNOWN"
-                )
-                logger.info(
-                    f"Compute environment '{ce_name}' - state: {ce_state}, "
-                    f"status: {ce_status}"
-                )
-
-                if ce_state != "ENABLED" or ce_status not in ["VALID", "UPDATING"]:
-                    logger.warning(f"Compute environment '{ce_name}' may have issues")
-
-        # Check container image accessibility
-        container_image = batch_executor.get_container_image()
-        logger.info(f"Container image: {container_image}")
-
-        # Try to describe the ECR repository if using ECR
-        if "ecr" in container_image:
-            try:
-                repo_name = container_image.split("/")[-1].split(":")[0]
-                logger.debug(f"Checking ECR repository: {repo_name}")
-                batch_executor.ecr_client.describe_repositories(
-                    repositoryNames=[repo_name]
-                )
-                logger.debug("ECR repository accessible")
-            except Exception as ecr_error:
-                logger.warning(f"ECR repository check failed: {ecr_error}")
-
-        logger.info("AWS Batch configuration validation completed successfully")
-        return True
-
-    except Exception as e:
-        logger.error(f"AWS Batch configuration validation failed: {e}")
-        return False
 
 
 def snakemake_execute(workspace_id: str, unique_id: str, params: SmkParam):
@@ -868,11 +171,11 @@ def _snakemake_execute_batch(
 
         # Debug AWS Batch environment status for immediate visibility
         logger.info("Debugging AWS Batch environment...")
-        _debug_batch_environment(batch_executor)
+        BatchDebug.debug_batch_environment(batch_executor)
 
         # Validate AWS Batch configuration before proceeding
         logger.info("Validating AWS Batch configuration...")
-        if not _validate_batch_configuration(batch_executor):
+        if not BatchDebug.validate_batch_configuration(batch_executor):
             logger.error(
                 "AWS Batch configuration validation failed - aborting execution"
             )
@@ -891,23 +194,32 @@ def _snakemake_execute_batch(
             s3_bucket_name = os.environ.get(
                 "S3_DEFAULT_BUCKET_NAME", BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
             )
-            # Use bucket root to match S3StorageController path structure
-            # S3StorageController uses: input/{workspace_id}/, etc.
-            # Ensure no double slashes in S3 path construction
+            # Fix double slash issue by removing trailing slash from  prefix
+            # Snakemake adds leading slash to paths,
+            # so s3://bucket + /path = s3://bucket/path
+            # With trailing slash:
+            # s3://bucket/ + /path = s3://bucket//path (double slash)
             s3_storage = f"{s3_prefix}://{s3_bucket_name}"
             storage_settings = StorageSettings(
                 default_storage_provider=s3_prefix,
                 default_storage_prefix=s3_storage,
             )
             logger.debug(f"Using S3 storage: {s3_storage}")
+            logger.debug(
+                f"S3 storage breakdown: provider='{s3_prefix}', "
+                f"bucket='{s3_bucket_name}', full_prefix='{s3_storage}'"
+            )
         else:
             # Use optimized EFS configuration when S3 is not available
             logger.info("S3 not available, configuring optimized EFS storage")
-            _prepare_efs_environment(workspace_id, unique_id)
-            storage_settings = _get_efs_optimized_storage_settings(
+            BatchDebug.prepare_efs_environment(workspace_id, unique_id)
+            storage_settings = BatchDebug.get_efs_optimized_storage_settings(
                 workspace_id, unique_id
             )
-        batch_workdir = Path("/app")
+        # Set working directory to studio_data to eliminate /app prefix in S3 paths
+        # When Snakemake constructs relative paths to be relative to /app/studio_data
+        # Expected: s3://bucket/ + output/workspace/id = s3://bucket/output/workspace/id
+        batch_workdir = Path("/app/studio_data")
         config_source = join_filepath([smk_workdir, DIRPATH.SNAKEMAKE_CONFIG_YML])
         config_dest = join_filepath([str(batch_workdir), DIRPATH.SNAKEMAKE_CONFIG_YML])
 
@@ -1030,9 +342,9 @@ def _snakemake_execute_batch(
                         envvars.extend(["EFS_MOUNT_TARGET", "TMPDIR", "TMP"])
 
                     # Prepare container setup for EFS optimization
-                    container_setup = []
+                    contain_setup = []
                     if not RemoteStorageController.is_available():
-                        container_setup = _get_batch_container_setup_commands()
+                        contain_setup = BatchDebug.get_batch_contain_setup_commands()
 
                     logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
                     logger.debug(f"Job Queue: {selected_job_queue}")
@@ -1044,7 +356,7 @@ def _snakemake_execute_batch(
                     logger.debug(
                         f"S3 Available: {RemoteStorageController.is_available()}"
                     )
-                    logger.debug(f"Container Setup Commands: {container_setup}")
+                    logger.debug(f"Container Setup Commands: {contain_setup}")
 
                     # Enhanced debugging - Check AWS configuration
                     logger.debug(f"AWS Region: {BATCH_CONFIG.AWS_DEFAULT_REGION}")
@@ -1068,26 +380,26 @@ def _snakemake_execute_batch(
                     logger.debug(f"Resource settings - nodes: 10, cores: {cores}")
                     logger.debug("Default resources: mem_mb=4096")
 
-                    logger.info("=== CONTAINER COMMAND DEBUG ===")
-                    logger.info(
+                    logger.debug("=== CONTAINER COMMAND DEBUG ===")
+                    logger.debug(
                         f"Container Image: {batch_executor.get_container_image()}"
                     )
-                    logger.info(f"Precommand Setup: {container_setup}")
-                    logger.info(
+                    logger.debug(f"Precommand Setup: {contain_setup}")
+                    logger.debug(
                         "Note: Using script-based Snakemake rules with ENTRYPOINT fix"
                     )
-                    logger.info(
+                    logger.debug(
                         "If 'Shell command: None' persists, check container ENTRYPOINT"
                     )
-                    logger.info("=== END CONTAINER COMMAND DEBUG ===")
+                    logger.debug("=== END CONTAINER COMMAND DEBUG ===")
 
                     # Debug S3 storage configuration - critical for file latency issues
-                    logger.info("=== S3 STORAGE DEBUG ===")
-                    logger.info(f"S3 Storage Prefix: {s3_storage}")
-                    logger.info(f"S3 Bucket: {s3_bucket_name}")
-                    logger.info(f"S3 Provider: {s3_prefix}")
-                    logger.info("Increased latency_wait to 60s for S3 consistency")
-                    logger.info("=== END S3 STORAGE DEBUG ===")
+                    logger.debug("=== S3 STORAGE DEBUG ===")
+                    logger.debug(f"S3 Storage Prefix: {s3_storage}")
+                    logger.debug(f"S3 Bucket: {s3_bucket_name}")
+                    logger.debug(f"S3 Provider: {s3_prefix}")
+                    logger.debug("Increased latency_wait to 300s for S3 consistency")
+                    logger.debug("=== END S3 STORAGE DEBUG ===")
 
                     logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
 
@@ -1105,7 +417,7 @@ def _snakemake_execute_batch(
                             execution_settings=ExecutionSettings(
                                 retries=3,
                                 keep_going=False,
-                                latency_wait=60,
+                                latency_wait=300,
                             ),
                             executor_settings=ExecutorSettings(
                                 region=BATCH_CONFIG.AWS_DEFAULT_REGION,
@@ -1118,7 +430,7 @@ def _snakemake_execute_batch(
                                 envvars=envvars,
                                 jobname="optinist-{rulename}-{jobid}",
                                 # Add container setup commands for EFS optimization
-                                precommand=container_setup if container_setup else None,
+                                precommand=contain_setup if contain_setup else None,
                             ),
                         )
 

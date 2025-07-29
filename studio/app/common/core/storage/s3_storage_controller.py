@@ -48,9 +48,19 @@ class S3StorageController(BaseRemoteStorageController):
         # Include app/studio_data path to match Snakemake's expected S3 structure
         # Remove leading slash to prevent double slashes when combined with S3 prefix
         input_data_remote_path = join_filepath(
-            ["app", "studio_data", __class__.S3_INPUT_DIR, workspace_id, filename]
+            [__class__.S3_INPUT_DIR, workspace_id, filename]
         )
-        return input_data_remote_path.lstrip("/")
+        # Debug: log the path construction to troubleshoot double slash issue
+        stripped_path = input_data_remote_path.lstrip("/")
+        logger.warning(
+            "[DEBUG] S3 input path construction: "
+            f" workspace_id='{workspace_id}', filename='{filename}'"
+        )
+        logger.warning(
+            "[DEBUG] S3 input path: original= "
+            f"'{input_data_remote_path}', stripped='{stripped_path}'"
+        )
+        return stripped_path
 
     def _make_experiment_local_path(self, workspace_id: str, unique_id: str) -> str:
         experiment_local_path = join_filepath(
@@ -59,12 +69,22 @@ class S3StorageController(BaseRemoteStorageController):
         return experiment_local_path
 
     def _make_experiment_remote_path(self, workspace_id: str, unique_id: str) -> str:
-        # Include app/studio_data path to match Snakemake's expected S3 structure
-        # Remove leading slash to prevent double slashes when combined with S3 prefix
+        # Use clean S3 structure without app/studio_data prefix to match input paths
+        # This creates: output/{workspace_id}/{unique_id}
         experiment_remote_path = join_filepath(
-            ["app", "studio_data", __class__.S3_OUTPUT_DIR, workspace_id, unique_id]
+            [__class__.S3_OUTPUT_DIR, workspace_id, unique_id]
         )
-        return experiment_remote_path.lstrip("/")
+        # Debug: log the path construction to troubleshoot double slash issue
+        stripped_path = experiment_remote_path.lstrip("/")
+        logger.warning(
+            "[DEBUG] S3 experiment path construction: "
+            f"workspace_id='{workspace_id}', unique_id='{unique_id}'"
+        )
+        logger.warning(
+            "[DEBUG] S3 experiment path: original= "
+            f"'{experiment_remote_path}', stripped='{stripped_path}'"
+        )
+        return stripped_path
 
     @property
     def bucket_name(self) -> str:
