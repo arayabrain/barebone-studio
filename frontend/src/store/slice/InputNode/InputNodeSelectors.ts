@@ -7,6 +7,7 @@ import {
   isHDF5InputNode,
   isMatlabInputNode,
   isMicroscopeInputNode,
+  isBatchImageInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import { RootState } from "store/store"
 
@@ -61,6 +62,7 @@ const generateTypedSelectors = () => {
       hdf5: isHDF5InputNode,
       matlab: isMatlabInputNode,
       microscope: isMicroscopeInputNode,
+      batch_image: isBatchImageInputNode,
     }
 
   getAllFileTypeConfigs().forEach((config) => {

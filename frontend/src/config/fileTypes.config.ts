@@ -53,6 +53,7 @@ export const REACT_FLOW_NODE_TYPE_KEY = {
   BehaviorFileNode: "BehaviorFileNode",
   MatlabFileNode: "MatlabFileNode",
   MicroscopeFileNode: "MicroscopeFileNode",
+  BatchImageFileNode: "BatchImageFileNode",
 } as const
 
 // Streamlined config - nodeType references REACT_FLOW_NODE_TYPE_KEY
@@ -135,6 +136,16 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     defaultParam: {},
     dataType: "matlab", // Special: uses matlab data type
     nodeType: REACT_FLOW_NODE_TYPE_KEY.MicroscopeFileNode,
+  },
+  BATCH_IMAGE: {
+    key: "batch_image",
+    displayName: "batchImageData",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {},
+    treeType: "image",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchImageFileNode,
+    treeHierarchy: "Batch Data",
   },
 } as const
 

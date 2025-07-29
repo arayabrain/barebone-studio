@@ -8,6 +8,7 @@ import {
   FILE_TYPE,
   MatlabInputNode,
   MicroscopeInputNode,
+  BatchImageInputNode,
 } from "store/slice/InputNode/InputNodeType"
 
 export function isImageInputNode(
@@ -38,6 +39,12 @@ export function isMicroscopeInputNode(
   inputNode: InputNodeType,
 ): inputNode is MicroscopeInputNode {
   return inputNode.fileType === FILE_TYPE_SET.MICROSCOPE
+}
+
+export function isBatchImageInputNode(
+  inputNode: InputNodeType,
+): inputNode is BatchImageInputNode {
+  return inputNode.fileType === FILE_TYPE_SET.BATCH_IMAGE
 }
 
 // Helper functions using factory

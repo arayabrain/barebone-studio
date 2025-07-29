@@ -16,6 +16,7 @@ export type InputNodeType =
   | HDF5InputNode
   | MatlabInputNode
   | MicroscopeInputNode
+  | BatchImageInputNode
 
 interface InputNodeBaseType<
   T extends FILE_TYPE,
@@ -57,4 +58,9 @@ export interface HDF5InputNode
 export interface MicroscopeInputNode
   extends InputNodeBaseType<"microscope", Record<never, never>> {
   selectedFilePath?: string
+}
+
+export interface BatchImageInputNode
+  extends InputNodeBaseType<"batch_image", Record<never, never>> {
+  selectedFilePath?: string[]
 }
