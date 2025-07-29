@@ -1,8 +1,8 @@
 workspace_id: '1'
 unique_id: tutorial4
 name: Tutorial4
-started_at: '2025-07-29 13:08:45'
-finished_at: '2025-07-29 13:09:53'
+started_at: '2025-07-29 13:16:51'
+finished_at: '2025-07-29 13:17:49'
 success: success
 hasNWB: true
 function:
@@ -19,7 +19,7 @@ function:
         max_index: 1
         data_shape: []
     started_at: null
-    finished_at: '2025-07-29 13:09:11'
+    finished_at: '2025-07-29 13:17:16'
   suite2p_registration_xq4pexs8o7:
     unique_id: suite2p_registration_xq4pexs8o7
     name: suite2p_registration
@@ -40,10 +40,10 @@ function:
       mc_images:
         path: /tmp/studio/output/1/tutorial4/suite2p_registration_xq4pexs8o7/tiff/mc_images/mc_images.tif
         type: images
-        max_index: 2000
+        max_index: 500
         data_shape: []
     started_at: null
-    finished_at: '2025-07-29 13:09:26'
+    finished_at: '2025-07-29 13:17:27'
   suite2p_roi_yvqcdmsg0r:
     unique_id: suite2p_roi_yvqcdmsg0r
     name: suite2p_roi
@@ -64,10 +64,10 @@ function:
       fluorescence:
         path: /tmp/studio/output/1/tutorial4/suite2p_roi_yvqcdmsg0r/fluorescence
         type: timeseries
-        max_index: 295
+        max_index: 96
         data_shape:
-        - 295
-        - 2000
+        - 96
+        - 500
       all_roi:
         path: /tmp/studio/output/1/tutorial4/suite2p_roi_yvqcdmsg0r/all_roi.json
         type: roi
@@ -84,7 +84,7 @@ function:
         max_index: null
         data_shape: []
     started_at: null
-    finished_at: '2025-07-29 13:09:42'
+    finished_at: '2025-07-29 13:17:42'
   input_6m0vw0sv6s:
     unique_id: input_6m0vw0sv6s
     name: sample_hdf5.hdf5
@@ -92,8 +92,8 @@ function:
     hasNWB: false
     message: null
     outputPaths: null
-    started_at: '2025-07-29 13:08:45'
-    finished_at: '2025-07-29 13:08:45'
+    started_at: '2025-07-29 13:16:51'
+    finished_at: '2025-07-29 13:16:51'
   input_d1fy5k1p6f:
     unique_id: input_d1fy5k1p6f
     name: sample_hdf5.hdf5
@@ -101,8 +101,8 @@ function:
     hasNWB: false
     message: null
     outputPaths: null
-    started_at: '2025-07-29 13:08:45'
-    finished_at: '2025-07-29 13:08:45'
+    started_at: '2025-07-29 13:16:51'
+    finished_at: '2025-07-29 13:16:51'
   cca_e9mbfm8vck:
     unique_id: cca_e9mbfm8vck
     name: cca
@@ -121,7 +121,7 @@ function:
         max_index: null
         data_shape: []
     started_at: null
-    finished_at: '2025-07-29 13:09:53'
+    finished_at: '2025-07-29 13:17:49'
 nwb:
   session_description: optinist
   identifier: optinist
