@@ -1,8 +1,13 @@
 import {
+  DATA_TYPE_MAPPING,
   EnhancedFileTypeConfig,
   FileTypeConfig,
   getFileTypeConfig,
 } from "config/fileTypes.config"
+import {
+  DATA_TYPE,
+  DATA_TYPE_SET,
+} from "store/slice/DisplayData/DisplayDataType"
 import { NODE_TYPE_SET } from "store/slice/FlowElement/FlowElementType"
 import { FILE_TYPE, FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 import { getNanoId } from "utils/nanoid/NanoIdUtils"
@@ -133,5 +138,26 @@ export class FileNodeFactory {
     const capitalizedName =
       config.key.charAt(0).toUpperCase() + config.key.slice(1)
     return `select${capitalizedName}InputNode${suffix}`
+  }
+
+  /**
+   * Converts FILE_TYPE to DATA_TYPE
+   * Used for converting InputNode file types to DisplayData types
+   * Uses config-driven approach via DATA_TYPE_MAPPING
+   */
+  static toDataTypeFromFileType(fileType: FILE_TYPE): DATA_TYPE {
+    const dataTypeString = FileNodeFactory.getDataType(fileType)
+
+    // Use mapping from config instead of hardcoded strings
+    const mappedType =
+      DATA_TYPE_MAPPING[dataTypeString as keyof typeof DATA_TYPE_MAPPING]
+    if (mappedType) {
+      return DATA_TYPE_SET[
+        mappedType.toUpperCase() as keyof typeof DATA_TYPE_SET
+      ]
+    }
+
+    // Fallback to CSV for unknown types
+    return DATA_TYPE_SET.CSV
   }
 }

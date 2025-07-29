@@ -9,6 +9,7 @@ import ListSubheader from "@mui/material/ListSubheader"
 import MenuItem from "@mui/material/MenuItem"
 import Select from "@mui/material/Select"
 
+import { FileNodeFactory } from "factories/FileNodeFactory"
 import { DATA_TYPE } from "store/slice/DisplayData/DisplayDataType"
 import { selectNodeLabelById } from "store/slice/FlowElement/FlowElementSelectors"
 import { getFileName } from "store/slice/FlowElement/FlowElementUtils"
@@ -18,7 +19,6 @@ import {
   selectPipelineNodeResultSuccessList,
 } from "store/slice/Pipeline/PipelineSelectors"
 import { RootState } from "store/store"
-import { toDataTypeFromFileType } from "utils/DataTypeUtils"
 
 export const FilePathSelect: FC<{
   dataType?: DATA_TYPE
@@ -40,7 +40,7 @@ export const FilePathSelect: FC<{
           nodeId,
           filePath: inputNode.selectedFilePath,
           fileType: inputNode.fileType,
-          dataType: toDataTypeFromFileType(inputNode.fileType),
+          dataType: FileNodeFactory.toDataTypeFromFileType(inputNode.fileType),
           nodeName: selectNodeLabelById(nodeId)(state),
         }))
         .filter(({ filePath }) => filePath != null)
