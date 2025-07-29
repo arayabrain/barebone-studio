@@ -20,8 +20,10 @@ import {
   TreeItemDragObject,
   TreeItemDropResult,
 } from "components/Workspace/FlowChart/DnDItemType"
-import { getFileTypeConfigsByHierarchy } from "config/fileTypes.config"
-import { REACT_FLOW_NODE_TYPE_KEY } from "const/flowchart"
+import {
+  getFileTypeConfigsByHierarchy,
+  REACT_FLOW_NODE_TYPE_KEY,
+} from "config/fileTypes.config"
 import { FileNodeFactory } from "factories/FileNodeFactory"
 import { getAlgoList } from "store/slice/AlgorithmList/AlgorithmListActions"
 import {
