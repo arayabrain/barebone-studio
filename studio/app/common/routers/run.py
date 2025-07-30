@@ -1,3 +1,4 @@
+import copy
 from typing import Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -7,6 +8,7 @@ from studio.app.common.core.workflow.workflow import (
     DataFilterParam,
     Message,
     NodeItem,
+    NodeType,
     RunItem,
 )
 from studio.app.common.core.workflow.workflow_filter import WorkflowNodeDataFilter
@@ -22,6 +24,7 @@ from studio.app.common.core.workspace.workspace_dependencies import (
     is_workspace_available,
     is_workspace_owner,
 )
+from studio.app.const import FILETYPE
 
 router = APIRouter(prefix="/run", tags=["run"])
 
@@ -163,4 +166,86 @@ async def apply_filter(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to filter data.",
+        )
+
+
+# TODO: Demo version of batch_run API
+@router.post(
+    "/util/batch_run/{workspace_id}",
+    response_model=str,
+    dependencies=[Depends(is_workspace_owner)],
+)
+async def batch_run(
+    workspace_id: str, runItem: RunItem, background_tasks: BackgroundTasks
+):
+    try:
+        run_items = []
+
+        # Search for Batch Input Data
+        # TODO: Tentatively, only BatchImageFileNode is searched.
+        target_images = []
+        for node_id, node in runItem.nodeDict.items():
+            if node.type == "BatchImageFileNode":  # TODO: Needs to be constantized
+                target_images = node.data.path
+                break
+
+        # TODO: debug print
+        print("========================== target_images:", target_images)
+
+        # TODO: Assertion when target_images is missing
+        assert target_images, "Batch Image Files is not specified."
+
+        # Build workflow execution target data (RunItem)
+        for idx, image in enumerate(target_images):
+            new_run_item = copy.deepcopy(runItem)
+
+            for node_id, node in new_run_item.nodeDict.items():
+                # if node.type == NodeType.IMAGE:
+                if node.type == "BatchImageFileNode":
+                    new_run_item.name = f"{new_run_item.name} ({idx})"
+
+                    new_run_item.nodeDict[node_id].data.path = [image]
+                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.IMAGE
+                    new_run_item.nodeDict[node_id].data.label = image
+                    new_run_item.nodeDict[node_id].type = (
+                        NodeType.IMAGE
+                    )  # Node type is forced to be replaced from batch-type to normal-type.
+                    break
+            run_items.append(new_run_item)
+
+        # TODO: debug print
+        import pprint
+
+        pprint.pprint(run_items)
+
+        # Executes processing for the number of input data items
+        # TODO: Parallel processing is required for performance.
+        for run_item in run_items:
+            unique_id = WorkflowRunner.create_workflow_unique_id()
+            WorkflowRunner(workspace_id, unique_id, run_item).run_workflow(
+                background_tasks
+            )
+
+        last_unique_id = unique_id
+
+        logger.info("run snakemake")
+
+        # TODO As a temporary measure, the UID of the executed workflow is returned.
+        # Eventually, the batch workflow itself will be saved and the UID returned.
+        return last_unique_id
+
+    except KeyError as e:
+        logger.error(e, exc_info=True)
+        # Pass through the specific error message for KeyErrors
+        raise HTTPException(
+            # Changed to 422 since it's a client configuration issue
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e).strip('"'),  # Remove quotes from the KeyError message
+        )
+
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to run workflow.",
         )
