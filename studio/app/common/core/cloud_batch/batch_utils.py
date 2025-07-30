@@ -388,15 +388,6 @@ class BatchUtils:
         asyncio.run(s3_controller.upload_experiment(self.workspace_id, self.unique_id))
         logger.info("Workspace upload completed")
 
-    def sync_batch_results(self):
-        """
-        Sync results from AWS Batch execution back to local storage.
-        This is a placeholder for S3 sync operations that will be implemented later.
-        """
-        logger.info("Syncing batch results (placeholder for S3 sync)")
-        # TODO: Implement S3 to local sync when S3 storage is added
-        pass
-
     def monitor_batch_jobs(self, job_ids: list) -> Dict[str, str]:
         """
         Monitor the status of submitted AWS Batch jobs.
@@ -1125,6 +1116,73 @@ class BatchDebug:
             # Optional: Set rsync options for better EFS performance
             "export SNAKEMAKE_RSYNC_OPTS='-av --inplace --no-sparse'",
         ]
+
+    @staticmethod
+    def validate_batch_configuration(batch_executor) -> bool:
+        """
+        Validate AWS Batch configuration to ensure it's ready for execution.
+        """
+        try:
+            logger.info("Validating AWS Batch configuration...")
+            job_queue = batch_executor.get_job_queue_for_user()
+            queues = batch_executor.batch_client.describe_job_queues(
+                jobQueues=[job_queue]
+            )
+            if not queues.get("jobQueues"):
+                logger.error(f"Job queue '{job_queue}' not found.")
+                return False
+
+            queue = queues["jobQueues"][0]
+            if queue.get("state") != "ENABLED":
+                logger.error(
+                    f"Job queue '{job_queue}' is not enabled "
+                    f"(state: {queue.get('state')})."
+                )
+                return False
+
+            if queue.get("status") != "VALID":
+                logger.error(
+                    f"Job queue '{job_queue}' is not valid "
+                    f"(status: {queue.get('status')})."
+                )
+                return False
+
+            compute_envs = queue.get("computeEnvironmentOrder", [])
+            if not compute_envs:
+                logger.error(
+                    f"No compute environments found for job queue '{job_queue}'."
+                )
+                return False
+
+            for ce_order in compute_envs:
+                ce_name = ce_order["computeEnvironment"]
+                ce_details = batch_executor.batch_client.describe_compute_environments(
+                    computeEnvironments=[ce_name]
+                )
+                if not ce_details.get("computeEnvironments"):
+                    logger.error(f"Compute environment '{ce_name}' not found.")
+                    return False
+
+                ce_info = ce_details["computeEnvironments"][0]
+                if ce_info.get("state") != "ENABLED":
+                    logger.error(
+                        f"Compute environment '{ce_name}' is not enabled "
+                        f"(state: {ce_info.get('state')})."
+                    )
+                    return False
+                if ce_info.get("status") not in ["VALID", "UPDATING"]:
+                    logger.error(
+                        f"Compute environment '{ce_name}' is not valid "
+                        f"(status: {ce_info.get('status')})."
+                    )
+                    return False
+
+            logger.info("AWS Batch configuration validation successful.")
+            return True
+
+        except Exception as e:
+            logger.error(f"AWS Batch configuration validation failed: {e}")
+            return False
 
     def test_ecr_image_pull(batch_executor) -> None:
         """

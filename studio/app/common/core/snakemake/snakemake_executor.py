@@ -155,6 +155,7 @@ def _snakemake_execute_batch(
     """
     Execute Snakemake workflow using AWS Batch executor.
     """
+
     smk_logger = SmkStatusLogger(workspace_id, unique_id)
     smk_workdir = join_filepath(
         [
@@ -194,11 +195,7 @@ def _snakemake_execute_batch(
             s3_bucket_name = os.environ.get(
                 "S3_DEFAULT_BUCKET_NAME", BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
             )
-            # Fix double slash issue by removing trailing slash from  prefix
-            # Snakemake adds leading slash to paths,
-            # so s3://bucket + /path = s3://bucket/path
-            # With trailing slash:
-            # s3://bucket/ + /path = s3://bucket//path (double slash)
+            # Fix double slash issue by removing trailing slash from prefix
             s3_storage = f"{s3_prefix}://{s3_bucket_name}"
             storage_settings = StorageSettings(
                 default_storage_provider=s3_prefix,
@@ -216,10 +213,8 @@ def _snakemake_execute_batch(
             storage_settings = BatchDebug.get_efs_optimized_storage_settings(
                 workspace_id, unique_id
             )
-        # Set working directory to studio_data to eliminate /app prefix in S3 paths
-        # When Snakemake constructs relative paths to be relative to /app/studio_data
-        # Expected: s3://bucket/ + output/workspace/id = s3://bucket/output/workspace/id
-        batch_workdir = Path("/app/studio_data")
+
+        batch_workdir = Path("/app")
         config_source = join_filepath([smk_workdir, DIRPATH.SNAKEMAKE_CONFIG_YML])
         config_dest = join_filepath([str(batch_workdir), DIRPATH.SNAKEMAKE_CONFIG_YML])
 
@@ -227,23 +222,20 @@ def _snakemake_execute_batch(
         import shutil
 
         if os.path.exists(config_source):
+            os.makedirs(os.path.dirname(config_dest), exist_ok=True)
             shutil.copy2(config_source, config_dest)
             logger.debug(f"Copied config from {config_source} to {config_dest}")
 
             # Also ensure config is uploaded to S3 for batch job access
             if RemoteStorageController.is_available():
                 try:
-                    # Upload just the snakemake.yaml config file to S3
-                    # using proper async interface
-                    # According to RemoteStorageController docs, target_files
-                    # list specifies specific files
+                    # Upload config file to S3 using proper async interface
                     remote_controller = RemoteStorageController(
                         BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
                     )
 
                     # Use asyncio to run the async upload method
-                    # This uploads only the snakemake.yaml file,
-                    # not the entire experiment
+                    # This uploads the 3 config file to S3
                     import asyncio
 
                     try:
@@ -259,7 +251,11 @@ def _snakemake_execute_batch(
                             remote_controller.upload_experiment(
                                 workspace_id,
                                 unique_id,
-                                target_files=[DIRPATH.SNAKEMAKE_CONFIG_YML],
+                                target_files=[
+                                    DIRPATH.SNAKEMAKE_CONFIG_YML,
+                                    DIRPATH.EXPERIMENT_YML,
+                                    DIRPATH.WORKFLOW_YML,
+                                ],
                             )
                         )
                         logger.debug(
@@ -313,6 +309,7 @@ def _snakemake_execute_batch(
                 logger.info("DAG created successfully")
             except Exception as e:
                 logger.error(f"Failed to create DAG: {e}")
+                raise e
 
             logger.info("Starting workflow execution on AWS Batch...")
             try:
@@ -410,6 +407,8 @@ def _snakemake_execute_batch(
                     # Start job monitoring before execution
                     logger.info("Starting enhanced job monitoring...")
                     batch_executor.start_job_monitoring()
+
+                    snakemake_result = False
 
                     try:
                         dag_api.execute_workflow(
@@ -536,7 +535,7 @@ def _snakemake_execute_batch(
                             logger.error(f"Failed to get job details: {detail_error}")
 
                         raise exec_error
-                    result = True
+                    snakemake_result = True
                     logger.info("AWS Batch workflow execution succeeded.")
                 finally:
                     # Restore AWS credentials to environment
@@ -552,7 +551,7 @@ def _snakemake_execute_batch(
                     except Exception as e:
                         logger.warning(f"Failed to cleanup config {config_dest}: {e}")
             except Exception as e:
-                result = False
+                snakemake_result = False
                 logger.error(f"AWS Batch workflow execution failed: {e}")
                 logger.error(f"Exception details: {str(e)}")
                 import traceback
@@ -564,10 +563,8 @@ def _snakemake_execute_batch(
                 batch_executor.stop_job_monitoring()
 
                 smk_logger.extract_errors_from_snakemake_log(smk_workdir)
-                # Sync results back from batch execution
-                # batch_executor.sync_batch_results()
 
-                if not result:
+                if not snakemake_result:
                     logger.error(
                         "AWS Batch execution failed - "
                         "attempting to retrieve enhanced job logs"
@@ -654,15 +651,49 @@ def _snakemake_execute_batch(
     finally:
         smk_logger.clean_up()
 
-    # Post-processing (same for both local and batch)
-    _post_process_workflow(workspace_id, unique_id, snakemake_result)
+    # Post-processing (same for local using cloud storage)
+    # _post_process_workflow(workspace_id, unique_id, snakemake_result)
 
     return snakemake_result
 
 
 def _post_process_workflow(workspace_id: str, unique_id: str, result: bool = False):
+    # Download experiment results from S3 if using remote storage and batch mode
+    from studio.app.common.core.cloud_batch.batch_config import BATCH_CONFIG
+
+    if result and BATCH_CONFIG.USE_AWS_BATCH and RemoteStorageController.is_available():
+        try:
+            logger.info("Downloading experiment results from S3 for post-processing")
+            remote_controller = RemoteStorageController(
+                BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
+            )
+            try:
+                # Check if we're already in an event loop
+                asyncio.get_running_loop()
+                logger.warning(
+                    "Cannot download experiment results in async context - "
+                    "post-processing may fail"
+                )
+            except RuntimeError:
+                # No running loop, safe to create a new one
+                asyncio.run(
+                    remote_controller.download_experiment(workspace_id, unique_id)
+                )
+                logger.info(
+                    f"Downloaded experiment results for {workspace_id}/{unique_id}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to download experiment results from S3: {e}")
+            logger.warning("Post-processing may fail due to missing local files")
+
     # Update workflow processing results
-    asyncio.run(WorkflowResult(workspace_id, unique_id).observe_overall())
+    try:
+        # Check if we're already in an event loop
+        asyncio.get_running_loop()
+        logger.warning("Cannot run workflow observation in async context - skipping")
+    except RuntimeError:
+        # No running loop, safe to create a new one
+        asyncio.run(WorkflowResult(workspace_id, unique_id).observe_overall())
 
     # Data usage calculation
     WorkspaceDataCapacityService.update_experiment_data_usage(workspace_id, unique_id)
