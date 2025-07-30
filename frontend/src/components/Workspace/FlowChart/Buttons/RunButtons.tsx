@@ -44,6 +44,7 @@ export const RunButtons = memo(function RunButtons(
     algorithmNodeNotExist,
     handleCancelPipeline,
     handleRunPipeline,
+    handleBatchRunPipeline,
     handleRunPipelineByUid,
   } = props
 
@@ -55,6 +56,7 @@ export const RunButtons = memo(function RunButtons(
   const sendingRunRequest = useRef(false)
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
   const handleClick = () => {
     let errorMessage: string | null = null
@@ -92,6 +94,31 @@ export const RunButtons = memo(function RunButtons(
   }
   const onClickCancel = () => {
     handleCancelPipeline()
+  }
+  const onClickBatchRun = () => {
+    let errorMessage: string | null = null
+    if (algorithmNodeNotExist) {
+      errorMessage = "please add some algorithm nodes to the flowchart"
+    }
+    if (filePathIsUndefined) {
+      errorMessage = "please select input file"
+    }
+    if (errorMessage != null) {
+      enqueueSnackbar(errorMessage, {
+        variant: "error",
+      })
+    } else {
+      setBatchDialogOpen(true)
+    }
+  }
+  const onClickDialogBatchRun = (name: string) => {
+    if (sendingRunRequest.current) return
+    sendingRunRequest.current = true
+    handleBatchRunPipeline(name)
+    setTimeout(() => {
+      sendingRunRequest.current = false
+    }, 3000)
+    setBatchDialogOpen(false)
   }
   const [menuOpen, setMenuOpen] = useState(false)
   const anchorRef = useRef<HTMLDivElement>(null)
@@ -185,10 +212,24 @@ export const RunButtons = memo(function RunButtons(
           </IconButton>
         </Tooltip>
       )}
+      <Button
+        variant="contained"
+        sx={{ margin: 1 }}
+        onClick={onClickBatchRun}
+        disabled={runDisabled}
+        startIcon={<PlayArrow />}
+      >
+        Batch Run
+      </Button>
       <RunDialog
         open={dialogOpen}
         handleRun={onClickDialogRun}
         handleClose={() => setDialogOpen(false)}
+      />
+      <RunDialog
+        open={batchDialogOpen}
+        handleRun={onClickDialogBatchRun}
+        handleClose={() => setBatchDialogOpen(false)}
       />
     </>
   )

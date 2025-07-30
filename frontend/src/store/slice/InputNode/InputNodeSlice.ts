@@ -25,7 +25,6 @@ import {
   isCsvInputNode,
   isHDF5InputNode,
   isMatlabInputNode,
-  isBatchImageInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import {
   reproduceWorkflow,
