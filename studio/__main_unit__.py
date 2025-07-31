@@ -29,6 +29,7 @@ from studio.app.common.routers import (
     outputs,
     params,
     run,
+    storage_alerts,
     users_admin,
     users_me,
     users_search,
@@ -97,6 +98,7 @@ app.include_router(logs.router, dependencies=[Depends(get_current_user)])
 app.include_router(outputs.router, dependencies=[Depends(get_current_user)])
 app.include_router(params.router, dependencies=[Depends(get_current_user)])
 app.include_router(run.router, dependencies=[Depends(get_current_user)])
+app.include_router(storage_alerts.router, dependencies=[Depends(get_current_user)])
 app.include_router(users_admin.router, dependencies=[Depends(get_admin_user)])
 app.include_router(users_me.router, dependencies=[Depends(get_current_user)])
 app.include_router(users_search.router, dependencies=[Depends(get_current_user)])
