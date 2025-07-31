@@ -56,19 +56,36 @@ class S3StorageMonitor:
                 f"app/studio_data/{S3StorageController.S3_INPUT_DIR}/{user_id}/",
                 f"app/studio_data/{S3StorageController.S3_OUTPUT_DIR}/{user_id}/",
             ]
+            logger.debug(
+                f"Checking S3 storage for user {user_id} in bucket {self.bucket_name}"
+            )
+            logger.debug(f"Scanning prefixes: {prefixes}")
 
             for prefix in prefixes:
                 try:
+                    logger.debug(f"Scanning prefix: {prefix}")
                     # Use paginator to handle large number of objects
                     paginator = s3_client.get_paginator("list_objects_v2")
                     page_iterator = paginator.paginate(
                         Bucket=self.bucket_name, Prefix=prefix
                     )
 
+                    prefix_size = 0
+                    object_count = 0
                     for page in page_iterator:
                         if "Contents" in page:
                             for obj in page["Contents"]:
-                                total_size += obj["Size"]
+                                object_size = obj["Size"]
+                                total_size += object_size
+                                prefix_size += object_size
+                                object_count += 1
+                                # logger.debug(f"Found object: {obj['Key']} "
+                                #               f"({object_size:,} bytes)")
+
+                    logger.debug(
+                        f"Prefix {prefix}: {object_count} objects, "
+                        f"{prefix_size:,} bytes"
+                    )
 
                 except Exception as e:
                     logger.warning(f"Failed to get size for prefix {prefix}: {e}")
