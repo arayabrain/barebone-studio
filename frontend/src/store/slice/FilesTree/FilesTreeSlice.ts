@@ -13,23 +13,6 @@ import { convertToTreeNodeType } from "store/slice/FilesTree/FilesTreeUtils"
 import { uploadFile } from "store/slice/FileUploader/FileUploaderActions"
 // importSampleData available if needed for future workflow features
 
-// Helper function to update file tree state
-function updateFileTreeState(
-  state: FilesTree,
-  treeType: string,
-  isLatest: boolean = false,
-) {
-  if (state[treeType] != null) {
-    state[treeType].isLatest = isLatest
-  } else {
-    state[treeType] = {
-      isLoading: false,
-      isLatest,
-      tree: [],
-    }
-  }
-}
-
 export const initialState: FilesTree = {}
 export const filesTreeSlice = createSlice({
   name: FILES_TREE_SLICE_NAME,
@@ -78,14 +61,20 @@ export const filesTreeSlice = createSlice({
       .addCase(uploadFile.pending, (state, action) => {
         const { fileType } = action.meta.arg
         // Get tree type from FileNodeFactory, fallback to ALL
+        let treeType: string
         try {
-          const treeType = fileType
+          treeType = fileType
             ? FileNodeFactory.getTreeType(fileType)
             : FILE_TREE_TYPE_SET.ALL
-          updateFileTreeState(state, treeType, false)
         } catch (error) {
           // Fallback to ALL type for unknown file types
-          updateFileTreeState(state, FILE_TREE_TYPE_SET.ALL, false)
+          treeType = FILE_TREE_TYPE_SET.ALL
+        }
+
+        state[treeType] = {
+          ...state[treeType],
+          isLoading: true,
+          isLatest: false,
         }
       })
       .addCase(uploadFile.fulfilled, (state, action) => {
