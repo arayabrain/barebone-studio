@@ -2,7 +2,11 @@ from typing import Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
-from studio.app.common.core.auth.auth_dependencies import get_user_remote_bucket_name
+from studio.app.common.core.auth.auth_dependencies import (
+    get_current_user,
+    get_user_remote_bucket_name,
+)
+from studio.app.common.core.cloud.s3_storage_monitor import S3StorageMonitor
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.storage.remote_storage_controller import (
     RemoteStorageLockError,
@@ -26,6 +30,7 @@ from studio.app.common.core.workspace.workspace_dependencies import (
     is_workspace_available,
     is_workspace_owner,
 )
+from studio.app.common.schemas.users import User
 
 router = APIRouter(prefix="/run", tags=["run"])
 
@@ -41,9 +46,23 @@ async def run(
     workspace_id: str,
     runItem: RunItem,
     background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
     remote_bucket_name: str = Depends(get_user_remote_bucket_name),
 ):
     try:
+        # Check storage before running job
+        if remote_bucket_name:
+            monitor = S3StorageMonitor(remote_bucket_name)
+            alert = await monitor.check_user_storage_alerts(current_user.id)
+
+            if alert and alert.get("alert_level") == "danger":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Cannot run job: Storage quota exceeded "
+                    f"({alert.get('usage_percentage', 0):.1f}% used). "
+                    f"Please free up space before running jobs.",
+                )
+
         unique_id = WorkflowRunner.create_workflow_unique_id()
         WorkflowRunner(
             remote_bucket_name, workspace_id, unique_id, runItem

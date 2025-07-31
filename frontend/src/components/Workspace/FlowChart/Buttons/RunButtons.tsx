@@ -22,6 +22,7 @@ import Paper from "@mui/material/Paper"
 import Popper from "@mui/material/Popper"
 import TextField from "@mui/material/TextField"
 
+import { getMyStorageAlertApi } from "api/storage/StorageAlerts"
 import { UseRunPipelineReturnType } from "store/slice/Pipeline/PipelineHook"
 import {
   selectPipelineIsStartedSuccess,
@@ -55,8 +56,42 @@ export const RunButtons = memo(function RunButtons(
   const sendingRunRequest = useRef(false)
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [storageChecking, setStorageChecking] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
-  const handleClick = () => {
+
+  const checkStorageBeforeRun = async () => {
+    try {
+      setStorageChecking(true)
+      const storageResponse = await getMyStorageAlertApi()
+
+      if (storageResponse.has_alert && storageResponse.alert) {
+        const alert = storageResponse.alert
+        if (alert.alert_level === "danger") {
+          // Block job submission if quota is exceeded
+          enqueueSnackbar(
+            `Cannot run job: Storage quota exceeded (${alert.usage_percentage.toFixed(1)}% used). Please free up space before running jobs.`,
+            { variant: "error", autoHideDuration: 10000 },
+          )
+          return false
+        } else if (alert.alert_level === "critical") {
+          // Show warning but allow job to proceed
+          enqueueSnackbar(
+            `Warning: Storage usage is high (${alert.usage_percentage.toFixed(1)}% used). Consider freeing up space.`,
+            { variant: "warning", autoHideDuration: 8000 },
+          )
+        }
+      }
+      return true
+    } catch (error) {
+      console.error("Failed to check storage:", error)
+      // Allow job to proceed if storage check fails
+      return true
+    } finally {
+      setStorageChecking(false)
+    }
+  }
+
+  const handleClick = async () => {
     let errorMessage: string | null = null
     if (algorithmNodeNotExist) {
       errorMessage = "please add some algorithm nodes to the flowchart"
@@ -68,21 +103,36 @@ export const RunButtons = memo(function RunButtons(
       enqueueSnackbar(errorMessage, {
         variant: "error",
       })
+      return
+    }
+
+    // Check storage before proceeding
+    const canProceed = await checkStorageBeforeRun()
+    if (!canProceed) {
+      return // Storage check failed, don't proceed with job
+    }
+
+    if (runBtnOption === RUN_BTN_OPTIONS.RUN_NEW) {
+      setDialogOpen(true)
     } else {
-      if (runBtnOption === RUN_BTN_OPTIONS.RUN_NEW) {
-        setDialogOpen(true)
-      } else {
-        if (sendingRunRequest.current) return
-        sendingRunRequest.current = true
-        handleRunPipelineByUid()
-        setTimeout(() => {
-          sendingRunRequest.current = false
-        }, 3000)
-      }
+      if (sendingRunRequest.current) return
+      sendingRunRequest.current = true
+      handleRunPipelineByUid()
+      setTimeout(() => {
+        sendingRunRequest.current = false
+      }, 3000)
     }
   }
-  const onClickDialogRun = (name: string) => {
+  const onClickDialogRun = async (name: string) => {
     if (sendingRunRequest.current) return
+
+    // Check storage before proceeding
+    const canProceed = await checkStorageBeforeRun()
+    if (!canProceed) {
+      setDialogOpen(false)
+      return
+    }
+
     sendingRunRequest.current = true
     handleRunPipeline(name)
     setTimeout(() => {
@@ -124,19 +174,22 @@ export const RunButtons = memo(function RunButtons(
         }}
         variant="contained"
         ref={anchorRef}
-        disabled={runDisabled}
+        disabled={runDisabled || storageChecking}
       >
         <Button
           onClick={handleClick}
           startIcon={
-            runBtnOption === RUN_BTN_OPTIONS.RUN_ALREADY ? (
+            storageChecking ? undefined : runBtnOption ===
+              RUN_BTN_OPTIONS.RUN_ALREADY ? (
               <ReplayIcon />
             ) : (
               <PlayArrow />
             )
           }
         >
-          {RUN_BTN_LABELS[runBtnOption]}
+          {storageChecking
+            ? "Checking storage..."
+            : RUN_BTN_LABELS[runBtnOption]}
         </Button>
         <Button size="small" onClick={handleToggle}>
           <ArrowDropDownIcon />
