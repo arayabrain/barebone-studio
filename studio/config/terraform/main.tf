@@ -2368,6 +2368,17 @@ INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (1, 1);
 
 UPDATE users SET attributes = JSON_MERGE_PATCH(IFNULL(attributes,'{}'), '{"remote_bucket_name": "${aws_s3_bucket.app_storage.id}"}') WHERE id = 1;
 
+-- Insert default subscription plans
+INSERT IGNORE INTO subscription_plan (id, name, price) VALUES
+(1, 'Free', 0),
+(2, 'Premium', 2000);
+
+-- Set admin user to premium plan by default
+INSERT IGNORE INTO subscription_users (plan_id, user_id, subscription_id, status) VALUES (2, 1, 'admin_default', 'active');
+
+-- Initialize storage usage for admin user
+INSERT IGNORE INTO user_storage_usage (user_id, current_usage_bytes, quota_limit_bytes) VALUES (1, 0, 107374182400);
+
 INIT_SQL
 
 chmod 644 /tmp/init_optinist_db.sql
