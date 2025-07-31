@@ -195,16 +195,30 @@ def _snakemake_execute_batch(
             s3_bucket_name = os.environ.get(
                 "S3_DEFAULT_BUCKET_NAME", BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
             )
-            # Fix double slash issue by removing trailing slash from prefix
-            s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # Configure S3 storage mapping
+            # Snakemake local paths: /app/studio_data/output/1/958d5ef3/file.pkl
+            # Should map to S3: s3://bucket/app/studio_data/output/1/958d5ef3/file.pkl
+            # But we're seeing: s3://bucket//app/studio_data/... (double slash)
+            # This suggests Snakemake replaces the local_storage_prefix
+            # with default_storage_prefix
+            # So we need: local="/app/studio_data" -> s3="s3://bucket/app/studio_data"
+            # Tried so far:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}/app/studio_data"
+            s3_storage = f"{s3_prefix}://{s3_bucket_name}/app/studio_data"
             storage_settings = StorageSettings(
                 default_storage_provider=s3_prefix,
                 default_storage_prefix=s3_storage,
+                local_storage_prefix=Path(DIRPATH.DATA_DIR),  # = /app/studio_data
             )
             logger.debug(f"Using S3 storage: {s3_storage}")
             logger.debug(
                 f"S3 storage breakdown: provider='{s3_prefix}', "
                 f"bucket='{s3_bucket_name}', full_prefix='{s3_storage}'"
+            )
+            logger.debug(f"Local storage prefix: {DIRPATH.DATA_DIR}")
+            logger.debug(
+                f"Snakemake will map {DIRPATH.DATA_DIR}/ paths to {s3_storage}/"
             )
         else:
             # Use optimized EFS configuration when S3 is not available
@@ -214,6 +228,8 @@ def _snakemake_execute_batch(
                 workspace_id, unique_id
             )
 
+        # Working directory for snakemake config file (file paths in rules are absolute)
+        # Use /app as working directory - consistent with container app location
         batch_workdir = Path("/app")
         config_source = join_filepath([smk_workdir, DIRPATH.SNAKEMAKE_CONFIG_YML])
         config_dest = join_filepath([str(batch_workdir), DIRPATH.SNAKEMAKE_CONFIG_YML])
@@ -225,46 +241,6 @@ def _snakemake_execute_batch(
             os.makedirs(os.path.dirname(config_dest), exist_ok=True)
             shutil.copy2(config_source, config_dest)
             logger.debug(f"Copied config from {config_source} to {config_dest}")
-
-            # Also ensure config is uploaded to S3 for batch job access
-            if RemoteStorageController.is_available():
-                try:
-                    # Upload config file to S3 using proper async interface
-                    remote_controller = RemoteStorageController(
-                        BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME
-                    )
-
-                    # Use asyncio to run the async upload method
-                    # This uploads the 3 config file to S3
-                    import asyncio
-
-                    try:
-                        # Try to get the current event loop
-                        asyncio.get_running_loop()
-                        logger.warning(
-                            "Cannot upload config in async context - skipping"
-                        )
-                        logger.debug("Config will be available via S3 storage plugin")
-                    except RuntimeError:
-                        # No running loop, safe to create a new one
-                        asyncio.run(
-                            remote_controller.upload_experiment(
-                                workspace_id,
-                                unique_id,
-                                target_files=[
-                                    DIRPATH.SNAKEMAKE_CONFIG_YML,
-                                    DIRPATH.EXPERIMENT_YML,
-                                    DIRPATH.WORKFLOW_YML,
-                                ],
-                            )
-                        )
-                        logger.debug(
-                            f"Uploaded config file to S3 for "
-                            f"workspace {workspace_id}/{unique_id}"
-                        )
-                except Exception as e:
-                    logger.warning(f"Failed to upload config to S3 (not critical): {e}")
-                    logger.debug("Snakemake will access config via S3 storage plugin")
         else:
             logger.error(f"Config file not found at {config_source}")
             return False
@@ -651,8 +627,8 @@ def _snakemake_execute_batch(
     finally:
         smk_logger.clean_up()
 
-    # Post-processing (same for local using cloud storage)
-    # _post_process_workflow(workspace_id, unique_id, snakemake_result)
+    # Post-processing (download results and run workflow observation)
+    _post_process_workflow(workspace_id, unique_id, snakemake_result)
 
     return snakemake_result
 

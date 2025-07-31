@@ -46,21 +46,16 @@ class S3StorageController(BaseRemoteStorageController):
 
     def _make_input_data_remote_path(self, workspace_id: str, filename: str) -> str:
         # Include app/studio_data path to match Snakemake's expected S3 structure
-        # Remove leading slash to prevent double slashes when combined with S3 prefix
+        # Snakemake expects: /app/studio_data/input/{workspace_id}/{filename}
+        # S3 mapping: s3://bucket/app/studio_data/input/{workspace_id}/{filename}
         input_data_remote_path = join_filepath(
-            [__class__.S3_INPUT_DIR, workspace_id, filename]
+            ["app", "studio_data", __class__.S3_INPUT_DIR, workspace_id, filename]
         )
-        # Debug: log the path construction to troubleshoot double slash issue
-        stripped_path = input_data_remote_path.lstrip("/")
-        logger.warning(
-            "[DEBUG] S3 input path construction: "
-            f" workspace_id='{workspace_id}', filename='{filename}'"
+        logger.debug(
+            f"S3 input path: {input_data_remote_path} "
+            f"(workspace_id='{workspace_id}', filename='{filename}')"
         )
-        logger.warning(
-            "[DEBUG] S3 input path: original= "
-            f"'{input_data_remote_path}', stripped='{stripped_path}'"
-        )
-        return stripped_path
+        return input_data_remote_path
 
     def _make_experiment_local_path(self, workspace_id: str, unique_id: str) -> str:
         experiment_local_path = join_filepath(
@@ -69,22 +64,17 @@ class S3StorageController(BaseRemoteStorageController):
         return experiment_local_path
 
     def _make_experiment_remote_path(self, workspace_id: str, unique_id: str) -> str:
-        # Use clean S3 structure without app/studio_data prefix to match input paths
-        # This creates: output/{workspace_id}/{unique_id}
+        # Include app/studio_data path to match Snakemake's expected S3 structure
+        # Snakemake expects: /app/studio_data/output/{workspace_id}/{unique_id}
+        # S3 mapping: s3://bucket/app/studio_data/output/{workspace_id}/{unique_id}
         experiment_remote_path = join_filepath(
-            [__class__.S3_OUTPUT_DIR, workspace_id, unique_id]
+            ["app", "studio_data", __class__.S3_OUTPUT_DIR, workspace_id, unique_id]
         )
-        # Debug: log the path construction to troubleshoot double slash issue
-        stripped_path = experiment_remote_path.lstrip("/")
-        logger.warning(
-            "[DEBUG] S3 experiment path construction: "
-            f"workspace_id='{workspace_id}', unique_id='{unique_id}'"
+        logger.debug(
+            f"S3 experiment path: {experiment_remote_path} "
+            f"(workspace_id='{workspace_id}', unique_id='{unique_id}')"
         )
-        logger.warning(
-            "[DEBUG] S3 experiment path: original= "
-            f"'{experiment_remote_path}', stripped='{stripped_path}'"
-        )
-        return stripped_path
+        return experiment_remote_path
 
     @property
     def bucket_name(self) -> str:
@@ -298,7 +288,7 @@ class S3StorageController(BaseRemoteStorageController):
         async with self.__get_s3_client() as __s3_client:
             workspaces_response = await __s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
-                Prefix=f"{__class__.S3_OUTPUT_DIR}/",
+                Prefix=f"app/studio_data/{__class__.S3_OUTPUT_DIR}/",
                 Delimiter="/",
             )
 
@@ -640,6 +630,8 @@ class S3StorageController(BaseRemoteStorageController):
 
             s3_file_path = join_filepath(
                 [
+                    "app",
+                    "studio_data",
                     __class__.S3_OUTPUT_DIR,
                     workspace_id,
                     unique_id,
