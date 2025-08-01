@@ -9,20 +9,90 @@ from studio.app.dir_path import DIRPATH
 
 
 def main(args):
-    # copy config file
-    if args.config is not None:
-        shutil.copyfile(
-            args.config,
-            join_filepath([DIRPATH.STUDIO_DIR, DIRPATH.SNAKEMAKE_CONFIG_YML]),
-        )
+    # Temp dir for snakemake config in case of permission errors on cluster.
+    # Output files saved to config file path
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_workdir = Path(temp_dir)
+        print(f"Temporary work directory created at: {temp_workdir}")
 
-    snakemake(
-        DIRPATH.SNAKEMAKE_FILEPATH,
-        forceall=args.forceall,
-        cores=args.cores,
-        use_conda=args.use_conda,
-        workdir=f"{os.path.dirname(DIRPATH.STUDIO_DIR)}",
-    )
+        config_file_path = None
+
+        if args.config is None:
+            raise FileNotFoundError(
+                "Please provide snakemake file path --config='my/path/snakemake.yaml'"
+            )
+
+        else:
+            if not (args.config.endswith(".yml") or args.config.endswith(".yaml")):
+                config_file_path = join_filepath(
+                    [args.config, DIRPATH.SNAKEMAKE_CONFIG_YML]
+                )
+            else:
+                config_file_path = args.config
+            if not Path(config_file_path).exists():
+                raise FileNotFoundError(f"Config file not found: {args.config}")
+
+            shutil.copyfile(
+                config_file_path,
+                join_filepath([str(temp_workdir), str(Path(config_file_path).name)]),
+            )
+            print(f"Config file copied from {config_file_path} to {temp_workdir}")
+
+        snakemake_args = {
+            "snakefile": DIRPATH.SNAKEMAKE_FILEPATH,
+            "forceall": args.forceall,
+            "cores": args.cores,
+            "use_conda": args.use_conda,
+            "workdir": f"{os.path.dirname(DIRPATH.STUDIO_DIR)}",
+        }
+
+        if config_file_path is not None:
+            snakemake_args["configfiles"] = [str(config_file_path)]
+
+        if args.use_conda:
+            snakemake_args["conda_prefix"] = DIRPATH.SNAKEMAKE_CONDA_ENV_DIR
+
+        print(f"Snakemake arguments: {snakemake_args}")
+
+        result = snakemake(**snakemake_args)
+
+        if result:
+            print("snakemake execution succeeded.")
+            # Copy config file back to output directory for future reference
+            try:
+                # Find the output directory from the last_output in config
+                from studio.app.common.core.utils.config_handler import ConfigReader
+
+                config_data = ConfigReader.read(config_file_path)
+                if config_data and "last_output" in config_data:
+                    # Extract workspace and unique_id from output path
+                    output_path_parts = config_data["last_output"][0].split("/")
+                    if len(output_path_parts) >= 3:
+                        workspace_id = output_path_parts[0]
+                        unique_id = output_path_parts[1]
+
+                        output_config_dir = join_filepath(
+                            [DIRPATH.OUTPUT_DIR, workspace_id, unique_id]
+                        )
+                        os.makedirs(output_config_dir, exist_ok=True)
+                        output_config_path = join_filepath(
+                            [output_config_dir, DIRPATH.SNAKEMAKE_CONFIG_YML]
+                        )
+
+                        shutil.copyfile(config_file_path, output_config_path)
+                        print(
+                            f"Config copied to output directory: {output_config_path}"
+                        )
+                    else:
+                        print("Warning: Could not get output directory from config")
+                else:
+                    print("Warning: No output found in config, skipping config copy")
+            except Exception as e:
+                print(f"Warning: Failed to copy config to output directory: {e}")
+        else:
+            print("snakemake execution failed.")
+
+        return result
 
 
 if __name__ == "__main__":

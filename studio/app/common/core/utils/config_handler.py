@@ -16,16 +16,11 @@ class ConfigReader:
     def read(cls, file: Union[str, bytes]):
         config = {}
 
-        if file is None:
-            return config
-
-        if isinstance(file, bytes):
-            config = yaml.safe_load(file)
-        elif isinstance(file, str) and os.path.exists(file):
-            with open(file) as f:
-                config = yaml.safe_load(f)
-        else:
-            assert False, f"Invalid file [{file}]"
+        if filepath is not None and os.path.exists(filepath):
+            with open(filepath) as f:
+                loaded_config = yaml.safe_load(f)
+                if loaded_config is not None:
+                    config = loaded_config
 
         return config
 

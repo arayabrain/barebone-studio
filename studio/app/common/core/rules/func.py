@@ -17,6 +17,7 @@ logger = AppLogger.get_logger()
 def main():
     try:
         from studio.app.common.core.rules.runner import Runner
+        from studio.app.common.core.snakemake.smk_utils import SmkUtils
         from studio.app.common.core.snakemake.snakemake_reader import RuleConfigReader
         from studio.app.common.core.utils.filepath_creater import join_filepath
         from studio.app.dir_path import DIRPATH
@@ -27,6 +28,8 @@ def main():
         ]
 
         rule_config = RuleConfigReader.read(snakemake.params.name)
+
+        rule_config = SmkUtils.resolve_nwbfile_reference(rule_config, snakemake.config)
 
         rule_config.input = snakemake.input
         rule_config.output = snakemake.output[0]
