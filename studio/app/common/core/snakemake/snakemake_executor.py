@@ -167,23 +167,23 @@ def _snakemake_execute_batch(
 
     try:
         # Initialize BatchExecutor for AWS Batch specific operations
-        logger.debug("Load BatchExecutor")
+        logger.info("Load BatchExecutor")
         batch_executor = BatchUtils(workspace_id, unique_id)
 
         # Debug AWS Batch environment status for immediate visibility
-        logger.info("Debugging AWS Batch environment...")
-        BatchDebug.debug_batch_environment(batch_executor)
+        # logger.info("Debugging AWS Batch environment...")
+        # BatchDebug.debug_batch_environment(batch_executor)
 
         # Validate AWS Batch configuration before proceeding
-        logger.info("Validating AWS Batch configuration...")
-        if not BatchDebug.validate_batch_configuration(batch_executor):
-            logger.error(
-                "AWS Batch configuration validation failed - aborting execution"
-            )
-            return False
+        # logger.info("Validating AWS Batch configuration...")
+        # if not BatchDebug.validate_batch_configuration(batch_executor):
+        #     logger.error(
+        #         "AWS Batch configuration validation failed - aborting execution"
+        #     )
+        #     return False
 
         # Prepare workspace for batch execution
-        logger.debug("Prepare batch workspace")
+        logger.info("Prepare batch workspace")
         batch_executor.prepare_batch_workspace()
 
         cores = 2  # Set consistent cores for debugging
@@ -337,7 +337,7 @@ def _snakemake_execute_batch(
             dag_settings = DAGSettings(
                 forceall=forceall,
             )
-            logger.debug("DAG settings created")
+            logger.info("DAG settings created")
 
             try:
                 dag_api = workflow_api.dag(
@@ -380,24 +380,24 @@ def _snakemake_execute_batch(
                     if not RemoteStorageController.is_available():
                         contain_setup = BatchDebug.get_batch_contain_setup_commands()
 
-                    logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
-                    logger.debug(f"Job Queue: {selected_job_queue}")
-                    logger.debug(f"Job Role: {BATCH_CONFIG.AWS_BATCH_JOB_ROLE}")
-                    logger.debug(
-                        f"Container Image: {batch_executor.get_container_image()}"
-                    )
-                    logger.debug(f"Environment Variables: {envvars}")
-                    logger.debug(
-                        f"S3 Available: {RemoteStorageController.is_available()}"
-                    )
-                    logger.debug(f"Container Setup Commands: {contain_setup}")
+                    # logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
+                    # logger.debug(f"Job Queue: {selected_job_queue}")
+                    # logger.debug(f"Job Role: {BATCH_CONFIG.AWS_BATCH_JOB_ROLE}")
+                    # logger.debug(
+                    #     f"Container Image: {batch_executor.get_container_image()}"
+                    # )
+                    # logger.debug(f"Environment Variables: {envvars}")
+                    # logger.debug(
+                    #     f"S3 Available: {RemoteStorageController.is_available()}"
+                    # )
+                    # logger.debug(f"Container Setup Commands: {contain_setup}")
 
-                    # Enhanced debugging - Check AWS configuration
-                    logger.debug(f"AWS Region: {BATCH_CONFIG.AWS_DEFAULT_REGION}")
-                    logger.debug(f"S3 Bucket: {BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME}")
-                    logger.debug(
-                        f"Job Definition: {BATCH_CONFIG.AWS_BATCH_JOB_DEFINITION}"
-                    )
+                    # # Enhanced debugging - Check AWS configuration
+                    # logger.debug(f"AWS Region: {BATCH_CONFIG.AWS_DEFAULT_REGION}")
+                    # logger.debug(f"S3 Bucket: {BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME}")
+                    # logger.debug(
+                    #     f"Job Definition: {BATCH_CONFIG.AWS_BATCH_JOB_DEFINITION}"
+                    # )
 
                     # Check current environment variables that will be passed
                     for env_var in envvars:
@@ -405,37 +405,37 @@ def _snakemake_execute_batch(
                         logger.debug(f"Env {env_var}: {value}")
 
                     # Check AWS credentials (without logging the actual values)
-                    aws_key_exists = "AWS_ACCESS_KEY_ID" in os.environ
-                    aws_secret_exists = "AWS_SECRET_ACCESS_KEY" in os.environ
-                    logger.debug(f"AWS_ACCESS_KEY_ID exists: {aws_key_exists}")
-                    logger.debug(f"AWS_SECRET_ACCESS_KEY exists: {aws_secret_exists}")
+                    # aws_key_exists = "AWS_ACCESS_KEY_ID" in os.environ
+                    # aws_secret_exists = "AWS_SECRET_ACCESS_KEY" in os.environ
+                    # logger.debug(f"AWS_ACCESS_KEY_ID exists: {aws_key_exists}")
+                    # logger.debug(f"AWS_SECRET_ACCESS_KEY exists: {aws_secret_exists}")
 
                     # Check resource settings
-                    logger.debug(f"Resource settings - nodes: 10, cores: {cores}")
-                    logger.debug("Default resources: mem_mb=4096")
+                    # logger.debug(f"Resource settings - nodes: 10, cores: {cores}")
+                    # logger.debug("Default resources: mem_mb=4096")
 
-                    logger.debug("=== CONTAINER COMMAND DEBUG ===")
-                    logger.debug(
-                        f"Container Image: {batch_executor.get_container_image()}"
-                    )
-                    logger.debug(f"Precommand Setup: {contain_setup}")
-                    logger.debug(
-                        "Note: Using script-based Snakemake rules with ENTRYPOINT fix"
-                    )
-                    logger.debug(
-                        "If 'Shell command: None' persists, check container ENTRYPOINT"
-                    )
-                    logger.debug("=== END CONTAINER COMMAND DEBUG ===")
+                    # logger.debug("=== CONTAINER COMMAND DEBUG ===")
+                    # logger.debug(
+                    #     f"Container Image: {batch_executor.get_container_image()}"
+                    # )
+                    # logger.debug(f"Precommand Setup: {contain_setup}")
+                    # logger.debug(
+                    #     "Note: Using script-based Snakemake rules with ENTRYPOINT fix"
+                    # )
+                    # logger.debug(
+                    #     "If 'Shell command: None' persists, check container ENTRYPOINT"
+                    # )
+                    # logger.debug("=== END CONTAINER COMMAND DEBUG ===")
 
                     # Debug S3 storage configuration - critical for file latency issues
-                    logger.debug("=== S3 STORAGE DEBUG ===")
-                    logger.debug(f"S3 Storage Prefix: {s3_storage}")
-                    logger.debug(f"S3 Bucket: {s3_bucket_name}")
-                    logger.debug(f"S3 Provider: {s3_prefix}")
-                    logger.debug("Increased latency_wait to 300s for S3 consistency")
-                    logger.debug("=== END S3 STORAGE DEBUG ===")
+                    # logger.debug("=== S3 STORAGE DEBUG ===")
+                    # logger.debug(f"S3 Storage Prefix: {s3_storage}")
+                    # logger.debug(f"S3 Bucket: {s3_bucket_name}")
+                    # logger.debug(f"S3 Provider: {s3_prefix}")
+                    # logger.debug("Increased latency_wait to 300s for S3 consistency")
+                    # logger.debug("=== END S3 STORAGE DEBUG ===")
 
-                    logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
+                    # logger.debug("=== AWS BATCH EXECUTION DEBUG ===")
 
                     # Store start time for monitoring
                     execution_start_time = time.time()
@@ -581,10 +581,6 @@ def _snakemake_execute_batch(
                     if aws_secret_key is not None:
                         os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key
 
-                    # Config cleanup no longer needed since it's uploaded to S3
-                    logger.debug(
-                        "Config file uploaded to S3 - no local cleanup required"
-                    )
             except Exception as e:
                 snakemake_result = False
                 logger.error(f"AWS Batch workflow execution failed: {e}")
@@ -787,7 +783,6 @@ def delete_dependencies(
                 ),
             ]
         )
-        # logger.debug(pickle_filepath)
 
         if os.path.exists(pickle_filepath):
             os.remove(pickle_filepath)
