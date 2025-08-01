@@ -199,17 +199,52 @@ def _snakemake_execute_batch(
             # Snakemake local paths: /app/studio_data/output/1/958d5ef3/file.pkl
             # Should map to S3: s3://bucket/app/studio_data/output/1/958d5ef3/file.pkl
             # But we're seeing: s3://bucket//app/studio_data/... (double slash)
-            # This suggests Snakemake replaces the local_storage_prefix
-            # with default_storage_prefix
-            # So we need: local="/app/studio_data" -> s3="s3://bucket/app/studio_data"
-            # Tried so far:
-            # s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # Tried 1:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}" ...
+            # + local_storage_prefix=Path(DIRPATH.DATA_DIR),
+            # resulted in exit at STARTING with no files found:
+            # s3://subscr-optinist-app-storage//app/studio_data/output/1/...
+            # 8b445935/input_zdax4o54o0/sample_mouse2p_behavior.pkl
+            # + batch_workdir = Path("/app")
+            # Tried 2:
             # s3_storage = f"{s3_prefix}://{s3_bucket_name}/app/studio_data"
-            s3_storage = f"{s3_prefix}://{s3_bucket_name}/app/studio_data"
+            # + local_storage_prefix=Path(DIRPATH.DATA_DIR),
+            # + batch_workdir = Path("/app")
+            # resulted in exit at STARTING with no files found:
+            # /app/studio_data/s3/subscr-optinist-app-storage/...
+            # app/studio_data/app/studio_data/input/1
+            # Tried 3:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}" # no local_storage_prefix
+            # + batch_workdir = Path("/app")
+            # resulted in exit at STARTING with no files found:
+            # s3://subscr-optinist-app-storage//app/studio_data/...
+            # output/1/c75c5320/input_zdax4o54o0/sample_mouse2p_behavior.pkl
+            # Tried 4:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # + local_storage_prefix=Path(DIRPATH.DATA_DIR),
+            # + batch_workdir = Path(DIRPATH.DATA_DIR)
+            # resulted in:
+            # s3://subscr-optinist-app-storage//app/studio_data/...
+            # output/1/9196bec2/input_zdax4o54o0/sample_mouse2p_behavior.pkl
+            # And also /app/studio_data/s3/subscr-optinist-app-storage/app/...
+            # studio_data/output/1/9196bec2/input_ab1mmvt2ky/sample_mouse2p_image.pkl
+            # So next will try:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # + batch_workdir = Path("/app") # Keep Snakefile accessible
+            # + NO local_storage_prefix # Avoid duplication
+            # Tried 5:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # + shared_fs_usage=[], retrieve_storage=True, keep_storage_local=False
+            # + Upload snakemake.yaml config to S3 for batch jobs to find
+            # This should fix the "Invalid config yaml file" error
+
+            s3_storage = f"{s3_prefix}://{s3_bucket_name}"
             storage_settings = StorageSettings(
                 default_storage_provider=s3_prefix,
                 default_storage_prefix=s3_storage,
-                local_storage_prefix=Path(DIRPATH.DATA_DIR),  # = /app/studio_data
+                shared_fs_usage=[],
+                retrieve_storage=True,
+                keep_storage_local=False,
             )
             logger.debug(f"Using S3 storage: {s3_storage}")
             logger.debug(
@@ -228,21 +263,47 @@ def _snakemake_execute_batch(
                 workspace_id, unique_id
             )
 
-        # Working directory for snakemake config file (file paths in rules are absolute)
-        # Use /app as working directory - consistent with container app location
-        batch_workdir = Path("/app")
-        config_source = join_filepath([smk_workdir, DIRPATH.SNAKEMAKE_CONFIG_YML])
-        config_dest = join_filepath([str(batch_workdir), DIRPATH.SNAKEMAKE_CONFIG_YML])
+        smk_config = join_filepath([smk_workdir, DIRPATH.SNAKEMAKE_CONFIG_YML])
 
-        # Copy config file to batch workdir
-        import shutil
+        # Upload config file to S3 so batch jobs can find it
+        if os.path.exists(smk_config):
+            if RemoteStorageController.is_available():
+                try:
+                    # Construct S3 path relative to smk_workdir structure
+                    # smk_workdir = DIRPATH.OUTPUT_DIR/workspace_id/unique_id
+                    # So S3 path should be:
+                    # app/studio_data/output/workspace_id/unique_id/snakemake.yaml
+                    s3_config_path = join_filepath(
+                        [
+                            DIRPATH.OUTPUT_DIR,
+                            workspace_id,
+                            unique_id,
+                            DIRPATH.SNAKEMAKE_CONFIG_YML,
+                        ]
+                    )
 
-        if os.path.exists(config_source):
-            os.makedirs(os.path.dirname(config_dest), exist_ok=True)
-            shutil.copy2(config_source, config_dest)
-            logger.debug(f"Copied config from {config_source} to {config_dest}")
+                    # Upload using boto3 S3 client directly
+                    import boto3
+
+                    s3_client = boto3.client("s3")
+                    # Remove leading slash for S3 key
+                    s3_key = s3_config_path.lstrip("/")
+                    s3_client.upload_file(
+                        smk_config, BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME, s3_key
+                    )
+                    logger.info(
+                        f"Uploaded config to S3: "
+                        f"s3://{BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME}/{s3_key}"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to upload config to S3: {e}")
+                    return False
+            else:
+                logger.warning(
+                    "S3 not available - config may not be accessible to batch jobs"
+                )
         else:
-            logger.error(f"Config file not found at {config_source}")
+            logger.error(f"Config file not found at {smk_config}")
             return False
 
         # Use context manager for proper cleanup
@@ -254,7 +315,7 @@ def _snakemake_execute_batch(
         ) as snakemake_api:
             workflow_api = snakemake_api.workflow(
                 snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
-                workdir=batch_workdir,
+                workdir=Path(smk_workdir),
                 storage_settings=storage_settings,
                 resource_settings=ResourceSettings(
                     nodes=10,
@@ -520,12 +581,10 @@ def _snakemake_execute_batch(
                     if aws_secret_key is not None:
                         os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key
 
-                    try:
-                        if os.path.exists(config_dest):
-                            os.remove(config_dest)
-                            logger.debug(f"Cleaned up copied config: {config_dest}")
-                    except Exception as e:
-                        logger.warning(f"Failed to cleanup config {config_dest}: {e}")
+                    # Config cleanup no longer needed since it's uploaded to S3
+                    logger.debug(
+                        "Config file uploaded to S3 - no local cleanup required"
+                    )
             except Exception as e:
                 snakemake_result = False
                 logger.error(f"AWS Batch workflow execution failed: {e}")
