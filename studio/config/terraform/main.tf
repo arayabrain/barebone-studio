@@ -1418,6 +1418,23 @@ resource "aws_s3_bucket_policy" "app_storage" {
         ]
       },
       {
+        Sid       = "AllowBatchJobAccess"
+        Effect    = "Allow"
+        Principal = {
+          AWS = aws_iam_role.batch_job.arn
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          aws_s3_bucket.app_storage.arn,
+          "${aws_s3_bucket.app_storage.arn}/*"
+        ]
+      },
+      {
         Sid    = "AllowALBLogsAccess"
         Effect = "Allow"
         Principal = {

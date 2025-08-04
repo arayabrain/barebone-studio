@@ -316,39 +316,39 @@ class BatchUtils:
         Determine which AWS Batch job queue to use based on user tier.
         Tries multiple methods to get user information with fallbacks.
         """
-        try:
-            # First try: use the current_user from class initialization
-            if self.current_user and hasattr(self.current_user, "subscription_tier"):
-                tier = self.current_user.subscription_tier
-                user_name = getattr(self.current_user, "name", "unknown")
+        # try:
+        #     # First try: use the current_user from class initialization
+        #     if self.current_user and hasattr(self.current_user, "subscription_tier"):
+        #         tier = self.current_user.subscription_tier
+        #         user_name = getattr(self.current_user, "name", "unknown")
 
-                if tier == "paid":
-                    logger.info(f"Using paid tier queue for user: {user_name}")
-                    return BATCH_CONFIG.AWS_BATCH_PAID_QUEUE
-                else:
-                    logger.info(f"Using free tier queue for user: {user_name}")
-                    return BATCH_CONFIG.AWS_BATCH_FREE_QUEUE
+        #         if tier == "paid":
+        #             logger.info(f"Using paid tier queue for user: {user_name}")
+        #             return BATCH_CONFIG.AWS_BATCH_PAID_QUEUE
+        #         else:
+        #             logger.info(f"Using free tier queue for user: {user_name}")
+        #             return BATCH_CONFIG.AWS_BATCH_FREE_QUEUE
 
-            # Second try: get user context from database
-            from studio.app.common.core.cloud.cloud_utils import (
-                get_current_user_context,
-            )
+        #     # Second try: get user context from database
+        #     from studio.app.common.core.cloud.cloud_utils import (
+        #         get_current_user_context,
+        #     )
 
-            current_user = get_current_user_context()
+        #     current_user = get_current_user_context()
 
-            if current_user and isinstance(current_user, dict):
-                tier = current_user.get("subscription_tier", "free")
-                user_name = current_user.get("name", "unknown")
+        #     if current_user and isinstance(current_user, dict):
+        #         tier = current_user.get("subscription_tier", "free")
+        #         user_name = current_user.get("name", "unknown")
 
-                if tier == "paid":
-                    logger.info(f"Using paid tier queue for user: {user_name}")
-                    return BATCH_CONFIG.AWS_BATCH_PAID_QUEUE
-                else:
-                    logger.info(f"Using free tier queue for user: {user_name}")
-                    return BATCH_CONFIG.AWS_BATCH_FREE_QUEUE
+        #         if tier == "paid":
+        #             logger.info(f"Using paid tier queue for user: {user_name}")
+        #             return BATCH_CONFIG.AWS_BATCH_PAID_QUEUE
+        #         else:
+        #             logger.info(f"Using free tier queue for user: {user_name}")
+        #             return BATCH_CONFIG.AWS_BATCH_FREE_QUEUE
 
-        except Exception as e:
-            logger.warning(f"Failed to determine user tier: {e}")
+        # except Exception as e:
+        #     logger.warning(f"Failed to determine user tier: {e}")
 
         # Default to free tier queue
         logger.info("Defaulting to free tier queue")
@@ -371,7 +371,7 @@ class BatchUtils:
         """
         Prepare the workspace for AWS Batch execution.
         """
-        logger.debug(
+        logger.info(
             f"Preparing batch workspace for {self.workspace_id}/{self.unique_id}"
         )
 

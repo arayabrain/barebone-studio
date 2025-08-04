@@ -237,12 +237,42 @@ def _snakemake_execute_batch(
             # + shared_fs_usage=[], retrieve_storage=True, keep_storage_local=False
             # + Upload snakemake.yaml config to S3 for batch jobs to find
             # This should fix the "Invalid config yaml file" error
+            # Tried 6:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}" (no trailing slash)
+            # + local_storage_prefix=Path("/app") (/app instead of /app/studio_data)
+            # Result: Still double slash, Snakemake creating /app/s3/ paths
+            # Tried 7:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # + remote_job_local_storage_prefix for AWS Batch jobs
+            # + No local_storage_prefix to avoid local S3 mount paths
+            # Result: Still double slash s3://bucket//app/studio_data/...
+            # Tried 8:
+            # Empty default_storage_prefix to bypass Snakemake's path construction
+            # + frozenset() for shared_fs_usage (not list)
+            # + Let S3 plugin handle full path construction
+            # Result: ERROR - S3 plugin requires valid --default-storage-prefix
+            # with s3:// scheme
+            # Tried 9:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}/app/studio_data"
+            # + default_storage_prefix includes full /app/studio_data path
+            # + local_storage_prefix=Path(DIRPATH.DATA_DIR) strips /app/studio_data
+            # + remote_job_local_storage_prefix="/tmp/snakemake_scratch"
+            # Result: Triple duplication
+            # /app/studio_data/s3/.../app/studio_data/app/studio_data/
+            # Tried 10:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}" (no path in prefix)
+            # + local_storage_prefix=Path(DIRPATH.DATA_DIR) strips /app/studio_data
+            # + remote_job_local_storage_prefix="/tmp/snakemake_scratch" for batch jobs
+            # + frozenset() for shared_fs_usage
+            # Similar to Tried 1 but adds remote_job_local_storage_prefix
 
             s3_storage = f"{s3_prefix}://{s3_bucket_name}"
             storage_settings = StorageSettings(
                 default_storage_provider=s3_prefix,
                 default_storage_prefix=s3_storage,
-                shared_fs_usage=[],
+                local_storage_prefix=Path(DIRPATH.DATA_DIR),
+                remote_job_local_storage_prefix="/tmp/snakemake_scratch",
+                shared_fs_usage=frozenset(),
                 retrieve_storage=True,
                 keep_storage_local=False,
             )
@@ -394,7 +424,9 @@ def _snakemake_execute_batch(
 
                     # # Enhanced debugging - Check AWS configuration
                     # logger.debug(f"AWS Region: {BATCH_CONFIG.AWS_DEFAULT_REGION}")
-                    # logger.debug(f"S3 Bucket: {BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME}")
+                    # logger.debug(
+                    #     f"S3 Bucket: {BATCH_CONFIG.AWS_BATCH_S3_BUCKET_NAME}"
+                    # )
                     # logger.debug(
                     #     f"Job Definition: {BATCH_CONFIG.AWS_BATCH_JOB_DEFINITION}"
                     # )
@@ -423,7 +455,7 @@ def _snakemake_execute_batch(
                     #     "Note: Using script-based Snakemake rules with ENTRYPOINT fix"
                     # )
                     # logger.debug(
-                    #     "If 'Shell command: None' persists, check container ENTRYPOINT"
+                    #     "If 'Shell command: None', check container ENTRYPOINT"
                     # )
                     # logger.debug("=== END CONTAINER COMMAND DEBUG ===")
 
