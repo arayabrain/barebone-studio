@@ -4,9 +4,9 @@ import json
 import os
 import platform
 import subprocess
-from pathlib import Path
 from typing import Dict
 
+from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import Rule
 from studio.app.common.core.snakemake.snakemake_reader import SmkConfigReader
@@ -144,29 +144,28 @@ class SmkUtils:
                         logger.error(f"Config keys available: {list(config.keys())}")
                 else:
                     # Fallback to file reading for backwards compatibility
-                    workflow_dirpath = str(Path(rule_config.output).parent.parent)
-
-                    config_path = join_filepath(
+                    output_path = join_filepath(
                         [
                             DIRPATH.OUTPUT_DIR,
-                            workflow_dirpath,
-                            DIRPATH.SNAKEMAKE_CONFIG_YML,
+                            rule_config.output,
                         ]
                     )
-
-                    config = SmkConfigReader.read_from_path(config_path)
+                    path_ids = ExptOutputPathIds(os.path.dirname(output_path))
+                    config = SmkConfigReader.read(
+                        path_ids.workspace_id,
+                        path_ids.unique_id,
+                    )
 
                     if config and "nwb_template" in config:
                         template = config["nwb_template"]
                         rule_config.nwbfile = template
                     else:
-                        logger.error(f"NWB template not found in config: {config_path}")
+                        logger.error(
+                            "NWB template not found in config:"
+                            f" {path_ids.workspace_id}/{path_ids.unique_id}"
+                        )
                         config_keys = list(config.keys()) if config else "None"
                         logger.error(f"Config keys available: {config_keys}")
-                        config_exists = (
-                            os.path.exists(config_path) if config_path else False
-                        )
-                        logger.error(f"Config exists: {config_exists}")
 
         return rule_config
 
