@@ -265,13 +265,44 @@ def _snakemake_execute_batch(
             # + remote_job_local_storage_prefix="/tmp/snakemake_scratch" for batch jobs
             # + frozenset() for shared_fs_usage
             # Similar to Tried 1 but adds remote_job_local_storage_prefix
-
+            # Result: SAME as # 1 - Double slash s3://bucket//app/studio_data/output/...
+            # Jobs submit but still path construction issue + S3 mount paths
+            # Tried 11:
+            # s3_storage = f"{s3_prefix}://{s3_bucket_name}" (no path in prefix)
+            # + local_storage_prefix=Path("/tmp/snakemake_storage") (different from
+            #    container data dir)
+            # + remote_job_local_storage_prefix=Path("/tmp/snakemake_storage")
+            #    (same as local)
+            # + Avoid path conflicts with actual container working directory
+            # Result: Better local storage (/tmp/snakemake_storage/s3/...) but STILL
+            # double slash s3://bucket//app/studio_data/...
+            # Tried 12:
+            # + Modified SmkUtils to generate relative paths for S3 mode
+            # + s3_storage includes full app/studio_data path prefix
+            # + SmkUtils strips /app/studio_data from absolute paths in S3 mode
+            # + Relative paths: "output/1/abc/file.pkl" + prefix
+            # + Expected result: s3://bucket/app/studio_data/output/1/abc/file.pkl
+            # And workdir=Path(smk_workdir)
+            # Result: MissingInputException - path duplication still occurring.
+            # /tmp/snakemake_storage/s3/subscr-optinist-app-storage/...
+            # app/studio_data/app/studio_data/output/...
+            # Tried 13:
+            # + s3_storage = f"{s3_prefix}://{s3_bucket_name}" (no path in prefix)
+            # + Let Snakemake combine the bucket URI with the full
+            # relative path from the rule
+            # + Expected result: s3://bucket/app/studio_data/output/1/abc/file.pkl
+            # Result: MissingInputException - path duplication still occurring.
+            # /tmp/snakemake_storage/s3/subscr-optinist-app-storage/app/studio_data/output/
+            #  Tried 14:
+            # + Change workdir to /app/studio_data
+            # + Keep s3_storage as bucket URI only
+            # + Expected result: Snakemake resolves paths correctly from the new workdir
             s3_storage = f"{s3_prefix}://{s3_bucket_name}"
             storage_settings = StorageSettings(
                 default_storage_provider=s3_prefix,
                 default_storage_prefix=s3_storage,
-                local_storage_prefix=Path(DIRPATH.DATA_DIR),
-                remote_job_local_storage_prefix="/tmp/snakemake_scratch",
+                local_storage_prefix=Path("/tmp/snakemake_storage"),
+                remote_job_local_storage_prefix=Path("/tmp/snakemake_storage"),
                 shared_fs_usage=frozenset(),
                 retrieve_storage=True,
                 keep_storage_local=False,
@@ -281,9 +312,11 @@ def _snakemake_execute_batch(
                 f"S3 storage breakdown: provider='{s3_prefix}', "
                 f"bucket='{s3_bucket_name}', full_prefix='{s3_storage}'"
             )
-            logger.debug(f"Local storage prefix: {DIRPATH.DATA_DIR}")
+            logger.debug("Local storage prefix: /tmp/snakemake_storage")
             logger.debug(
-                f"Snakemake will map {DIRPATH.DATA_DIR}/ paths to {s3_storage}/"
+                f"Example: {DIRPATH.DATA_DIR}/output/1/abc/file.pkl -> "
+                f"app/studio_data/output/1/abc/file.pkl -> "
+                f"{s3_storage}/app/studio_data/output/1/abc/file.pkl"
             )
         else:
             # Use optimized EFS configuration when S3 is not available
@@ -345,7 +378,7 @@ def _snakemake_execute_batch(
         ) as snakemake_api:
             workflow_api = snakemake_api.workflow(
                 snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
-                workdir=Path(smk_workdir),
+                workdir=Path(DIRPATH.DATA_DIR),
                 storage_settings=storage_settings,
                 resource_settings=ResourceSettings(
                     nodes=10,

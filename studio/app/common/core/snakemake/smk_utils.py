@@ -22,18 +22,66 @@ logger = AppLogger.get_logger()
 
 class SmkUtils:
     @classmethod
+    def _is_s3_storage_mode(cls):
+        """Check if we're in S3 storage mode by checking environment variables"""
+        import os
+
+        return (
+            os.environ.get("USE_AWS_BATCH", "").lower() == "true"
+            and os.environ.get("S3_DEFAULT_BUCKET_NAME") is not None
+        )
+
+    @classmethod
+    def _make_relative_path(cls, absolute_path):
+        """Convert absolute path to relative path for S3 storage compatibility
+
+        For S3 storage, Snakemake expects relative paths that will be prefixed
+        with the storage prefix. Absolute paths cause double slash issues.
+
+        Example:
+        - Absolute: /app/studio_data/output/1/abc123/file.pkl
+        - Relative: output/1/abc123/file.pkl
+        - S3 Result: s3://bucket/app/studio_data/output/1/abc123/file.pkl
+        """
+        if not cls._is_s3_storage_mode():
+            return absolute_path
+
+        # Strip the DATA_DIR prefix to make paths relative
+        # DIRPATH.DATA_DIR = "/app/studio_data" in container
+        data_dir = DIRPATH.DATA_DIR
+        if absolute_path.startswith(data_dir + "/"):
+            # Remove "/app/studio_data/" prefix, leaving "output/1/abc123/file.pkl"
+            return absolute_path[len(data_dir) + 1 :]
+        elif absolute_path.startswith(data_dir):
+            # Remove "/app/studio_data" prefix, handle case without trailing slash
+            remaining = absolute_path[len(data_dir) :]
+            # If remaining starts with "/", remove it to avoid empty path
+            return remaining.lstrip("/")
+
+        # If path doesn't start with DATA_DIR, might be
+        # already relative or different structure
+        # Remove leading slash if present to ensure relative path
+        return absolute_path.lstrip("/")
+
+    @classmethod
     def input(cls, details):
         if NodeTypeUtil.check_nodetype_from_filetype(details["type"]) == NodeType.DATA:
             if details["type"] in [FILETYPE.IMAGE]:
-                return [join_filepath([DIRPATH.INPUT_DIR, x]) for x in details["input"]]
+                paths = [
+                    join_filepath([DIRPATH.INPUT_DIR, x]) for x in details["input"]
+                ]
+                return [cls._make_relative_path(p) for p in paths]
             else:
-                return join_filepath([DIRPATH.INPUT_DIR, details["input"]])
+                path = join_filepath([DIRPATH.INPUT_DIR, details["input"]])
+                return cls._make_relative_path(path)
         else:
-            return [join_filepath([DIRPATH.OUTPUT_DIR, x]) for x in details["input"]]
+            paths = [join_filepath([DIRPATH.OUTPUT_DIR, x]) for x in details["input"]]
+            return [cls._make_relative_path(p) for p in paths]
 
     @classmethod
     def output(cls, details):
-        return join_filepath([DIRPATH.OUTPUT_DIR, details["output"]])
+        path = join_filepath([DIRPATH.OUTPUT_DIR, details["output"]])
+        return cls._make_relative_path(path)
 
     @classmethod
     def dict2leaf(cls, root_dict: dict, path_list):
