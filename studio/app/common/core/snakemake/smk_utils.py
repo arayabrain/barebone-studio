@@ -9,7 +9,7 @@ from typing import Dict
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import Rule
-from studio.app.common.core.utils.config_handler import ConfigReader
+from studio.app.common.core.snakemake.snakemake_reader import SmkConfigReader
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.common.core.utils.filepath_finder import find_condaenv_filepath
 from studio.app.common.core.workflow.workflow import NodeType, NodeTypeUtil
@@ -154,7 +154,7 @@ class SmkUtils:
                         ]
                     )
 
-                    config = ConfigReader.read(config_path)
+                    config = SmkConfigReader.read_from_path(config_path)
 
                     if config and "nwb_template" in config:
                         template = config["nwb_template"]
