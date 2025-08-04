@@ -4,6 +4,8 @@ import shutil
 
 from snakemake import snakemake
 
+from studio.app.common.core.experiment.experiment import ExptOutputPathIds
+from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.dir_path import DIRPATH
 
@@ -38,6 +40,7 @@ def main(args):
             )
             print(f"Config file copied from {config_file_path} to {temp_workdir}")
 
+        # Main snakemake execution
         snakemake_args = {
             "snakefile": DIRPATH.SNAKEMAKE_FILEPATH,
             "forceall": args.forceall,
@@ -61,32 +64,36 @@ def main(args):
             # Copy config file back to output directory for future reference
             try:
                 # Find the output directory from the last_output in config
-                from studio.app.common.core.utils.config_handler import ConfigReader
-
                 config_data = ConfigReader.read(config_file_path)
                 if config_data and "last_output" in config_data:
-                    # Extract workspace and unique_id from output path
-                    output_path_parts = config_data["last_output"][0].split("/")
-                    if len(output_path_parts) >= 3:
-                        workspace_id = output_path_parts[0]
-                        unique_id = output_path_parts[1]
+                    # Extract the last output path
+                    last_output_path = config_data["last_output"][0]
+                    # Construct absolute path and extract directory
+                    absolute_output_path = join_filepath(
+                        [DIRPATH.OUTPUT_DIR, last_output_path]
+                    )
+                    # Extract the workspace_id and unique_id
+                    path_ids = ExptOutputPathIds(os.path.dirname(absolute_output_path))
 
-                        output_config_dir = join_filepath(
-                            [DIRPATH.OUTPUT_DIR, workspace_id, unique_id]
-                        )
-                        os.makedirs(output_config_dir, exist_ok=True)
-                        output_config_path = join_filepath(
-                            [output_config_dir, DIRPATH.SNAKEMAKE_CONFIG_YML]
-                        )
+                    # Create the output directory path to copy the config file
+                    output_config_dir = join_filepath(
+                        [
+                            DIRPATH.OUTPUT_DIR,
+                            path_ids.workspace_id,
+                            path_ids.unique_id,
+                        ]
+                    )
+                    os.makedirs(output_config_dir, exist_ok=True)
+                    output_config_path = join_filepath(
+                        [output_config_dir, DIRPATH.SNAKEMAKE_CONFIG_YML]
+                    )
 
-                        shutil.copyfile(config_file_path, output_config_path)
-                        print(
-                            f"Config copied to output directory: {output_config_path}"
-                        )
-                    else:
-                        print("Warning: Could not get output directory from config")
+                    shutil.copyfile(config_file_path, output_config_path)
+                    print(f"Config copied to output directory: {output_config_path}")
                 else:
-                    print("Warning: No output found in config, skipping config copy")
+                    print(
+                        "Warning: No output path found in config, skipping config copy"
+                    )
             except Exception as e:
                 print(f"Warning: Failed to copy config to output directory: {e}")
         else:
