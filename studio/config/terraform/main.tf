@@ -594,7 +594,7 @@ resource "aws_s3_bucket_public_access_block" "user_data" {
 # =========================
 # Application Load Balancer
 # =========================
-resource "aws_lb" "main" {
+resource "aws_lb" "autoscaling" {
   name               = "subscr-optinist-lb"
   internal           = false
   load_balancer_type = "application"
@@ -620,15 +620,52 @@ resource "aws_lb" "main" {
   }
 }
 
+resource "aws_lb" "batch" {
+  name               = "subscr-batch-optinist-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id, aws_security_group.ecs.id]
+  subnets           = [aws_subnet.public1.id, aws_subnet.public2.id]
+
+  enable_deletion_protection = false
+  idle_timeout              = 60
+
+  # Enable access logs for detailed monitoring
+  access_logs {
+    bucket  = aws_s3_bucket.app_storage.id
+    prefix  = "alb-logs"
+    enabled = true
+  }
+
+  depends_on = [
+    aws_s3_bucket_policy.app_storage
+  ]
+
+  tags = {
+    Name = "subscr-batch-optinist-load-balancer"
+  }
+}
+
 # Load Balancer Listener
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.main.arn
+resource "aws_lb_listener" "autoscaling" {
+  load_balancer_arn = aws_lb.autoscaling.arn
   port              = "80"
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.autoscaling.arn
+  }
+}
+
+resource "aws_lb_listener" "batch" {
+  load_balancer_arn = aws_lb.batch.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.batch.arn
   }
 }
 
@@ -638,7 +675,7 @@ resource "aws_lb_listener" "http" {
 resource "aws_autoscaling_group" "main" {
   name                = "subscr-optinist-asg"
   vpc_zone_identifier = [aws_subnet.private1.id, aws_subnet.private2.id]
-  target_group_arns   = [aws_lb_target_group.app.arn]
+  target_group_arns   = [aws_lb_target_group.autoscaling.arn]
   health_check_type   = "ELB"
   health_check_grace_period = 180
   default_cooldown = 300
@@ -739,8 +776,8 @@ resource "aws_autoscaling_policy" "scale_down" {
 }
 
 # Target Group for ALB
-resource "aws_lb_target_group" "app" {
-  name        = "subscr-optinist-target-group"
+resource "aws_lb_target_group" "autoscaling" {
+  name        = "subscr-optinist-tg"
   port        = 8000
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -770,6 +807,40 @@ resource "aws_lb_target_group" "app" {
 
   tags = {
     Name = "subscr-optinist-cloud-target-group"
+  }
+}
+
+resource "aws_lb_target_group" "batch" {
+  name        = "subscr-batch-optinist-tg"
+  port        = 8000
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "instance"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 5
+    interval            = 60
+    matcher            = "200"
+    path               = "/health"
+    port               = "traffic-port"
+    protocol           = "HTTP"
+    timeout            = 30
+  }
+
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 86400
+    enabled         = false
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "subscr-batch-optinist-cloud-target-group"
   }
 }
 
@@ -810,10 +881,19 @@ resource "aws_ecs_capacity_provider" "main" {
     managed_scaling {
       maximum_scaling_step_size = 1
       minimum_scaling_step_size = 1
-      status                    = "DISABLED"
-      target_capacity           = 100
+      status                    = "ENABLED"
+      target_capacity           = 90
       instance_warmup_period    = 300
     }
+  }
+
+  depends_on = [
+    aws_autoscaling_group.main,
+    aws_launch_template.ecs
+  ]
+
+  lifecycle {
+    create_before_destroy = true
   }
 
   tags = {
@@ -835,10 +915,13 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
 
   depends_on = [
     aws_ecs_capacity_provider.main,
-    aws_autoscaling_group.main
+    aws_autoscaling_group.main,
+    aws_ecs_cluster.main,
+    aws_launch_template.ecs
   ]
 
   lifecycle {
+    create_before_destroy = false
     prevent_destroy = false
     ignore_changes = [capacity_providers]
   }
@@ -1810,6 +1893,7 @@ resource "aws_batch_job_queue" "free_tier" {
   depends_on = [aws_batch_compute_environment.free_tier]
 
   lifecycle {
+    create_before_destroy = true
     prevent_destroy = false
   }
 }
@@ -1826,11 +1910,13 @@ resource "aws_batch_job_queue" "paid_tier" {
   depends_on = [aws_batch_compute_environment.paid_tier]
 
   lifecycle {
+    create_before_destroy = true
     prevent_destroy = false
   }
 }
 
 resource "aws_batch_compute_environment" "free_tier" {
+  name = "subscr-optinist-batch-free-tier"
   type                    = "MANAGED"
   state                   = "ENABLED"
   service_role           = aws_iam_role.batch_service.arn
@@ -1855,6 +1941,7 @@ resource "aws_batch_compute_environment" "free_tier" {
 }
 
 resource "aws_batch_compute_environment" "paid_tier" {
+  name = "subscr-optinist-batch-paid-tier"
   type                    = "MANAGED"
   state                   = "ENABLED"
   service_role           = aws_iam_role.batch_service.arn
@@ -1900,6 +1987,70 @@ resource "aws_cloudwatch_log_group" "autoscaling" {
   }
 }
 
+resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  alarm_name          = "subscr-optinist-cpu-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/AutoScaling"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "90"
+  alarm_description   = "This metric monitors ec2 cpu utilization"
+  alarm_actions       = [aws_autoscaling_policy.scale_up.arn]
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.main.name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory_high" {
+  alarm_name          = "subscr-optinist-memory-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "90"
+  alarm_description   = "This metric monitors memory utilization"
+  dimensions = {
+    ServiceName = aws_ecs_service.autoscaling.name
+    ClusterName = aws_ecs_cluster.main.name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "cpu_low" {
+  alarm_name          = "subscr-optinist-cpu-low"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/AutoScaling"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "20"
+  alarm_description   = "This metric monitors low cpu utilization"
+  alarm_actions       = [aws_autoscaling_policy.scale_down.arn]
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.main.name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory_low" {
+  alarm_name          = "subscr-optinist-memory-low"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "20"
+  alarm_description   = "This metric monitors memory utilization"
+  dimensions = {
+    ServiceName = aws_ecs_service.autoscaling.name
+    ClusterName = aws_ecs_cluster.main.name
+  }
+}
+
 resource "aws_cloudwatch_log_group" "application" {
   name              = "/aws/application/subscr-optinist"
   retention_in_days = 14
@@ -1924,7 +2075,7 @@ resource "aws_cloudwatch_log_group" "batch" {
   ]
   lifecycle {
     ignore_changes = [name]
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
@@ -1956,8 +2107,10 @@ resource "aws_cloudwatch_dashboard" "main" {
 
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", aws_ecs_service.main.name, "ClusterName", aws_ecs_cluster.main.name],
-            ["AWS/ECS", "MemoryUtilization", "ServiceName", aws_ecs_service.main.name, "ClusterName", aws_ecs_cluster.main.name]
+            ["AWS/ECS", "CPUUtilization", "ServiceName", aws_ecs_service.autoscaling.name, "ClusterName", aws_ecs_cluster.main.name],
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", aws_ecs_service.autoscaling.name, "ClusterName", aws_ecs_cluster.main.name],
+            ["AWS/ECS", "CPUUtilization", "ServiceName", aws_ecs_service.batch.name, "ClusterName", aws_ecs_cluster.main.name],
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", aws_ecs_service.batch.name, "ClusterName", aws_ecs_cluster.main.name]
           ]
           view    = "timeSeries"
           stacked = false
@@ -1995,11 +2148,16 @@ resource "aws_cloudwatch_dashboard" "main" {
 
         properties = {
           metrics = [
-            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.main.arn_suffix],
-            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.main.arn_suffix],
-            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", aws_lb.main.arn_suffix],
-            ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", aws_lb.main.arn_suffix],
-            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", aws_lb.main.arn_suffix]
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.autoscaling.arn_suffix],
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.autoscaling.arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", aws_lb.autoscaling.arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", aws_lb.autoscaling.arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", aws_lb.autoscaling.arn_suffix],
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.batch.arn_suffix],
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.batch.arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", aws_lb.batch.arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", aws_lb.batch.arn_suffix],
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", aws_lb.batch.arn_suffix],
           ]
           view    = "timeSeries"
           stacked = false
@@ -2196,10 +2354,10 @@ user_data = base64encode(<<-EOF
 # =============
 
 resource "null_resource" "build_and_deploy" {
-  depends_on = [aws_lb.main, aws_ecs_service.main]
+  depends_on = [aws_lb.autoscaling, aws_ecs_service.autoscaling]
 
   triggers = {
-    alb_dns = aws_lb.main.dns_name
+    alb_dns = aws_lb.autoscaling.dns_name
     # Force rebuild when git branch changes
     git_branch = var.git_branch
     # Force rebuild when ECR repo changes
@@ -2210,12 +2368,55 @@ resource "null_resource" "build_and_deploy" {
     command = <<-EOT
       set -e
       echo "=== Starting automated build and deploy ==="
-      echo "ALB DNS: ${aws_lb.main.dns_name}"
+      echo "ALB DNS: ${aws_lb.autoscaling.dns_name}"
 
       # Create frontend config with ALB DNS
       echo "Creating frontend .env.production..."
       cat > ../../../frontend/.env.production << 'ENV_EOF'
-REACT_APP_SERVER_HOST=${aws_lb.main.dns_name}
+REACT_APP_SERVER_HOST=${aws_lb.autoscaling.dns_name}
+REACT_APP_SERVER_PORT=80
+REACT_APP_SERVER_PROTO=http
+REACT_APP_EXPDB_METADATA_EDITABLE=true
+ENV_EOF
+
+      echo "Frontend configuration created:"
+      cat ../../../frontend/.env.production
+
+      # Build and push image
+      echo "Building and pushing Docker image..."
+      chmod +x ecr_build_push.sh
+      ./ecr_build_push.sh
+
+      echo "Waiting for ECR image to be available..."
+      sleep 60
+
+      echo "✅ Build and push completed successfully"
+
+    EOT
+  }
+}
+
+resource "null_resource" "build_and_deploy_batch" {
+  depends_on = [aws_lb.batch, aws_ecs_service.batch]
+
+  triggers = {
+    alb_dns = aws_lb.batch.dns_name
+    # Force rebuild when git branch changes
+    git_branch = var.git_branch
+    # Force rebuild when ECR repo changes
+    ecr_repo = var.ecr_repository_url
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      echo "=== Starting automated build and deploy ==="
+      echo "ALB DNS: ${aws_lb.batch.dns_name}"
+
+      # Create frontend config with ALB DNS
+      echo "Creating frontend .env.production..."
+      cat > ../../../frontend/.env.production << 'ENV_EOF'
+REACT_APP_SERVER_HOST=${aws_lb.batch.dns_name}
 REACT_APP_SERVER_PORT=80
 REACT_APP_SERVER_PROTO=http
 REACT_APP_EXPDB_METADATA_EDITABLE=true
@@ -2250,7 +2451,7 @@ resource "null_resource" "deploy_to_ecs" {
       echo "Forcing ECS service deployment..."
       aws ecs update-service \
         --cluster ${aws_ecs_cluster.main.name} \
-        --service ${aws_ecs_service.main.name} \
+        --service ${aws_ecs_service.autoscaling.name} \
         --force-new-deployment \
         --region ${var.aws_region}
 
@@ -2258,7 +2459,7 @@ resource "null_resource" "deploy_to_ecs" {
             # Check if service is already running first
             SERVICE_STATUS=$(aws ecs describe-services \
               --cluster ${aws_ecs_cluster.main.name} \
-              --services ${aws_ecs_service.main.name} \
+              --services ${aws_ecs_service.autoscaling.name} \
               --region ${var.aws_region} \
               --query 'services[0].status' --output text)
 
@@ -2266,7 +2467,7 @@ resource "null_resource" "deploy_to_ecs" {
               echo "Service is already active, checking running count..."
               RUNNING_COUNT=$(aws ecs describe-services \
                 --cluster ${aws_ecs_cluster.main.name} \
-                --services ${aws_ecs_service.main.name} \
+                --services ${aws_ecs_service.autoscaling.name} \
                 --region ${var.aws_region} \
                 --query 'services[0].runningCount' --output text)
 
@@ -2276,7 +2477,7 @@ resource "null_resource" "deploy_to_ecs" {
                 echo "Waiting for service to stabilize..."
                 timeout 1800 aws ecs wait services-stable \
                   --cluster ${aws_ecs_cluster.main.name} \
-                  --services ${aws_ecs_service.main.name} \
+                  --services ${aws_ecs_service.autoscaling.name} \
                   --region ${var.aws_region} \
                   --cli-read-timeout 1800 \
                   --cli-connect-timeout 120 || echo "Warning: Service stabilization timed out, but continuing..."
@@ -2285,15 +2486,75 @@ resource "null_resource" "deploy_to_ecs" {
               echo "Service not active, waiting..."
               timeout 1800 aws ecs wait services-stable \
                 --cluster ${aws_ecs_cluster.main.name} \
-                --services ${aws_ecs_service.main.name} \
+                --services ${aws_ecs_service.autoscaling.name} \
                 --region ${var.aws_region} \
                 --cli-read-timeout 1800 \
                 --cli-connect-timeout 120 || echo "Warning: Service stabilization timed out, but continuing..."
             fi
 
       echo "=== DEPLOYMENT COMPLETE ==="
-      echo "✅ Application is ready at: http://${aws_lb.main.dns_name}"
-      echo "✅ Health check: http://${aws_lb.main.dns_name}/health"
+      echo "✅ Application is ready at: http://${aws_lb.autoscaling.dns_name}"
+      echo "✅ Health check: http://${aws_lb.autoscaling.dns_name}/health"
+    EOT
+  }
+}
+
+resource "null_resource" "deploy_to_ecs_batch" {
+  depends_on = [null_resource.build_and_deploy_batch]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      echo "=== Starting ECS deployment ==="
+
+      # Force ECS deployment
+      echo "Forcing ECS service deployment..."
+      aws ecs update-service \
+        --cluster ${aws_ecs_cluster.main.name} \
+        --service ${aws_ecs_service.batch.name} \
+        --force-new-deployment \
+        --region ${var.aws_region}
+
+      echo "Waiting for ECS service to stabilize..."
+            # Check if service is already running first
+            SERVICE_STATUS=$(aws ecs describe-services \
+              --cluster ${aws_ecs_cluster.main.name} \
+              --services ${aws_ecs_service.batch.name} \
+              --region ${var.aws_region} \
+              --query 'services[0].status' --output text)
+
+            if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+              echo "Service is already active, checking running count..."
+              RUNNING_COUNT=$(aws ecs describe-services \
+                --cluster ${aws_ecs_cluster.main.name} \
+                --services ${aws_ecs_service.batch.name} \
+                --region ${var.aws_region} \
+                --query 'services[0].runningCount' --output text)
+
+              if [ "$RUNNING_COUNT" -gt "0" ]; then
+                echo "Service already has $RUNNING_COUNT running tasks"
+              else
+                echo "Waiting for service to stabilize..."
+                timeout 1800 aws ecs wait services-stable \
+                  --cluster ${aws_ecs_cluster.main.name} \
+                  --services ${aws_ecs_service.batch.name} \
+                  --region ${var.aws_region} \
+                  --cli-read-timeout 1800 \
+                  --cli-connect-timeout 120 || echo "Warning: Service stabilization timed out, but continuing..."
+              fi
+            else
+              echo "Service not active, waiting..."
+              timeout 1800 aws ecs wait services-stable \
+                --cluster ${aws_ecs_cluster.main.name} \
+                --services ${aws_ecs_service.batch.name} \
+                --region ${var.aws_region} \
+                --cli-read-timeout 1800 \
+                --cli-connect-timeout 120 || echo "Warning: Service stabilization timed out, but continuing..."
+            fi
+
+      echo "=== DEPLOYMENT COMPLETE ==="
+      echo "✅ Application is ready at: http://${aws_lb.batch.dns_name}"
+      echo "✅ Health check: http://${aws_lb.batch.dns_name}/health"
     EOT
   }
 }
@@ -2497,7 +2758,7 @@ resource "aws_ssm_association" "app_setup" {
 # ===================
 # ECS Task Definition
 # ===================
-resource "aws_ecs_task_definition" "app" {
+resource "aws_ecs_task_definition" "autoscaling" {
   family                   = "subscr-optinist-cloud-taskdef"
   requires_compatibilities = ["EC2"]
   network_mode            = "bridge"
@@ -2509,6 +2770,200 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name                  = "subscr-optinist-cloud-container"
+      image                 = "${var.ecr_repository_url}:latest"
+      cpu                   = 1536
+      memory                = 5120
+      memoryReservation     = 3072
+      essential             = true
+      workingDirectory      = "/app"
+      entryPoint            = ["/bin/sh", "-c"]
+      command               = ["./cloud-startup.sh"]
+
+      portMappings = [
+        {
+          name           = "subscr-optinist-cloud-container-port-8000"
+          containerPort  = 8000
+          hostPort       = 8000
+          protocol       = "tcp"
+        }
+      ]
+
+      environment = [
+        {
+          name  = "CLOUDWATCH_LOG_GROUP"
+          value = "/ecs/subscr-optinist-cloud-taskdef"
+        },
+        {
+          name  = "PYTHONPATH"
+          value = "/app/"
+        },
+        {
+          name  = "TZ"
+          value = "Asia/Tokyo"
+        },
+        {
+          name  = "DB_HOST"
+          value = split(":", aws_db_instance.main.endpoint)[0]
+        },
+        {
+          name  = "DB_PORT"
+          value = split(":", aws_db_instance.main.endpoint)[1]
+        },
+        {
+          name  = "DB_USER"
+          value = var.mysql_user
+        },
+        {
+          name  = "DB_NAME"
+          value = var.mysql_database
+        },
+        {
+          name  = "DB_PASSWORD"
+          value = var.mysql_password
+        },
+        {
+          name  = "BACKEND_HOST"
+          value = "0.0.0.0"
+        },
+        {
+          name  = "BACKEND_PORT"
+          value = "8000"
+        },
+        {
+          name  = "INITIAL_FIREBASE_UID"
+          value = var.optinist_admin_uid
+        },
+        {
+          name  = "INITIAL_USER_NAME"
+          value = var.optinist_admin_name
+        },
+        {
+          name  = "INITIAL_USER_EMAIL"
+          value = var.optinist_admin_email
+        },
+        {
+          name  = "SECRET_KEY"
+          value = var.optinist_secret_key
+        },
+        {
+          name = "S3_DEFAULT_BUCKET_NAME"
+          value = aws_s3_bucket.app_storage.id
+        },
+        {
+          name  = "USE_AWS_BATCH"
+          value = "false"
+        },
+        {
+          name  = "AWS_ECR_REPOSITORY"
+          value = "${var.ecr_batch_repository_url}:latest"
+        },
+        {
+          name  = "LOG_LEVEL"
+          value = "DEBUG"
+        },
+        {
+          name  = "UVICORN_ACCESS_LOG"
+          value = "1"
+        },
+        {
+          name  = "CORS_ORIGINS"
+          value = "*"
+        },
+        {
+          name  = "PYTHONUNBUFFERED"
+          value = "1"
+        },
+        {
+          name  = "OPTINIST_DIR"
+          value = "/app/studio_data"
+        },
+      ]
+      secrets = [
+        {
+          name      = "AWS_ACCESS_KEY_ID"
+          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_ACCESS_KEY_ID::"
+        },
+        {
+          name      = "AWS_SECRET_ACCESS_KEY"
+          valueFrom = "${aws_secretsmanager_secret.aws_credentials.arn}:AWS_SECRET_ACCESS_KEY::"
+        },
+      ]
+
+      mountPoints = [
+        {
+          sourceVolume  = "subscr-optinist-cloud-snmk-volume"
+          containerPath = "/app/.snakemake"
+          readOnly      = false
+        },
+        {
+          sourceVolume  = "subscr-optinist-cloud-studio-data-volume"
+          containerPath = "/app/studio_data"
+          readOnly      = false
+        }
+      ]
+
+      healthCheck = {
+        command     = ["CMD-SHELL", "curl -v http://127.0.0.1:8000/health"]
+        interval    = 300
+        timeout     = 5
+        retries     = 3
+        startPeriod = 300
+      }
+
+      dockerLabels = {
+        "health.check.enabled" = "true"
+      }
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/subscr-optinist-cloud-taskdef"
+          "mode"                  = "non-blocking"
+          "awslogs-multiline-pattern" = "^\\[\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"
+          "max-buffer-size"       = "25m"
+          "awslogs-region"        = "ap-northeast-1"
+          "awslogs-create-group"  = "true"
+          "awslogs-stream-prefix" = "ecs"
+          "mode"                  = "non-blocking"
+        }
+      }
+    }
+  ])
+
+  volume {
+    name = "subscr-optinist-cloud-studio-data-volume"
+  }
+
+  volume {
+    name = "subscr-optinist-cloud-snmk-volume"
+    efs_volume_configuration {
+      file_system_id = aws_efs_file_system.snmk.id
+      root_directory = "/"
+      transit_encryption = "ENABLED"
+      authorization_config {
+        access_point_id = aws_efs_access_point.snmk.id
+        iam            = "DISABLED"
+      }
+    }
+  }
+
+  tags = {
+    Name = "subscr-optinist-cloud-taskdef"
+  }
+}
+
+resource "aws_ecs_task_definition" "batch" {
+  family                   = "subscr-batch-optinist-cloud-taskdef"
+  requires_compatibilities = ["EC2"]
+  network_mode            = "bridge"
+  cpu                     = 2048
+  memory                  = 6144
+  task_role_arn          = aws_iam_role.ecs_task.arn
+  execution_role_arn     = aws_iam_role.ecs_task_execution.arn
+
+  container_definitions = jsonencode([
+    {
+      name                  = "subscr-batch-optinist-cloud-container"
       image                 = "${var.ecr_repository_url}:latest"
       cpu                   = 1536
       memory                = 5120
@@ -2670,12 +3125,12 @@ resource "aws_ecs_task_definition" "app" {
 
       mountPoints = [
         {
-          sourceVolume  = "subscr-optinist-cloud-snmk-volume"
+          sourceVolume  = "subscr-batch-optinist-cloud-snmk-volume"
           containerPath = "/app/.snakemake"
           readOnly      = false
         },
         {
-          sourceVolume  = "subscr-optinist-cloud-studio-data-volume"
+          sourceVolume  = "subscr-batch-optinist-cloud-studio-data-volume"
           containerPath = "/app/studio_data"
           readOnly      = false
         }
@@ -2696,7 +3151,7 @@ resource "aws_ecs_task_definition" "app" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/subscr-optinist-cloud-taskdef"
+          "awslogs-group"         = "/ecs/subscr-batch-optinist-cloud-taskdef"
           "mode"                  = "non-blocking"
           "awslogs-multiline-pattern" = "^\\[\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"
           "max-buffer-size"       = "25m"
@@ -2710,11 +3165,11 @@ resource "aws_ecs_task_definition" "app" {
   ])
 
   volume {
-    name = "subscr-optinist-cloud-studio-data-volume"
+    name = "subscr-batch-optinist-cloud-studio-data-volume"
   }
 
   volume {
-    name = "subscr-optinist-cloud-snmk-volume"
+    name = "subscr-batch-optinist-cloud-snmk-volume"
     efs_volume_configuration {
       file_system_id = aws_efs_file_system.snmk.id
       root_directory = "/"
@@ -2727,16 +3182,16 @@ resource "aws_ecs_task_definition" "app" {
   }
 
   tags = {
-    Name = "subscr-optinist-cloud-taskdef"
+    Name = "subscr-batch-optinist-cloud-taskdef"
   }
 }
 # ===========
 # ECS Service
 # ===========
-resource "aws_ecs_service" "main" {
+resource "aws_ecs_service" "autoscaling" {
   name             = "subscr-optinist-cloud-service"
   cluster          = aws_ecs_cluster.main.id
-  task_definition  = aws_ecs_task_definition.app.arn
+  task_definition  = aws_ecs_task_definition.autoscaling.arn
   desired_count    = 1
   deployment_maximum_percent        = 200
   deployment_minimum_healthy_percent = 0
@@ -2750,7 +3205,7 @@ resource "aws_ecs_service" "main" {
   enable_execute_command = true
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.autoscaling.arn
     container_name   = "subscr-optinist-cloud-container"
     container_port   = 8000
   }
@@ -2758,8 +3213,8 @@ resource "aws_ecs_service" "main" {
   depends_on = [
     aws_autoscaling_group.main,
     aws_db_instance.main,
-    aws_lb.main,
-    aws_lb_listener.http
+    aws_lb.autoscaling,
+    aws_lb_listener.autoscaling
   ]
 
   health_check_grace_period_seconds = 300
@@ -2769,13 +3224,44 @@ resource "aws_ecs_service" "main" {
   }
 }
 
+resource "aws_ecs_service" "batch" {
+  name             = "subscr-batch-optinist-cloud-service"
+  cluster          = aws_ecs_cluster.main.id
+  task_definition  = aws_ecs_task_definition.batch.arn
+  desired_count    = 1
+  deployment_maximum_percent        = 200
+  deployment_minimum_healthy_percent = 0
+  launch_type      = "EC2"
+
+  enable_execute_command = true
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.batch.arn
+    container_name   = "subscr-batch-optinist-cloud-container"
+    container_port   = 8000
+  }
+
+  depends_on = [
+    aws_autoscaling_group.main,
+    aws_db_instance.main,
+    aws_lb.batch,
+    aws_lb_listener.batch
+  ]
+
+  health_check_grace_period_seconds = 300
+
+  tags = {
+    Name = "subscr-batch-optinist-cloud-service"
+  }
+}
+
 # ============================
 # Auto Scaling for ECS Service
 # ============================
 #resource "aws_appautoscaling_target" "ecs_target" {
 #  max_capacity       = 5
 #  min_capacity       = 0
-#  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.main.name}"
+#  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.autoscaling.name}"
 #  scalable_dimension = "ecs:service:DesiredCount"
 #  service_namespace  = "ecs"
 #}
@@ -2980,7 +3466,12 @@ output "ecs_security_group_id" {
 
 output "alb_dns_name" {
   description = "ALB DNS name"
-  value       = aws_lb.main.dns_name
+  value       = aws_lb.autoscaling.dns_name
+}
+
+output "alb_dns_name_batch" {
+  description = "ALB batch DNS name"
+  value       = aws_lb.batch.dns_name
 }
 
 output "ecs_cluster_name" {
@@ -2988,9 +3479,14 @@ output "ecs_cluster_name" {
   value       = aws_ecs_cluster.main.name
 }
 
-output "ecs_service_name" {
+output "ecs_service_name_autoscaling" {
   description = "Name of the ECS service"
-  value       = aws_ecs_service.main.name
+  value       = aws_ecs_service.autoscaling.name
+}
+
+output "ecs_service_name_batch" {
+  description = "Name of the ECS batch service"
+  value       = aws_ecs_service.batch.name
 }
 
 output "efs_id" {
@@ -3014,10 +3510,20 @@ output "launch_template_id" {
 }
 
 # Configuration Outputs
-output "frontend_config" {
+output "frontend_config_autoscaling" {
   description = "Configuration values for frontend/.env.production"
   value = {
-    REACT_APP_SERVER_HOST = aws_lb.main.dns_name
+    REACT_APP_SERVER_HOST = aws_lb.autoscaling.dns_name
+    REACT_APP_SERVER_PORT = "80"
+    REACT_APP_SERVER_PROTO = "http"
+    REACT_APP_EXPDB_METADATA_EDITABLE=true
+  }
+}
+
+output "frontend_config_batch" {
+  description = "Configuration values for frontend/.env.production"
+  value = {
+    REACT_APP_SERVER_HOST = aws_lb.batch.dns_name
     REACT_APP_SERVER_PORT = "80"
     REACT_APP_SERVER_PROTO = "http"
     REACT_APP_EXPDB_METADATA_EDITABLE=true

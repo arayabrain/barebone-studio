@@ -89,6 +89,37 @@ def update_services(services: list[str]) -> bool:
     """Scale down ECS services to 0 tasks"""
     print(f"{Colors.YELLOW}Scaling down ECS services to 0 tasks...{Colors.NC}")
     for service in services:
+        # Check service status first
+        status_result = run_command(
+            [
+                "aws",
+                "ecs",
+                "describe-services",
+                "--cluster",
+                "subscr-optinist-cloud-cluster",
+                "--services",
+                service,
+                "--query",
+                "services[0].status",
+                "--output",
+                "text",
+            ]
+        )
+
+        if status_result is None or status_result.strip() == "None":
+            print(
+                f"{Colors.YELLOW}Service {service} does not exist, skipping{Colors.NC}"
+            )
+            continue
+
+        service_status = status_result.strip()
+        if service_status != "ACTIVE":
+            print(
+                f"{Colors.YELLOW}Service {service} {Colors.NC}"
+                f"{Colors.YELLOW}is not active ({service_status}), skipping{Colors.NC}"
+            )
+            continue
+
         result = run_command(
             [
                 "aws",
@@ -217,13 +248,42 @@ def check_tasks_stopped() -> bool:
 def scale_down_asg() -> bool:
     """Scale down Auto Scaling Groups"""
     print(f"{Colors.YELLOW}Scaling down ASGs...{Colors.NC}")
+    asg_name = "subscr-optinist-asg"
+
+    # Check ASG state first
+    state_result = run_command(
+        [
+            "aws",
+            "autoscaling",
+            "describe-auto-scaling-groups",
+            "--auto-scaling-group-names",
+            asg_name,
+            "--query",
+            "AutoScalingGroups[0].Status",
+            "--output",
+            "text",
+        ]
+    )
+
+    if state_result is None or state_result.strip() == "None":
+        print(f"{Colors.YELLOW}ASG {asg_name} does not exist, skipping...{Colors.NC}")
+        return True
+
+    asg_status = state_result.strip()
+    if asg_status == "Delete in progress":
+        print(
+            f"{Colors.YELLOW}ASG {asg_name} is already being deleted, {Colors.NC}"
+            f"{Colors.YELLOW}skipping scale down...{Colors.NC}"
+        )
+        return True
+
     result = run_command(
         [
             "aws",
             "autoscaling",
             "update-auto-scaling-group",
             "--auto-scaling-group-name",
-            "subscr-optinist-asg",
+            asg_name,
             "--desired-capacity",
             "0",
             "--min-size",
@@ -552,28 +612,77 @@ def cleanup_orphaned_batch_instances() -> bool:
 
 
 def shutdown_batch_environments() -> bool:
-    """Disable all AWS Batch compute environments to prevent new jobs"""
-    print(f"{Colors.YELLOW}Disabling AWS Batch compute environments...{Colors.NC}")
+    """Disable and clean up Batch compute environments"""
+    print(f"{Colors.YELLOW}Shutting down AWS Batch environments...{Colors.NC}")
 
-    # Get all compute environments
-    environments = run_command(
-        [
-            "aws",
-            "batch",
-            "describe-compute-environments",
-            "--query",
-            "computeEnvironments[].computeEnvironmentName",
-            "--output",
-            "text",
-        ]
-    )
+    # Cancel all running/pending jobs first
+    for queue_name in ["subscr-optinist-free-queue", "subscr-optinist-paid-queue"]:
+        print(f"{Colors.YELLOW}Canceling jobs in queue: {queue_name}{Colors.NC}")
 
-    if not environments:
-        print(f"{Colors.YELLOW}No compute environments found{Colors.NC}")
-        return True
+        # Get all non-terminal jobs
+        for status in ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING", "RUNNING"]:
+            jobs_output = run_command(
+                [
+                    "aws",
+                    "batch",
+                    "list-jobs",
+                    "--job-queue",
+                    queue_name,
+                    "--job-status",
+                    status,
+                    "--query",
+                    "jobList[].jobId",
+                    "--output",
+                    "text",
+                ],
+                check=False,
+            )
 
-    for env_name in environments.split():
-        print(f"{Colors.YELLOW}Disabling environment: {env_name}{Colors.NC}")
+            if jobs_output and jobs_output.strip() != "None":
+                job_ids = jobs_output.split()
+                for job_id in job_ids:
+                    print(f"{Colors.YELLOW}Canceling job: {job_id}{Colors.NC}")
+                    run_command(
+                        [
+                            "aws",
+                            "batch",
+                            "cancel-job",
+                            "--job-id",
+                            job_id,
+                            "--reason",
+                            "Shutdown",
+                        ],
+                        check=False,
+                    )
+
+    # Disable job queues
+    for queue_name in ["subscr-optinist-free-queue", "subscr-optinist-paid-queue"]:
+        print(f"{Colors.YELLOW}Disabling Batch job queue: {queue_name}{Colors.NC}")
+        run_command(
+            [
+                "aws",
+                "batch",
+                "update-job-queue",
+                "--job-queue",
+                queue_name,
+                "--state",
+                "DISABLED",
+            ],
+            check=False,
+        )
+
+    # Wait for queues to disable
+    time.sleep(20)
+
+    # Disable compute environments
+    for env_name in [
+        "subscr-optinist-batch-free-tier",
+        "subscr-optinist-batch-paid-tier",
+    ]:
+        print(
+            f"{Colors.YELLOW}Disabling Batch compute environment: {env_name}"
+            f"{Colors.NC}"
+        )
         run_command(
             [
                 "aws",
@@ -586,9 +695,6 @@ def shutdown_batch_environments() -> bool:
             ],
             check=False,
         )
-
-    # Clean up any orphaned instances after disabling environments
-    cleanup_orphaned_batch_instances()
 
     print(f"{Colors.GREEN}Batch environments shutdown initiated{Colors.NC}")
     return True
