@@ -33,8 +33,8 @@ smk_param = SmkParam(
     use_conda=True,
     cores=2,
     forceall=True,
-    forcetargets=True,
-    lock=False,
+    # forcetargets=True,
+    # lock=False,
 )
 
 shutil.copytree(
