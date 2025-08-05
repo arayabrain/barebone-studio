@@ -14,6 +14,9 @@ from snakemake.api import (
     StorageSettings,
 )
 
+from studio.app.common.core.experiment.experiment_record_services import (
+    ExperimentRecordService,
+)
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
@@ -126,6 +129,12 @@ def _snakemake_execute_process(
 
     # Update workflow processing results
     WorkflowResult(workspace_id, unique_id).observe_overall()
+
+    # Update experiment database record
+    if ExperimentRecordService.is_available():
+        ExperimentRecordService.regist_record_on_workflow_completed(
+            workspace_id, unique_id
+        )
 
     # Data usage calculation
     WorkspaceDataCapacityService.update_experiment_data_usage(workspace_id, unique_id)
