@@ -40,6 +40,7 @@ class SmkParam:
     use_conda: bool
     cores: int
     forceall: bool
-    forcetargets: bool
-    lock: bool
+    # These are currently (v2.3.0) not used, but kept for future compatibility
+    # forcetargets: bool
+    # lock: bool
     forcerun: List[ForceRun] = field(default_factory=list)
