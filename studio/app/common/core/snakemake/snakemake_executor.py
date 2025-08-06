@@ -91,8 +91,10 @@ def _snakemake_execute_process(
     # Use context manager for proper cleanup
     with SnakemakeApi(
         OutputSettings(
-            verbose=True,
-            show_failed_logs=True,
+            verbose=True,  # Print debugging output
+            show_failed_logs=True,  # Automatically display logs of failed jobs
+            debug_dag=True,  # Print candidate and selected jobs with wildcards
+            printshellcmds=True,  # Show shell commands
         ),
     ) as snakemake_api:
         workflow_api = snakemake_api.workflow(
@@ -186,7 +188,6 @@ def _snakemake_execute_batch(
         logger.info("Prepare batch workspace")
         batch_executor.prepare_batch_workspace()
 
-        cores = 2  # Set consistent cores for debugging
         # Configure storage based on availability
         storage_settings = None
         if RemoteStorageController.is_available():
@@ -293,14 +294,28 @@ def _snakemake_execute_batch(
             # + Expected result: s3://bucket/app/studio_data/output/1/abc/file.pkl
             # Result: MissingInputException - path duplication still occurring.
             # /tmp/snakemake_storage/s3/subscr-optinist-app-storage/app/studio_data/output/
-            #  Tried 14:
-            # + Change workdir to /app/studio_data
-            # + Keep s3_storage as bucket URI only
-            # + Expected result: Snakemake resolves paths correctly from the new workdir
-            s3_storage = f"{s3_prefix}://{s3_bucket_name}"
+            # Tried 14: Fix storage prefix to include OPTINIST_DIR path from environment
+            # s3_storage=f"{s3_prefix}://{s3_bucket_name}/{DIRPATH.DATA_DIR.lstrip("/")}"
+            # SmkUtils converts:
+            # /app/studio_data/output/1/abc/file.pkl -> output/1/abc/file.pkl
+            # Storage prefix should point to where relative paths should be stored in S3
+            # Use DIRPATH.DATA_DIR which comes from OPTINIST_DIR environment variable
+            data_dir_path = DIRPATH.DATA_DIR.lstrip(
+                "/"
+            )  # Remove leading slash for S3 path
+            s3_storage = f"{s3_prefix}://{s3_bucket_name}/{data_dir_path}"
+
+            logger.debug(f"DIRPATH.DATA_DIR from OPTINIST_DIR: {DIRPATH.DATA_DIR}")
+            logger.debug(f"Stripped data_dir_path for S3: {data_dir_path}")
+            logger.debug(f"Constructed S3 storage prefix: {s3_storage}")
+            logger.debug(
+                f"Expected path mapping: output/1/abc/file.pkl -> "
+                f"{s3_storage}/output/1/abc/file.pkl"
+            )
+
             storage_settings = StorageSettings(
-                default_storage_provider=s3_prefix,
-                default_storage_prefix=s3_storage,
+                default_storage_provider=s3_prefix,  # "s3"
+                default_storage_prefix=s3_storage,  # "s3://bucket/app/studio_data"
                 local_storage_prefix=Path("/tmp/snakemake_storage"),
                 remote_job_local_storage_prefix=Path("/tmp/snakemake_storage"),
                 shared_fs_usage=frozenset(),
@@ -313,10 +328,11 @@ def _snakemake_execute_batch(
                 f"bucket='{s3_bucket_name}', full_prefix='{s3_storage}'"
             )
             logger.debug("Local storage prefix: /tmp/snakemake_storage")
+            logger.debug(f"DIRPATH.DATA_DIR: {DIRPATH.DATA_DIR}")
             logger.debug(
-                f"Example: {DIRPATH.DATA_DIR}/output/1/abc/file.pkl -> "
-                f"app/studio_data/output/1/abc/file.pkl -> "
-                f"{s3_storage}/app/studio_data/output/1/abc/file.pkl"
+                f"Path conversion flow: {DIRPATH.DATA_DIR}/output/1/abc/file.pkl "
+                f"-> (SmkUtils) -> output/1/abc/file.pkl "
+                f"-> (Snakemake) -> {s3_storage}/output/1/abc/file.pkl"
             )
         else:
             # Use optimized EFS configuration when S3 is not available
@@ -372,8 +388,10 @@ def _snakemake_execute_batch(
         # Use context manager for proper cleanup
         with SnakemakeApi(
             OutputSettings(
-                verbose=True,
-                show_failed_logs=True,
+                verbose=True,  # Print debugging output
+                show_failed_logs=True,  # Automatically display logs of failed jobs
+                debug_dag=True,  # Print candidate and selected jobs with wildcards
+                printshellcmds=True,  # Show shell commands
             ),
         ) as snakemake_api:
             workflow_api = snakemake_api.workflow(
@@ -381,8 +399,8 @@ def _snakemake_execute_batch(
                 workdir=Path(DIRPATH.DATA_DIR),
                 storage_settings=storage_settings,
                 resource_settings=ResourceSettings(
-                    nodes=10,
-                    cores=cores,
+                    cores=1,  # Use 1 core for debugging
+                    nodes=1,  # # Use 1 node for debugging
                     default_resources=DefaultResources(["mem_mb=4096"]),
                 ),
                 deployment_settings=DeploymentSettings(
@@ -410,6 +428,81 @@ def _snakemake_execute_batch(
             except Exception as e:
                 logger.error(f"Failed to create DAG: {e}")
                 raise e
+
+            # Perform verbose dryrun validation before submitting expensive batch jobs
+            logger.info(
+                "Running verbose workflow dryrun validation before batch execution..."
+            )
+            logger.info("=" * 60)
+            logger.info("DRYRUN VALIDATION OUTPUT:")
+            logger.info("=" * 60)
+
+            try:
+                # Use the existing DAG API with dryrun execution settings
+                # (dryrun is controlled through ExecutionSettings, not DAGSettings)
+                logger.info("Starting dryrun validation with existing DAG")
+
+                # Execute verbose dryrun validation
+                dag_api.execute_workflow(
+                    executor="aws-batch",  # Use same executor for validation
+                    execution_settings=ExecutionSettings(
+                        dryrun=True,  # Critical: prevents actual job submission
+                        retries=0,  # No retries needed for dryrun
+                        keep_going=True,  # Continue validation even if some rules fail
+                        verbose=True,  # Show verbose output
+                        printreason=True,  # Show reason for each rule execution
+                        printshellcmds=True,  # Show shell commands
+                        debug=True,  # Enable debug mode for detailed execution info
+                        latency_wait=0,  # Reduce latency wait for faster dryrun
+                        ignore_incomplete=True,  # Ignore incompletes during validation
+                    ),
+                    executor_settings=ExecutorSettings(
+                        region=BATCH_CONFIG.AWS_DEFAULT_REGION,
+                        job_queue=batch_executor.get_job_queue_for_user(),
+                        job_role=BATCH_CONFIG.AWS_BATCH_JOB_ROLE,
+                    ),
+                    remote_execution_settings=RemoteExecutionSettings(
+                        container_image=batch_executor.get_container_image(),
+                        envvars=["USE_AWS_BATCH", "OPTINIST_DIR"],
+                        jobname="optinist-dryrun-{rulename}",
+                    ),
+                )
+
+                logger.info("=" * 60)
+                logger.info("✅ Dryrun validation passed - workflow structure is valid")
+
+            except Exception as dryrun_error:
+                logger.error("=" * 60)
+                logger.error("❌ Dryrun validation failed")
+                logger.error(f"Dryrun error: {dryrun_error}")
+
+                # Enhanced error reporting with full traceback
+                import traceback
+
+                logger.error("Full traceback:")
+                logger.error(traceback.format_exc())
+                logger.error("=" * 60)
+
+                # Decision point: fail fast or continue with warning
+                logger.error(
+                    "⚠️  Dryrun validation failed - batch execution may also fail"
+                )
+                logger.error(
+                    "This indicates workflow configuration issues "
+                    "(likely S3 path mapping)"
+                )
+                logger.error("Consider fixing workflow issues before proceeding")
+
+                # Uncomment the next line to fail fast on dryrun errors:
+                raise Exception(
+                    f"Batch execution aborted due to dryrun "
+                    f"validation failure: {dryrun_error}"
+                )
+
+                # For now, continue with warning to maintain existing behavior
+                # logger.warning(
+                #     "Proceeding with batch execution despite dryrun warnings"
+                # )
 
             logger.info("Starting workflow execution on AWS Batch...")
             try:
@@ -516,9 +609,13 @@ def _snakemake_execute_batch(
                         dag_api.execute_workflow(
                             executor="aws-batch",
                             execution_settings=ExecutionSettings(
+                                dryrun=False,  # Actual execution (not dryrun)
                                 retries=3,
                                 keep_going=False,
                                 latency_wait=300,
+                                verbose=True,  # Keep verbose output
+                                printreason=True,  # Show execution reasons
+                                printshellcmds=True,  # Show shell commands
                             ),
                             executor_settings=ExecutorSettings(
                                 region=BATCH_CONFIG.AWS_DEFAULT_REGION,

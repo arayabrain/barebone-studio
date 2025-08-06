@@ -2646,13 +2646,48 @@ INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (1, 1);
 
 UPDATE users SET attributes = JSON_MERGE_PATCH(IFNULL(attributes,'{}'), '{"remote_bucket_name": "${aws_s3_bucket.app_storage.id}"}') WHERE id = 1;
 
--- Insert default subscription plans
-INSERT IGNORE INTO subscription_plan (id, name, price) VALUES
-(1, 'Free', 0),
-(2, 'Premium', 2000);
+-- Insert subscription plans
+
+INSERT INTO subscription_plans (name, price, billing_cycle, features, currency, status) VALUES
+('Free', 0, 30, JSON_ARRAY(
+    JSON_OBJECT('text', '5GB storage allocation', 'isPremium', false),
+    JSON_OBJECT('text', 'Basic compute access with fair-use limitations', 'isPremium', false),
+    JSON_OBJECT('text', 'Standard support through documentation and community', 'isPremium', false),
+    JSON_OBJECT('text', 'Suitable for evaluation, learning, and small projects', 'isPremium', false)
+), 840, 1),
+('Premium', 2999, 30, JSON_ARRAY(
+    JSON_OBJECT('text', '5GB storage allocation', 'isPremium', false),
+    JSON_OBJECT('text', 'Basic compute access with fair-use limitations', 'isPremium', false),
+    JSON_OBJECT('text', 'Standard support through documentation and community', 'isPremium', false),
+    JSON_OBJECT('text', 'Suitable for evaluation, learning, and small projects', 'isPremium', false),
+    JSON_OBJECT('text', '200GB storage allocation (40x increase from free tier)', 'isPremium', true),
+    JSON_OBJECT('text', 'Priority compute access with guaranteed resource allocation', 'isPremium', true),
+    JSON_OBJECT('text', 'Enhanced support including direct assistance', 'isPremium', true),
+    JSON_OBJECT('text', 'Extended job history and analytics', 'isPremium', true),
+    JSON_OBJECT('text', 'Designed for professional use and larger datasets', 'isPremium', true)
+), 840, 1);
+
+-- Insert tax rate (10%)
+INSERT INTO taxes (tax_type, tax_name, tax_rate, is_active, effective_date, end_date) VALUES
+('sales_tax', 'Sales Tax', 0.10, 1, CURDATE(), NULL);
+
+-- Insert subscription users (assuming user IDs 1, 2, 3 exist)
+-- User 1 and 2 on Free plan, User 3 on Premium plan
+INSERT INTO subscription_users (plan_id, user_id, expiration) VALUES
+(1, 1, DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(1, 2, DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(2, 3, DATE_ADD(NOW(), INTERVAL 30 DAY));
+
+-- Insert payment accounts for users with paid subscriptions
+INSERT INTO subscription_payment_accounts (user_id, provider, external_account_id) VALUES
+(3, 'stripe', 'cus_stripe_customer_123456789');
+
+-- Insert purchase history (only for paid plans)
+INSERT INTO subscription_purchase_history (purchased_plan, user_id) VALUES
+(2, 3);  -- User 3 purchased Premium plan
 
 -- Set admin user to premium plan by default
-INSERT IGNORE INTO subscription_users (plan_id, user_id, subscription_id, status) VALUES (2, 1, 'admin_default', 'active');
+INSERT IGNORE INTO subscription_users (plan_id, user_id, expiration) VALUES (2, 1, DATE_ADD(NOW(), INTERVAL 365 DAY));
 
 -- Initialize storage usage for admin user
 INSERT IGNORE INTO user_storage_usage (user_id, current_usage_bytes, quota_limit_bytes) VALUES (1, 0, 107374182400);

@@ -26,10 +26,29 @@ class SmkUtils:
         """Check if we're in S3 storage mode by checking environment variables"""
         import os
 
-        return (
-            os.environ.get("USE_AWS_BATCH", "").lower() == "true"
-            and os.environ.get("S3_DEFAULT_BUCKET_NAME") is not None
+        use_aws_batch = os.environ.get("USE_AWS_BATCH", "")
+        s3_bucket = os.environ.get("S3_DEFAULT_BUCKET_NAME")
+
+        is_s3_mode = use_aws_batch.lower() == "true" and s3_bucket is not None
+
+        logger.debug(
+            f"S3 storage mode check: USE_AWS_BATCH='{use_aws_batch}', "
+            f"S3_DEFAULT_BUCKET_NAME='{s3_bucket}', is_s3_mode={is_s3_mode}"
         )
+
+        # If not in S3 mode, log all relevant environment variables for debugging
+        if not is_s3_mode:
+            logger.debug("Not in S3 mode. Current environment:")
+            for key in [
+                "USE_AWS_BATCH",
+                "S3_DEFAULT_BUCKET_NAME",
+                "OPTINIST_DIR",
+                "AWS_DEFAULT_REGION",
+            ]:
+                value = os.environ.get(key, "NOT_SET")
+                logger.debug(f"  {key}={value}")
+
+        return is_s3_mode
 
     @classmethod
     def _make_relative_path(cls, absolute_path):
@@ -43,45 +62,74 @@ class SmkUtils:
         - Relative: output/1/abc123/file.pkl
         - S3 Result: s3://bucket/app/studio_data/output/1/abc123/file.pkl
         """
+        logger.debug(f"_make_relative_path called with: {absolute_path}")
+
         if not cls._is_s3_storage_mode():
+            logger.debug(f"Not in S3 mode, returning absolute path: {absolute_path}")
             return absolute_path
 
         # Strip the DATA_DIR prefix to make paths relative
         # DIRPATH.DATA_DIR = "/app/studio_data" in container
         data_dir = DIRPATH.DATA_DIR
+        logger.debug(f"DATA_DIR: {data_dir}")
+
         if absolute_path.startswith(data_dir + "/"):
             # Remove "/app/studio_data/" prefix, leaving "output/1/abc123/file.pkl"
-            return absolute_path[len(data_dir) + 1 :]
+            relative_path = absolute_path[len(data_dir) + 1 :]
+            logger.debug(f"Converted path (case 1): {absolute_path} -> {relative_path}")
+            return relative_path
         elif absolute_path.startswith(data_dir):
             # Remove "/app/studio_data" prefix, handle case without trailing slash
             remaining = absolute_path[len(data_dir) :]
             # If remaining starts with "/", remove it to avoid empty path
-            return remaining.lstrip("/")
+            relative_path = remaining.lstrip("/")
+            logger.debug(f"Converted path (case 2): {absolute_path} -> {relative_path}")
+            return relative_path
 
         # If path doesn't start with DATA_DIR, might be
         # already relative or different structure
         # Remove leading slash if present to ensure relative path
-        return absolute_path.lstrip("/")
+        relative_path = absolute_path.lstrip("/")
+        logger.debug(f"Converted path (case 3): {absolute_path} -> {relative_path}")
+        return relative_path
 
     @classmethod
     def input(cls, details):
+        logger.debug(
+            f"SmkUtils.input() called with type: {details.get('type')}, "
+            f"input: {details.get('input')}"
+        )
+
         if NodeTypeUtil.check_nodetype_from_filetype(details["type"]) == NodeType.DATA:
             if details["type"] in [FILETYPE.IMAGE]:
                 paths = [
                     join_filepath([DIRPATH.INPUT_DIR, x]) for x in details["input"]
                 ]
-                return [cls._make_relative_path(p) for p in paths]
+                logger.debug(f"Generated IMAGE input paths: {paths}")
+                converted_paths = [cls._make_relative_path(p) for p in paths]
+                logger.debug(f"Converted IMAGE input paths: {converted_paths}")
+                return converted_paths
             else:
                 path = join_filepath([DIRPATH.INPUT_DIR, details["input"]])
-                return cls._make_relative_path(path)
+                logger.debug(f"Generated DATA input path: {path}")
+                converted_path = cls._make_relative_path(path)
+                logger.debug(f"Converted DATA input path: {converted_path}")
+                return converted_path
         else:
             paths = [join_filepath([DIRPATH.OUTPUT_DIR, x]) for x in details["input"]]
-            return [cls._make_relative_path(p) for p in paths]
+            logger.debug(f"Generated OUTPUT input paths: {paths}")
+            converted_paths = [cls._make_relative_path(p) for p in paths]
+            logger.debug(f"Converted OUTPUT input paths: {converted_paths}")
+            return converted_paths
 
     @classmethod
     def output(cls, details):
+        logger.debug(f"SmkUtils.output() called with output: {details.get('output')}")
         path = join_filepath([DIRPATH.OUTPUT_DIR, details["output"]])
-        return cls._make_relative_path(path)
+        logger.debug(f"Generated output path: {path}")
+        converted_path = cls._make_relative_path(path)
+        logger.debug(f"Converted output path: {converted_path}")
+        return converted_path
 
     @classmethod
     def dict2leaf(cls, root_dict: dict, path_list):

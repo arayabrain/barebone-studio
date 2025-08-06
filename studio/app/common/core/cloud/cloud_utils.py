@@ -106,10 +106,40 @@ def _get_fallback_users(cursor) -> list:
 def _get_fallback_storage_quota(user_id: int) -> Dict[str, Any]:
     """
     Get fallback storage quota when storage usage table doesn't exist.
+    Tries to determine quota based on user's subscription tier.
     """
-    # Default quotas - adjust these values as needed
-    default_quota_gb = 1  # 1GB for free tier
-    default_quota_bytes = default_quota_gb * 1024 * 1024 * 1024  # Convert to bytes
+    try:
+        # Try to get user's subscription tier to determine appropriate quota
+        user_context = get_current_user_context()
+        if user_context and user_context.get("id") == user_id:
+            tier = user_context.get("subscription_tier", "free")
+            plan_name = user_context.get("subscription_plan_name", "Free")
+
+            # Set quotas based on subscription tier
+            if tier == "paid":
+                default_quota_bytes = 200 * 1024 * 1024 * 1024  # 200GB for paid tier
+                logger.info(
+                    f"Using paid tier quota for user {user_id} ({plan_name}): 200GB"
+                )
+            else:
+                default_quota_bytes = 5 * 1024 * 1024 * 1024  # 5GB for free tier
+                logger.info(
+                    f"Using free tier quota for user {user_id} ({plan_name}): 5GB"
+                )
+        else:
+            # Fallback to free tier if we can't determine subscription
+            default_quota_bytes = 5 * 1024 * 1024 * 1024  # 5GB
+            logger.warning(
+                f"Could not determine subscription for user {user_id}, "
+                "using free tier quota: 5GB"
+            )
+
+    except Exception as e:
+        logger.warning(
+            f"Error determining subscription quota for user {user_id}: {e}, "
+            "using free tier"
+        )
+        default_quota_bytes = 5 * 1024 * 1024 * 1024  # 5GB fallback
 
     return {
         "user_id": user_id,
@@ -156,18 +186,21 @@ def get_current_user_context() -> Optional[Dict[str, Any]]:
                 u.email,
                 u.active,
                 u.attributes,
-                sp.name as subscription_plan_name,
-                sp.price as subscription_price,
-                su.status as subscription_status,
+                COALESCE(sp.name, 'Free') as subscription_plan_name,
+                COALESCE(sp.price, 0) as subscription_price,
                 CASE
-                    WHEN sp.name = 'Free' THEN 'free'
+                    WHEN su.expiration IS NOT NULL
+                    AND su.expiration > NOW() THEN 'active'
+                    ELSE 'expired'
+                END as subscription_status,
+                CASE
                     WHEN sp.name = 'Premium' THEN 'paid'
                     ELSE 'free'
                 END as subscription_tier
             FROM users u
             LEFT JOIN subscription_users su ON u.id = su.user_id
-                AND su.status = 'active'
-            LEFT JOIN subscription_plan sp ON su.plan_id = sp.id
+                AND su.expiration > NOW()
+            LEFT JOIN subscription_plans sp ON su.plan_id = sp.id
             WHERE u.id = %s AND u.active = 1
             """
 
@@ -205,8 +238,11 @@ def get_user_subscription_details(user_id: int) -> Optional[Dict[str, Any]]:
                 sp.id as plan_id,
                 sp.name as plan_name,
                 sp.price as plan_price,
-                su.subscription_id,
-                su.status,
+                su.expiration,
+                CASE
+                    WHEN su.expiration > NOW() THEN 'active'
+                    ELSE 'expired'
+                END as status,
                 su.created_at as subscription_start,
                 su.updated_at as subscription_updated,
                 uas.current_usage_bytes,
@@ -214,7 +250,8 @@ def get_user_subscription_details(user_id: int) -> Optional[Dict[str, Any]]:
                 uas.last_updated as usage_last_updated
             FROM users u
             LEFT JOIN subscription_users su ON u.id = su.user_id
-            LEFT JOIN subscription_plan sp ON su.plan_id = sp.id
+                AND su.expiration > NOW()
+            LEFT JOIN subscription_plans sp ON su.plan_id = sp.id
             LEFT JOIN user_storage_usage uas ON u.id = uas.user_id
             WHERE u.id = %s AND u.active = 1
             """
@@ -262,7 +299,10 @@ def get_all_active_subscriptions() -> list:
                 u.email,
                 sp.name as plan_name,
                 sp.price as plan_price,
-                su.status,
+                CASE
+                    WHEN su.expiration > NOW() THEN 'active'
+                    ELSE 'expired'
+                END as status,
                 su.created_at,
                 CASE
                     WHEN sp.name = 'Free' THEN 'free'
@@ -271,8 +311,8 @@ def get_all_active_subscriptions() -> list:
                 END as tier
             FROM users u
             JOIN subscription_users su ON u.id = su.user_id
-            JOIN subscription_plan sp ON su.plan_id = sp.id
-            WHERE u.active = 1 AND su.status = 'active'
+            JOIN subscription_plans sp ON su.plan_id = sp.id
+            WHERE u.active = 1 AND su.expiration > NOW()
             ORDER BY sp.price DESC, u.name
             """
 
