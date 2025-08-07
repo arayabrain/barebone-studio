@@ -9,6 +9,8 @@ from studio.app.const import FILETYPE
 
 
 class SmkRule:
+    RETURN_ARG_KEY_DELIMITER = "@"
+
     def __init__(
         self,
         workspace_id: str,
