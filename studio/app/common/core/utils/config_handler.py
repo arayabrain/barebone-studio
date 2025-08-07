@@ -1,5 +1,4 @@
 import os
-from typing import Union
 
 import yaml
 from filelock import FileLock
@@ -13,7 +12,7 @@ from studio.app.common.core.utils.filepath_creater import (
 
 class ConfigReader:
     @classmethod
-    def read(cls, file: Union[str, bytes]):
+    def read(cls, filepath: str) -> dict:
         config = {}
 
         if filepath is not None and os.path.exists(filepath):

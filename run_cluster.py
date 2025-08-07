@@ -1,6 +1,8 @@
 import argparse
 import os
 import shutil
+import tempfile
+from pathlib import Path
 
 from snakemake import snakemake
 
@@ -125,8 +127,12 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="optinist")
     parser.add_argument("--cores", type=int, default=2)
-    parser.add_argument("--forceall", action="store_true")
-    parser.add_argument("--use_conda", action="store_true")
+    parser.add_argument(  # Default true, use --no-forceall to disable forceall
+        "--forceall", default=True, action=argparse.BooleanOptionalAction
+    )
+    parser.add_argument(  # Default true, use --no-use_conda to disable conda usage
+        "--use_conda", default=True, action=argparse.BooleanOptionalAction
+    )
     parser.add_argument("--config", type=str, default=None)
 
     main(parser.parse_args())

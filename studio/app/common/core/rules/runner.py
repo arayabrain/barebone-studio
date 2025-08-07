@@ -12,6 +12,7 @@ from filelock import FileLock
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import Rule
+from studio.app.common.core.snakemake.snakemake_rule import SmkRule
 from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.file_reader import JsonReader
 from studio.app.common.core.utils.filelock_handler import FileLockUtils
@@ -43,14 +44,16 @@ class Runner:
             workflow_dirpath = str(Path(__rule.output).parent.parent)
             cls.write_pid_file(workflow_dirpath, __rule.type, run_script_path)
 
-            input_info = cls.read_input_info(__rule.input)
-            cls.__change_dict_key_exist(input_info, __rule)
+            orig_input_info = cls.__read_input_info(__rule.input)
+            input_info = cls.__align_input_info_content_keys(orig_input_info, __rule)
+            del orig_input_info
             nwbfile = input_info["nwbfile"]
 
             # input_info
-            for key in list(input_info):
-                if key not in __rule.return_arg.values():
-                    input_info.pop(key)
+            if __rule.return_arg is not None:
+                for key in list(input_info):
+                    if key not in __rule.return_arg.values():
+                        input_info.pop(key)
 
             # output_info
             output_info = cls.__execute_function(
@@ -61,13 +64,17 @@ class Runner:
                 input_info,
             )
 
-            # nwbfileの設定
-            output_info["nwbfile"] = cls.__save_func_nwb(
-                f"{__rule.output.split('.')[0]}.nwb",
-                __rule.type,
-                nwbfile,
-                output_info,
-            )
+            # Save NWB data of Function(Node) - skip for rules with no path
+            if __rule.path is not None:
+                output_info["nwbfile"] = cls.__save_func_nwb(
+                    f"{__rule.output.split('.')[0]}.nwb",
+                    __rule.type,
+                    nwbfile,
+                    output_info,
+                )
+            else:
+                # For rules with no path (like post_process), keep nwbfile nwbfile data
+                output_info["nwbfile"] = nwbfile
 
             # 各関数での結果を保存
             PickleWriter.write(__rule.output, output_info)
@@ -174,6 +181,9 @@ class Runner:
 
     @classmethod
     def __execute_function(cls, path, params, nwb_params, output_dir, input_info):
+        if path is None:
+            # For rules with no path (like post_process), create minimal output_info
+            return {"nwbfile": {}}
         wrapper = cls.__dict2leaf(wrapper_dict, path.split("/"))
         func = copy.deepcopy(wrapper["function"])
         output_info = func(
@@ -218,31 +228,86 @@ class Runner:
         return output_info
 
     @classmethod
-    def __change_dict_key_exist(cls, input_info, rule_config: Rule):
-        for return_name, arg_name in rule_config.return_arg.items():
-            if return_name in input_info:
-                input_info[arg_name] = input_info.pop(return_name)
+    def __read_input_info(cls, input_files: list) -> dict:
+        """
+        Read input files (.pkl) and construct data for further processing
+        """
 
-    @classmethod
-    def read_input_info(cls, input_files):
-        input_info = {}
-        for filepath in input_files:
-            load_data = PickleReader.read(filepath)
+        result_input_info = {}
 
-            # validate load_data content
+        for input_file in input_files:
+            ids = ExptOutputPathIds(os.path.dirname(input_file))
+
+            # Read & validate load_data content
+            load_data = PickleReader.read(input_file)
             assert PickleReader.check_is_valid_node_pickle(
                 load_data
-            ), f"Invalid node input data content. [{filepath}]"
+            ), f"Invalid node input data content. [{input_file}]"
 
-            merged_nwb = cls.__deep_merge(
-                load_data.pop("nwbfile", {}), input_info.pop("nwbfile", {})
-            )
-            input_info = dict(list(load_data.items()) + list(input_info.items()))
-            input_info["nwbfile"] = merged_nwb
-        return input_info
+            # Store input data for each function_id (node id)
+            single_input_info = load_data.copy()  # sharrow copy
+            result_input_info[ids.function_id] = single_input_info
+
+        return result_input_info
 
     @classmethod
-    def __deep_merge(cls, dict1, dict2):
+    def __align_input_info_content_keys(
+        cls, orig_input_info: dict, rule_config: Rule
+    ) -> dict:
+        """
+        Aligns the keys in the input_info data for further processing.
+        """
+
+        result_input_info = {}
+        merged_nwb = {}
+
+        if rule_config.return_arg is None:
+            result_input_info["nwbfile"] = {"input": merged_nwb}
+            return result_input_info
+
+        for return_arg_key, arg_name in rule_config.return_arg.items():
+            # RETURN_ARG_KEY includes key delimiter (standard)
+            if SmkRule.RETURN_ARG_KEY_DELIMITER in return_arg_key:
+                return_name, function_id = return_arg_key.split(
+                    SmkRule.RETURN_ARG_KEY_DELIMITER
+                )
+
+                # Get input_info corresponding to function_id
+                single_input_info = orig_input_info[function_id]
+            # RETURN_ARG_KEY does not include a delimiter (old version: v2.3 or earlier)
+            else:
+                return_name, function_id = (return_arg_key, None)
+
+                # Merge input_info for all function_ids
+                single_input_info = {}
+                for tmp_value in orig_input_info.values():
+                    single_input_info.update(tmp_value)
+                del tmp_value
+
+            if return_name in single_input_info:
+                # Rename the key of the matching element and store it again
+                #  (for further processing)
+                single_input_info[arg_name] = single_input_info.pop(return_name)
+
+                # Store in return value
+                # (At this stage, expand input_info split by function_id into flat)
+                result_input_info = cls.__deep_merge(
+                    result_input_info, single_input_info
+                )
+
+                # Handle nwbfile merging with proper "input" structure
+                nwb_data = single_input_info.pop("nwbfile", {})
+                if "input" in nwb_data:
+                    merged_nwb = cls.__deep_merge(merged_nwb, nwb_data["input"])
+                else:
+                    merged_nwb = cls.__deep_merge(merged_nwb, nwb_data)
+
+        result_input_info["nwbfile"] = {"input": merged_nwb}
+
+        return result_input_info
+
+    @classmethod
+    def __deep_merge(cls, dict1: dict, dict2: dict) -> dict:
         if not isinstance(dict1, dict) or not isinstance(dict2, dict):
             return dict2
         merged = dict1.copy()
@@ -254,7 +319,7 @@ class Runner:
         return merged
 
     @classmethod
-    def __dict2leaf(cls, root_dict: dict, path_list):
+    def __dict2leaf(cls, root_dict: dict, path_list: list) -> dict:
         path = path_list.pop(0)
         if len(path_list) > 0:
             return cls.__dict2leaf(root_dict[path], path_list)
