@@ -12,7 +12,6 @@ from filelock import FileLock
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import Rule
-from studio.app.common.core.snakemake.snakemake_rule import SmkRule
 from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.file_reader import JsonReader
 from studio.app.common.core.utils.filelock_handler import FileLockUtils
@@ -66,13 +65,17 @@ class Runner:
                 input_info,
             )
 
-            # Save NWB data of Function(Node)
-            output_info["nwbfile"] = cls.__save_func_nwb(
-                f"{__rule.output.split('.')[0]}.nwb",
-                __rule.type,
-                nwbfile,
-                output_info,
-            )
+            # Save NWB data of Function(Node) - skip for rules with no path
+            if __rule.path is not None:
+                output_info["nwbfile"] = cls.__save_func_nwb(
+                    f"{__rule.output.split('.')[0]}.nwb",
+                    __rule.type,
+                    nwbfile,
+                    output_info,
+                )
+            else:
+                # For rules with no path (like post_process), keep nwbfile nwbfile data
+                output_info["nwbfile"] = nwbfile
 
             # Save the processing result of the Function(Node) (.pkl)
             PickleWriter.write(__rule.output, output_info)
@@ -183,6 +186,9 @@ class Runner:
 
     @classmethod
     def __execute_function(cls, path, params, nwb_params, output_dir, input_info):
+        if path is None:
+            # For rules with no path (like post_process), create minimal output_info
+            return {"nwbfile": {}}
         wrapper = cls.__dict2leaf(wrapper_dict, path.split("/"))
         func = copy.deepcopy(wrapper["function"])
         output_info = func(
