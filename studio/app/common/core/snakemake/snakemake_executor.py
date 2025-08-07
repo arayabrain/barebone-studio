@@ -396,7 +396,7 @@ def _snakemake_execute_batch(
         ) as snakemake_api:
             workflow_api = snakemake_api.workflow(
                 snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
-                workdir=Path(DIRPATH.DATA_DIR),
+                workdir=Path(smk_workdir),
                 storage_settings=storage_settings,
                 resource_settings=ResourceSettings(
                     cores=1,  # Use 1 core for debugging

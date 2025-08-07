@@ -107,13 +107,13 @@ variable "ecr_batch_repository_url" {
 variable "asg_min_size" {
   description = "Minimum number of instances in ASG"
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "asg_max_size" {
   description = "Maximum number of instances in ASG"
   type        = number
-  default     = 1
+  default     = 3
 }
 
 variable "asg_desired_capacity" {
@@ -550,6 +550,16 @@ resource "aws_s3_bucket" "app_storage" {
   }
 }
 
+resource "aws_s3_bucket" "app_storage_batch" {
+  bucket = "subscr-optinist-batch-app-storage"
+  force_destroy = true
+
+  tags = {
+    Name        = "Subscr OptiNiSt Batch Application Storage"
+    Environment = "Production"
+  }
+}
+
 resource "aws_s3_bucket" "user_data" {
   bucket = "subscr-optinist-user-data"
   force_destroy = true
@@ -567,6 +577,13 @@ resource "aws_s3_bucket_versioning" "app_storage" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "app_storage_batch" {
+  bucket = aws_s3_bucket.app_storage_batch.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_versioning" "user_data" {
   bucket = aws_s3_bucket.user_data.id
   versioning_configuration {
@@ -577,6 +594,14 @@ resource "aws_s3_bucket_versioning" "user_data" {
 # Block all public access to S3
 resource "aws_s3_bucket_public_access_block" "app_storage" {
   bucket = aws_s3_bucket.app_storage.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_public_access_block" "app_storage_batch" {
+  bucket = aws_s3_bucket.app_storage_batch.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -711,6 +736,12 @@ resource "aws_autoscaling_group" "main" {
   tag {
     key                 = "Name"
     value               = "subscr-optinist-asg-instance"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Service"
+    value               = "autoscaling"
     propagate_at_launch = true
   }
 
@@ -1553,6 +1584,50 @@ resource "aws_s3_bucket_policy" "app_storage" {
   })
 }
 
+resource "aws_s3_bucket_policy" "app_storage_batch" {
+  bucket = aws_s3_bucket.app_storage_batch.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowECSTaskAccess"
+        Effect    = "Allow"
+        Principal = {
+          AWS = aws_iam_role.ecs_task.arn
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          aws_s3_bucket.app_storage_batch.arn,
+          "${aws_s3_bucket.app_storage_batch.arn}/*"
+        ]
+      },
+      {
+        Sid       = "AllowBatchJobAccess"
+        Effect    = "Allow"
+        Principal = {
+          AWS = aws_iam_role.batch_job.arn
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          aws_s3_bucket.app_storage_batch.arn,
+          "${aws_s3_bucket.app_storage_batch.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "ecs_task_s3" {
   role       = aws_iam_role.ecs_task.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
@@ -2339,8 +2414,9 @@ user_data = base64encode(<<-EOF
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name = "subscr-optinist-ecs-instance"
-      Type = "ECS"
+      Name = "subscr-optinist-asg-instance"
+      Type = "ECS-ASG"
+      Service = "autoscaling"
     }
   }
 
@@ -2889,10 +2965,6 @@ resource "aws_ecs_task_definition" "autoscaling" {
           value = "false"
         },
         {
-          name  = "AWS_ECR_REPOSITORY"
-          value = "${var.ecr_batch_repository_url}:latest"
-        },
-        {
           name  = "LOG_LEVEL"
           value = "DEBUG"
         },
@@ -3076,7 +3148,7 @@ resource "aws_ecs_task_definition" "batch" {
         },
         {
           name = "S3_DEFAULT_BUCKET_NAME"
-          value = aws_s3_bucket.app_storage.id
+          value = aws_s3_bucket.app_storage_batch.id
         },
         {
           name  = "USE_AWS_BATCH"
@@ -3084,7 +3156,7 @@ resource "aws_ecs_task_definition" "batch" {
         },
         {
           name = "AWS_BATCH_S3_BUCKET_NAME"
-          value = aws_s3_bucket.app_storage.id
+          value = aws_s3_bucket.app_storage_batch.id
         },
         {
           name = "AWS_DEFAULT_PROVIDER"
@@ -3252,6 +3324,10 @@ resource "aws_ecs_service" "autoscaling" {
     aws_lb_listener.autoscaling
   ]
 
+  placement_constraints {
+    type = "distinctInstance"  # Force different instances
+  }
+
   health_check_grace_period_seconds = 300
 
   tags = {
@@ -3270,6 +3346,11 @@ resource "aws_ecs_service" "batch" {
 
   enable_execute_command = true
 
+  placement_constraints {
+    type       = "memberOf"
+    expression = "attribute:ecs.instance-type =~ t3.large and ec2InstanceId == '${aws_instance.batch.id}'"
+  }
+
   load_balancer {
     target_group_arn = aws_lb_target_group.batch.arn
     container_name   = "subscr-batch-optinist-cloud-container"
@@ -3277,6 +3358,7 @@ resource "aws_ecs_service" "batch" {
   }
 
   depends_on = [
+    aws_instance.batch,
     aws_autoscaling_group.main,
     aws_db_instance.main,
     aws_lb.batch,
@@ -3290,31 +3372,182 @@ resource "aws_ecs_service" "batch" {
   }
 }
 
-# ============================
-# Auto Scaling for ECS Service
-# ============================
-#resource "aws_appautoscaling_target" "ecs_target" {
-#  max_capacity       = 5
-#  min_capacity       = 0
-#  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.autoscaling.name}"
-#  scalable_dimension = "ecs:service:DesiredCount"
-#  service_namespace  = "ecs"
-#}
-#
-#resource "aws_appautoscaling_policy" "ecs_policy" {
-#  name               = "subscr-optinist-cloud-autoscaling-policy"
-#  policy_type        = "TargetTrackingScaling"
-#  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
-#  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
-#  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
-#
-#  target_tracking_scaling_policy_configuration {
-#    target_value = 75.0
-#    predefined_metric_specification {
-#      predefined_metric_type = "ECSServiceAverageCPUUtilization"
-#    }
-#  }
-#}
+
+# =====================================================
+# Dedicated Batch Instance (separate from ASG)
+# =====================================================
+
+# Launch template for batch instances
+resource "aws_launch_template" "batch" {
+  name_prefix   = "subscr-optinist-batch-"
+  image_id      = data.aws_ami.ecs_optimized.id
+  instance_type = "t3.large"
+  key_name      = aws_key_pair.subscr_optinist_cloud_key_pair.key_name
+
+  vpc_security_group_ids = [aws_security_group.ecs.id]
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ecs_instance_profile.name
+  }
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = 30
+      volume_type = "gp3"
+      encrypted   = true
+    }
+  }
+
+  monitoring {
+    enabled = true
+  }
+
+user_data = base64encode(<<-EOF
+    #!/bin/bash
+    set -e
+    exec > /var/log/ecs-setup.log 2>&1
+
+    echo "$(date): Starting ECS setup for BATCH instance with OptiNiSt configuration"
+
+    # ECS Configuration
+    echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
+    echo ECS_ENABLE_CONTAINER_METADATA=true >> /etc/ecs/ecs.config
+    echo ECS_ENABLE_TASK_IAM_ROLE=true >> /etc/ecs/ecs.config
+
+    # Install packages
+    yum update -y
+    yum install -y amazon-ssm-agent mysql amazon-efs-utils nc mysql-client git docker amazon-cloudwatch-agent
+
+    # Start SSM agent
+    if ! systemctl is-active --quiet amazon-ssm-agent; then
+        systemctl enable amazon-ssm-agent
+        systemctl start amazon-ssm-agent
+    fi
+
+    # Create CloudWatch agent config
+    cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << 'CW_CONFIG'
+    {
+      "logs": {
+        "logs_collected": {
+          "files": {
+            "collect_list": [
+              {
+                "file_path": "/var/log/ecs/ecs-init.log",
+                "log_group_name": "/aws/batch/subscr-optinist",
+                "log_stream_name": "{instance_id}/ecs-init"
+              },
+              {
+                "file_path": "/var/log/ecs/ecs-agent.log.*",
+                "log_group_name": "/aws/batch/subscr-optinist",
+                "log_stream_name": "{instance_id}/ecs-agent"
+              },
+              {
+                "file_path": "/var/log/docker",
+                "log_group_name": "/aws/batch/subscr-optinist",
+                "log_stream_name": "{instance_id}/docker"
+              }
+            ]
+          }
+        }
+      }
+    }
+CW_CONFIG
+
+    # Start CloudWatch agent
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+        -a fetch-config \
+        -m ec2 \
+        -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+        -s
+
+    # Create OptiNiSt directories
+    mkdir -p /opt/optinist-for-cloud
+    cd /opt
+
+    # Clone repository if not exists
+    if [ ! -d "optinist-for-cloud" ]; then
+        echo "$(date): Cloning OptiNiSt repository"
+        git clone ${var.git_repo} optinist-for-cloud || {
+            echo "ERROR: Git clone failed!"
+            exit 1
+        }
+    fi
+    cd optinist-for-cloud
+
+    # Create Firebase configuration files on the host
+    echo "$(date): Creating Firebase configuration files"
+    mkdir -p /opt/optinist-for-cloud/studio/config/auth
+
+    # Create firebase_config.json
+    cat > /opt/optinist-for-cloud/studio/config/auth/firebase_config.json << 'FIREBASE_CONFIG'
+    ${var.firebase_config_json}
+    FIREBASE_CONFIG
+
+    # Create firebase_private.json
+    cat > /opt/optinist-for-cloud/studio/config/auth/firebase_private.json << 'FIREBASE_PRIVATE'
+    ${var.firebase_private_json}
+    FIREBASE_PRIVATE
+
+    # Set proper permissions
+    chmod 644 /opt/optinist-for-cloud/studio/config/auth/firebase_*.json
+
+    # ECR login and pull pre-built batch image
+    echo "$(date): Logging into ECR and pulling pre-built batch image"
+    aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin ${split("/", var.ecr_batch_repository_url)[0]}
+    echo "$(date): Pulling OptiNiSt Batch Docker image from ECR"
+    docker pull "${var.ecr_batch_repository_url}:latest" || {
+        echo "ERROR: Docker pull failed!"
+        exit 1
+    }
+
+    # EFS setup
+    mkdir -p /mnt/efs
+    echo "${aws_efs_file_system.snmk.id}.efs.ap-northeast-1.amazonaws.com:/ /mnt/efs efs tls,_netdev" >> /etc/fstab
+    mount -a || echo "EFS will retry"
+
+    # Test DB connection (non-blocking)
+    nc -z ${replace(aws_db_instance.main.endpoint, ":3306", "")} 3306 && echo "DB accessible" || echo "DB will be available"
+    EOF
+  )
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = "subscr-optinist-batch-instance"
+      Type = "ECS-Batch"
+      Service = "batch"
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Dedicated EC2 instance for batch service
+resource "aws_instance" "batch" {
+  launch_template {
+    id      = aws_launch_template.batch.id
+    version = "$Latest"
+  }
+
+  subnet_id = aws_subnet.private1.id
+
+  tags = {
+    Name = "subscr-optinist-batch-instance"
+    Type = "ECS-Batch-Dedicated"
+    Service = "batch"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  depends_on = [
+    aws_ecs_cluster.main,
+    aws_launch_template.batch
+  ]
+}
 
 # ========================
 # AWS batch job definition
@@ -3530,8 +3763,13 @@ output "efs_id" {
 }
 
 output "app_storage_bucket" {
-  description = "S3 bucket for application storage"
+  description = "S3 bucket for application storage (autoscaling)"
   value       = aws_s3_bucket.app_storage.id
+}
+
+output "app_storage_bucket_batch" {
+  description = "S3 bucket for application storage (batch)"
+  value       = aws_s3_bucket.app_storage_batch.id
 }
 
 output "asg_name" {
@@ -3576,7 +3814,7 @@ output "aws_batch_config" {
   description = "AWS Batch configuration values for batch_config"
   value = {
     AWS_BATCH_JOB_ROLE = aws_iam_role.batch_job.arn
-    AWS_BATCH_S3_BUCKET_NAME = aws_s3_bucket.app_storage.id
+    AWS_BATCH_S3_BUCKET_NAME = aws_s3_bucket.app_storage_batch.id
     AWS_BATCH_S3_USER_DATA_BUCKET = aws_s3_bucket.user_data.id
     AWS_BATCH_FREE_QUEUE = aws_batch_job_queue.free_tier.name
     AWS_BATCH_PAID_QUEUE = aws_batch_job_queue.paid_tier.name
@@ -3610,4 +3848,14 @@ output "optinist_cloud_user_secret_access_key" {
   description = "Secret Access Key for subscr-optinist-cloud-user"
   value       = aws_iam_access_key.subscr_optinist_cloud_user_access_key.secret
   sensitive   = true
+}
+
+output "batch_instance_id" {
+  description = "Instance ID of the dedicated batch instance"
+  value       = aws_instance.batch.id
+}
+
+output "batch_instance_private_ip" {
+  description = "Private IP of the dedicated batch instance"
+  value       = aws_instance.batch.private_ip
 }
