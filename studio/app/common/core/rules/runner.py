@@ -53,9 +53,10 @@ class Runner:
 
             # Construct input_info
             # - Remove data that will not be used later here
-            for key in list(input_info):
-                if key not in __rule.return_arg.values():
-                    input_info.pop(key)
+            if __rule.return_arg is not None:
+                for key in list(input_info):
+                    if key not in __rule.return_arg.values():
+                        input_info.pop(key)
 
             # Construct output_info
             output_info = cls.__execute_function(
@@ -66,13 +67,17 @@ class Runner:
                 input_info,
             )
 
-            # Save NWB data of Function(Node)
-            output_info["nwbfile"] = cls.__save_func_nwb(
-                f"{__rule.output.split('.')[0]}.nwb",
-                __rule.type,
-                nwbfile,
-                output_info,
-            )
+            # Save NWB data of Function(Node) - skip for rules with no path
+            if __rule.path is not None:
+                output_info["nwbfile"] = cls.__save_func_nwb(
+                    f"{__rule.output.split('.')[0]}.nwb",
+                    __rule.type,
+                    nwbfile,
+                    output_info,
+                )
+            else:
+                # For rules with no path (like post_process),keep nwbfile nwbfile data
+                output_info["nwbfile"] = nwbfile
 
             # Save the processing result of the Function(Node) (.pkl)
             PickleWriter.write(__rule.output, output_info)
@@ -183,6 +188,9 @@ class Runner:
 
     @classmethod
     def __execute_function(cls, path, params, nwb_params, output_dir, input_info):
+        if path is None:
+            # For rules with no path (like post_process), create minimal output_info
+            return {"nwbfile": {}}
         wrapper = cls.__dict2leaf(wrapper_dict, path.split("/"))
         func = copy.deepcopy(wrapper["function"])
         output_info = func(
@@ -263,6 +271,10 @@ class Runner:
         result_input_info = {}
         merged_nwb = {}
 
+        if rule_config.return_arg is None:
+            result_input_info["nwbfile"] = {"input": merged_nwb}
+            return result_input_info
+
         for return_arg_key, arg_name in rule_config.return_arg.items():
             # RETURN_ARG_KEY includes key delimiter (standard)
             if SmkRule.RETURN_ARG_KEY_DELIMITER in return_arg_key:
@@ -293,11 +305,14 @@ class Runner:
                     result_input_info, single_input_info
                 )
 
-                merged_nwb = cls.__deep_merge(
-                    merged_nwb, single_input_info.pop("nwbfile", {})
-                )
+                # Handle nwbfile merging with proper "input" structure
+                nwb_data = single_input_info.pop("nwbfile", {})
+                if "input" in nwb_data:
+                    merged_nwb = cls.__deep_merge(merged_nwb, nwb_data["input"])
+                else:
+                    merged_nwb = cls.__deep_merge(merged_nwb, nwb_data)
 
-        result_input_info["nwbfile"] = merged_nwb
+        result_input_info["nwbfile"] = {"input": merged_nwb}
 
         return result_input_info
 
