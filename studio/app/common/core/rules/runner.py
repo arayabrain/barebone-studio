@@ -12,6 +12,7 @@ from filelock import FileLock
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import Rule
+from studio.app.common.core.snakemake.snakemake_rule import SmkRule
 from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.file_reader import JsonReader
 from studio.app.common.core.utils.filelock_handler import FileLockUtils
@@ -52,9 +53,10 @@ class Runner:
 
             # Construct input_info
             # - Remove data that will not be used later here
-            for key in list(input_info):
-                if key not in __rule.return_arg.values():
-                    input_info.pop(key)
+            if __rule.return_arg is not None:
+                for key in list(input_info):
+                    if key not in __rule.return_arg.values():
+                        input_info.pop(key)
 
             # Construct output_info
             output_info = cls.__execute_function(
