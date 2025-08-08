@@ -1,11 +1,7 @@
 [tool.poetry]
 name = "optinist"
 description = "Calcium Imaging Pipeline Tool"
-<<<<<<< HEAD
 version = "2.2.2"
-=======
-version = "2.2.1"
->>>>>>> optinist/develop-main
 license = "GPL-3.0"
 authors = ["OIST <email@example.com>"]
 readme = "README.md"
