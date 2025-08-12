@@ -4,12 +4,8 @@ from enum import Enum
 
 from dotenv import load_dotenv
 
-_TEMP_DIR = (
-    os.environ.get("TEMP", os.environ.get("TMP", "C:\\temp"))
-    if platform.system() == "Windows"
-    else "/tmp"
-)
-_DEFAULT_DIR = f"{_TEMP_DIR}/studio"
+_TMP_DIR = "C:\\temp" if platform.system() == "Windows" else "/tmp"
+_DEFAULT_DIR = os.path.join(_TMP_DIR, "studio")
 _ENV_DIR = os.environ.get("OPTINIST_DIR")
 
 
