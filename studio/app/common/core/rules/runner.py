@@ -44,9 +44,8 @@ class Runner:
             workflow_dirpath = str(Path(__rule.output).parent.parent)
             cls.write_pid_file(workflow_dirpath, __rule.type, run_script_path)
 
-            orig_input_info = cls.__read_input_info(__rule.input)
-            input_info = cls.__align_input_info_content_keys(orig_input_info, __rule)
-            del orig_input_info
+            input_info = cls.read_input_info(__rule.input)
+            cls.__change_dict_key_exist(input_info, __rule)
             nwbfile = input_info["nwbfile"]
 
             # input_info
@@ -222,76 +221,56 @@ class Runner:
         return output_info
 
     @classmethod
-    def __read_input_info(cls, input_files: list) -> dict:
-        """
-        Read input files (.pkl) and construct data for further processing
-        """
+    def read_input_info(cls, input_files):
+        """Enhanced version of main's read_input_info with function_id tracking"""
+        input_info = {}
+        function_id_map = {}  # Track which data came from which function_id
 
-        result_input_info = {}
+        for filepath in input_files:
+            ids = ExptOutputPathIds(os.path.dirname(filepath))
+            load_data = PickleReader.read(filepath)
 
-        for input_file in input_files:
-            ids = ExptOutputPathIds(os.path.dirname(input_file))
-
-            # Read & validate load_data content
-            load_data = PickleReader.read(input_file)
+            # validate load_data content
             assert PickleReader.check_is_valid_node_pickle(
                 load_data
-            ), f"Invalid node input data content. [{input_file}]"
+            ), f"Invalid node input data content. [{filepath}]"
 
-            # Store input data for each function_id (node id)
-            single_input_info = load_data.copy()  # sharrow copy
-            result_input_info[ids.function_id] = single_input_info
+            # Track function_id for each piece of data (excluding nwbfile)
+            for key in load_data.keys():
+                if key != "nwbfile":
+                    function_id_map[key] = ids.function_id
 
-        return result_input_info
+            # Main's existing NWB merging logic (preserves NWB functionality)
+            merged_nwb = cls.__deep_merge(
+                load_data.pop("nwbfile", {}), input_info.pop("nwbfile", {})
+            )
+            input_info = dict(list(load_data.items()) + list(input_info.items()))
+            input_info["nwbfile"] = merged_nwb
+
+        # Store metadata for delimiter-based key processing
+        input_info["_function_id_map"] = function_id_map
+        return input_info
 
     @classmethod
-    def __align_input_info_content_keys(
-        cls, orig_input_info: dict, rule_config: Rule
-    ) -> dict:
-        """
-        Aligns the keys in the input_info data for further processing.
-        """
-
-        result_input_info = {}
-        merged_nwb = {}
+    def __change_dict_key_exist(cls, input_info, rule_config: Rule):
+        """Enhanced version that handles delimiter-based return_arg keys"""
+        function_id_map = input_info.pop("_function_id_map", {})
 
         for return_arg_key, arg_name in rule_config.return_arg.items():
-            # RETURN_ARG_KEY includes key delimiter (standard)
+            # Handle delimiter-based keys (for run_cluster.py support)
             if SmkRule.RETURN_ARG_KEY_DELIMITER in return_arg_key:
-                return_name, function_id = return_arg_key.split(
+                return_name, expected_function_id = return_arg_key.split(
                     SmkRule.RETURN_ARG_KEY_DELIMITER
                 )
-
-                # Get input_info corresponding to function_id
-                single_input_info = orig_input_info[function_id]
-            # RETURN_ARG_KEY does not include a delimiter (old version: v2.3 or earlier)
-            else:
-                return_name, function_id = (return_arg_key, None)
-
-                # Merge input_info for all function_ids
-                single_input_info = {}
-                for tmp_value in orig_input_info.values():
-                    single_input_info.update(tmp_value)
-                del tmp_value
-
-            if return_name in single_input_info:
-                # Rename the key of the matching element and store it again
-                #  (for further processing)
-                single_input_info[arg_name] = single_input_info.pop(return_name)
-
-                # Store in return value
-                # (At this stage, expand input_info split by function_id into flat)
-                result_input_info = cls.__deep_merge(
-                    result_input_info, single_input_info
-                )
-
-                merged_nwb = cls.__deep_merge(
-                    merged_nwb, single_input_info.pop("nwbfile", {})
-                )
-
-        result_input_info["nwbfile"] = merged_nwb
-
-        return result_input_info
+                # Only rename if data came from the expected function_id
+                if (
+                    return_name in input_info
+                    and function_id_map.get(return_name) == expected_function_id
+                ):
+                    input_info[arg_name] = input_info.pop(return_name)
+            # Handle simple keys (original main functionality)
+            elif return_arg_key in input_info:
+                input_info[arg_name] = input_info.pop(return_arg_key)
 
     @classmethod
     def __deep_merge(cls, dict1: dict, dict2: dict) -> dict:
