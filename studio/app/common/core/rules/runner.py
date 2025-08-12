@@ -12,6 +12,7 @@ from filelock import FileLock
 from studio.app.common.core.experiment.experiment import ExptOutputPathIds
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import Rule
+from studio.app.common.core.snakemake.snakemake_rule import SmkRule
 from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.file_reader import JsonReader
 from studio.app.common.core.utils.filelock_handler import FileLockUtils
@@ -61,7 +62,7 @@ class Runner:
                 input_info,
             )
 
-            # nwbfileの設定
+            # Save NWB data of Function(Node)
             output_info["nwbfile"] = cls.__save_func_nwb(
                 f"{__rule.output.split('.')[0]}.nwb",
                 __rule.type,
@@ -185,6 +186,8 @@ class Runner:
         try:
             # Initialize CONFIG dictionary structure
             function_id = ExptOutputPathIds(output_dir).function_id
+            if "nwbfile" not in output_info:
+                output_info["nwbfile"] = {}
             if NWBDATASET.CONFIG not in output_info["nwbfile"]:
                 output_info["nwbfile"][NWBDATASET.CONFIG] = {}
             if function_id not in output_info["nwbfile"][NWBDATASET.CONFIG]:
@@ -218,15 +221,13 @@ class Runner:
         return output_info
 
     @classmethod
-    def __change_dict_key_exist(cls, input_info, rule_config: Rule):
-        for return_name, arg_name in rule_config.return_arg.items():
-            if return_name in input_info:
-                input_info[arg_name] = input_info.pop(return_name)
-
-    @classmethod
     def read_input_info(cls, input_files):
+        """Enhanced version of main's read_input_info with function_id tracking"""
         input_info = {}
+        function_id_map = {}  # Track which data came from which function_id
+
         for filepath in input_files:
+            ids = ExptOutputPathIds(os.path.dirname(filepath))
             load_data = PickleReader.read(filepath)
 
             # validate load_data content
@@ -234,15 +235,45 @@ class Runner:
                 load_data
             ), f"Invalid node input data content. [{filepath}]"
 
+            # Track function_id for each piece of data (excluding nwbfile)
+            for key in load_data.keys():
+                if key != "nwbfile":
+                    function_id_map[key] = ids.function_id
+
+            # Main's existing NWB merging logic (preserves NWB functionality)
             merged_nwb = cls.__deep_merge(
                 load_data.pop("nwbfile", {}), input_info.pop("nwbfile", {})
             )
             input_info = dict(list(load_data.items()) + list(input_info.items()))
             input_info["nwbfile"] = merged_nwb
+
+        # Store metadata for delimiter-based key processing
+        input_info["_function_id_map"] = function_id_map
         return input_info
 
     @classmethod
-    def __deep_merge(cls, dict1, dict2):
+    def __change_dict_key_exist(cls, input_info, rule_config: Rule):
+        """Enhanced version that handles delimiter-based return_arg keys"""
+        function_id_map = input_info.pop("_function_id_map", {})
+
+        for return_arg_key, arg_name in rule_config.return_arg.items():
+            # Handle delimiter-based keys (for run_cluster.py support)
+            if SmkRule.RETURN_ARG_KEY_DELIMITER in return_arg_key:
+                return_name, expected_function_id = return_arg_key.split(
+                    SmkRule.RETURN_ARG_KEY_DELIMITER
+                )
+                # Only rename if data came from the expected function_id
+                if (
+                    return_name in input_info
+                    and function_id_map.get(return_name) == expected_function_id
+                ):
+                    input_info[arg_name] = input_info.pop(return_name)
+            # Handle simple keys (original main functionality)
+            elif return_arg_key in input_info:
+                input_info[arg_name] = input_info.pop(return_arg_key)
+
+    @classmethod
+    def __deep_merge(cls, dict1: dict, dict2: dict) -> dict:
         if not isinstance(dict1, dict) or not isinstance(dict2, dict):
             return dict2
         merged = dict1.copy()
@@ -254,7 +285,7 @@ class Runner:
         return merged
 
     @classmethod
-    def __dict2leaf(cls, root_dict: dict, path_list):
+    def __dict2leaf(cls, root_dict: dict, path_list: list) -> dict:
         path = path_list.pop(0)
         if len(path_list) > 0:
             return cls.__dict2leaf(root_dict[path], path_list)
