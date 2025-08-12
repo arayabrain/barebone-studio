@@ -117,9 +117,9 @@ def _get_fallback_storage_quota(user_id: int) -> Dict[str, Any]:
 
             # Set quotas based on subscription tier
             if tier == "paid":
-                default_quota_bytes = 200 * 1024 * 1024 * 1024  # 200GB for paid tier
+                default_quota_bytes = 100 * 1024 * 1024 * 1024  # 100GB for paid tier
                 logger.info(
-                    f"Using paid tier quota for user {user_id} ({plan_name}): 200GB"
+                    f"Using paid tier quota for user {user_id} ({plan_name}): 100GB"
                 )
             else:
                 default_quota_bytes = 5 * 1024 * 1024 * 1024  # 5GB for free tier
@@ -370,9 +370,11 @@ def get_user_storage_usage(user_id: int) -> Optional[Dict[str, Any]]:
             result = cursor.fetchone()
 
             if result:
-                logger.debug(
+                logger.info(
                     f"Retrieved storage usage for user {user_id}: "
-                    f"{result['usage_percentage']}%"
+                    f"current_usage={result.get('current_usage_bytes')}, "
+                    f"quota_limit={result.get('quota_limit_bytes')}, "
+                    f"usage_percentage={result.get('usage_percentage')}%"
                 )
                 return result
             else:

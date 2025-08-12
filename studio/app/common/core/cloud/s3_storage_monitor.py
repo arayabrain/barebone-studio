@@ -39,7 +39,7 @@ class S3StorageMonitor:
         # These should match the values in your subscription plan features
         self.TIER_QUOTAS = {
             "free": 5 * 1024 * 1024 * 1024,  # 5GB
-            "paid": 200 * 1024 * 1024 * 1024,  # 200GB
+            "paid": 100 * 1024 * 1024 * 1024,  # 100GB
         }
 
     async def get_user_s3_storage_size(self, user_id: int) -> int:

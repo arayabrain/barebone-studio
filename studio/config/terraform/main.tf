@@ -253,8 +253,21 @@ resource "aws_instance" "nat" {
   user_data = <<-EOF
               #!/bin/bash
               yum update -y
-              echo 1 > /proc/sys/net/ipv4/ip_forward
+
+              # Enable IP forwarding
+              echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
+              sysctl -p
+
+              # Configure NAT with iptables
               iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+              iptables -A FORWARD -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+              iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+
+              # Save iptables rules
+              service iptables save
+
+              # Ensure iptables starts on boot
+              chkconfig iptables on
               EOF
 
   tags = {
@@ -279,7 +292,7 @@ data "aws_ami" "nat_instance" {
 
   filter {
     name   = "name"
-    values = ["amzn-ami-vpc-nat-*"]
+    values = ["amzn2-ami-hvm-*"]
   }
 
   filter {
@@ -490,6 +503,38 @@ resource "aws_db_instance" "main" {
   }
 }
 
+# RDS Instance for Batch Service (Isolated)
+resource "aws_db_instance" "batch" {
+  identifier              = "subscr-optinist-cloud-rds-batch"
+  allocated_storage       = 20
+  storage_type            = "gp3"
+  engine                  = "mysql"
+  engine_version          = "8.0"
+  instance_class          = "db.t4g.micro"
+  parameter_group_name    = "default.mysql8.0"
+  db_name                 = var.mysql_database
+  username                = var.mysql_user
+  password                = var.mysql_password
+  skip_final_snapshot     = true
+  final_snapshot_identifier = "${var.mysql_database}-batch-final-snapshot"
+  backup_retention_period = 7
+  monitoring_interval     = 60
+  monitoring_role_arn     = aws_iam_role.rds_monitoring.arn
+  publicly_accessible     = false
+  enabled_cloudwatch_logs_exports = ["error", "general", "slowquery"]
+  network_type            = "IPV4"
+  port                    = 3306
+  vpc_security_group_ids  = [aws_security_group.rds.id]
+  db_subnet_group_name    = aws_db_subnet_group.main.name
+  multi_az                = false
+  storage_encrypted       = true
+
+  tags = {
+    Name = "subscr-optinist-cloud-rds-batch"
+    Service = "batch"
+  }
+}
+
 
 # ===============
 # EFS File System
@@ -533,6 +578,53 @@ resource "aws_efs_access_point" "snmk" {
 
   tags = {
     Name = "subscr-optinist-cloud-efs-ap"
+  }
+}
+
+# ========================
+# EFS File System for Batch (Isolated)
+# ========================
+resource "aws_efs_file_system" "batch" {
+  creation_token = "subscr-optinist-cloud-batch-snmk-volume"
+
+  performance_mode = "generalPurpose"
+  throughput_mode = "bursting"
+
+  tags = {
+    Name = "subscr-optinist-cloud-batch-efs"
+    Service = "batch"
+  }
+}
+
+# EFS Mount Targets for Batch
+resource "aws_efs_mount_target" "batch_private1" {
+  file_system_id  = aws_efs_file_system.batch.id
+  subnet_id       = aws_subnet.private1.id
+  security_groups = [aws_security_group.efs.id]
+}
+
+resource "aws_efs_mount_target" "batch_private2" {
+  file_system_id  = aws_efs_file_system.batch.id
+  subnet_id       = aws_subnet.private2.id
+  security_groups = [aws_security_group.efs.id]
+}
+
+# EFS Access Point for Batch
+resource "aws_efs_access_point" "batch" {
+  file_system_id = aws_efs_file_system.batch.id
+
+  root_directory {
+    path = "/"
+    creation_info {
+      owner_gid   = 1000
+      owner_uid   = 1000
+      permissions = "755"
+    }
+  }
+
+  tags = {
+    Name = "subscr-optinist-cloud-batch-efs-ap"
+    Service = "batch"
   }
 }
 
@@ -2154,6 +2246,27 @@ resource "aws_cloudwatch_log_group" "batch" {
   }
 }
 
+# CloudWatch Log Groups for Batch ECS Service (Isolated)
+resource "aws_cloudwatch_log_group" "ecs_batch" {
+  name              = "/ecs/subscr-optinist-batch-cloud-taskdef"
+  retention_in_days = 7
+
+  tags = {
+    Name = "subscr-optinist-batch-ecs-logs"
+    Service = "batch"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "batch_application" {
+  name              = "/aws/application/subscr-optinist-batch"
+  retention_in_days = 14
+
+  tags = {
+    Name = "subscr-optinist-batch-application-logs"
+    Service = "batch"
+  }
+}
+
 resource "aws_cloudwatch_log_metric_filter" "user_cpu_usage" {
   name           = "user-cpu-usage"
   log_group_name = aws_cloudwatch_log_group.ecs.name
@@ -2722,51 +2835,6 @@ INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (1, 1);
 
 UPDATE users SET attributes = JSON_MERGE_PATCH(IFNULL(attributes,'{}'), '{"remote_bucket_name": "${aws_s3_bucket.app_storage.id}"}') WHERE id = 1;
 
--- Insert subscription plans
-
-INSERT INTO subscription_plans (name, price, billing_cycle, features, currency, status) VALUES
-('Free', 0, 30, JSON_ARRAY(
-    JSON_OBJECT('text', '5GB storage allocation', 'isPremium', false),
-    JSON_OBJECT('text', 'Basic compute access with fair-use limitations', 'isPremium', false),
-    JSON_OBJECT('text', 'Standard support through documentation and community', 'isPremium', false),
-    JSON_OBJECT('text', 'Suitable for evaluation, learning, and small projects', 'isPremium', false)
-), 840, 1),
-('Premium', 2999, 30, JSON_ARRAY(
-    JSON_OBJECT('text', '5GB storage allocation', 'isPremium', false),
-    JSON_OBJECT('text', 'Basic compute access with fair-use limitations', 'isPremium', false),
-    JSON_OBJECT('text', 'Standard support through documentation and community', 'isPremium', false),
-    JSON_OBJECT('text', 'Suitable for evaluation, learning, and small projects', 'isPremium', false),
-    JSON_OBJECT('text', '200GB storage allocation (40x increase from free tier)', 'isPremium', true),
-    JSON_OBJECT('text', 'Priority compute access with guaranteed resource allocation', 'isPremium', true),
-    JSON_OBJECT('text', 'Enhanced support including direct assistance', 'isPremium', true),
-    JSON_OBJECT('text', 'Extended job history and analytics', 'isPremium', true),
-    JSON_OBJECT('text', 'Designed for professional use and larger datasets', 'isPremium', true)
-), 840, 1);
-
--- Insert tax rate (10%)
-INSERT INTO taxes (tax_type, tax_name, tax_rate, is_active, effective_date, end_date) VALUES
-('sales_tax', 'Sales Tax', 0.10, 1, CURDATE(), NULL);
-
--- Insert subscription users (assuming user IDs 1, 2, 3 exist)
--- User 1 and 2 on Free plan, User 3 on Premium plan
-INSERT INTO subscription_users (plan_id, user_id, expiration) VALUES
-(1, 1, DATE_ADD(NOW(), INTERVAL 30 DAY)),
-(1, 2, DATE_ADD(NOW(), INTERVAL 30 DAY)),
-(2, 3, DATE_ADD(NOW(), INTERVAL 30 DAY));
-
--- Insert payment accounts for users with paid subscriptions
-INSERT INTO subscription_payment_accounts (user_id, provider, external_account_id) VALUES
-(3, 'stripe', 'cus_stripe_customer_123456789');
-
--- Insert purchase history (only for paid plans)
-INSERT INTO subscription_purchase_history (purchased_plan, user_id) VALUES
-(2, 3);  -- User 3 purchased Premium plan
-
--- Set admin user to premium plan by default
-INSERT IGNORE INTO subscription_users (plan_id, user_id, expiration) VALUES (2, 1, DATE_ADD(NOW(), INTERVAL 365 DAY));
-
--- Initialize storage usage for admin user
-INSERT IGNORE INTO user_storage_usage (user_id, current_usage_bytes, quota_limit_bytes) VALUES (1, 0, 107374182400);
 
 INIT_SQL
 
@@ -2953,6 +3021,10 @@ resource "aws_ecs_task_definition" "autoscaling" {
           value = var.optinist_admin_email
         },
         {
+          name  = "ADMIN_STORAGE_QUOTA_BYTES"
+          value = "107374182400"
+        },
+        {
           name  = "SECRET_KEY"
           value = var.optinist_secret_key
         },
@@ -3092,7 +3164,7 @@ resource "aws_ecs_task_definition" "batch" {
       environment = [
         {
           name  = "CLOUDWATCH_LOG_GROUP"
-          value = "/ecs/subscr-optinist-cloud-taskdef"
+          value = "/ecs/subscr-optinist-batch-cloud-taskdef"
         },
         {
           name  = "PYTHONPATH"
@@ -3104,11 +3176,11 @@ resource "aws_ecs_task_definition" "batch" {
         },
         {
           name  = "DB_HOST"
-          value = split(":", aws_db_instance.main.endpoint)[0]
+          value = split(":", aws_db_instance.batch.endpoint)[0]
         },
         {
           name  = "DB_PORT"
-          value = split(":", aws_db_instance.main.endpoint)[1]
+          value = split(":", aws_db_instance.batch.endpoint)[1]
         },
         {
           name  = "DB_USER"
@@ -3141,6 +3213,10 @@ resource "aws_ecs_task_definition" "batch" {
         {
           name  = "INITIAL_USER_EMAIL"
           value = var.optinist_admin_email
+        },
+        {
+          name  = "ADMIN_STORAGE_QUOTA_BYTES"
+          value = "107374182400"
         },
         {
           name  = "SECRET_KEY"
@@ -3258,7 +3334,7 @@ resource "aws_ecs_task_definition" "batch" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/subscr-batch-optinist-cloud-taskdef"
+          "awslogs-group"         = "/ecs/subscr-optinist-batch-cloud-taskdef"
           "mode"                  = "non-blocking"
           "awslogs-multiline-pattern" = "^\\[\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"
           "max-buffer-size"       = "25m"
@@ -3278,11 +3354,11 @@ resource "aws_ecs_task_definition" "batch" {
   volume {
     name = "subscr-batch-optinist-cloud-snmk-volume"
     efs_volume_configuration {
-      file_system_id = aws_efs_file_system.snmk.id
+      file_system_id = aws_efs_file_system.batch.id
       root_directory = "/"
       transit_encryption = "ENABLED"
       authorization_config {
-        access_point_id = aws_efs_access_point.snmk.id
+        access_point_id = aws_efs_access_point.batch.id
         iam            = "DISABLED"
       }
     }
@@ -3360,7 +3436,7 @@ resource "aws_ecs_service" "batch" {
   depends_on = [
     aws_instance.batch,
     aws_autoscaling_group.main,
-    aws_db_instance.main,
+    aws_db_instance.batch,
     aws_lb.batch,
     aws_lb_listener.batch
   ]
@@ -3501,13 +3577,13 @@ CW_CONFIG
         exit 1
     }
 
-    # EFS setup
+    # EFS setup (batch-specific)
     mkdir -p /mnt/efs
-    echo "${aws_efs_file_system.snmk.id}.efs.ap-northeast-1.amazonaws.com:/ /mnt/efs efs tls,_netdev" >> /etc/fstab
+    echo "${aws_efs_file_system.batch.id}.efs.ap-northeast-1.amazonaws.com:/ /mnt/efs efs tls,_netdev" >> /etc/fstab
     mount -a || echo "EFS will retry"
 
-    # Test DB connection (non-blocking)
-    nc -z ${replace(aws_db_instance.main.endpoint, ":3306", "")} 3306 && echo "DB accessible" || echo "DB will be available"
+    # Test DB connection (batch-specific database)
+    nc -z ${replace(aws_db_instance.batch.endpoint, ":3306", "")} 3306 && echo "DB accessible" || echo "DB will be available"
     EOF
   )
   tag_specifications {
@@ -3720,8 +3796,13 @@ output "private_subnet_cidrs" {
 }
 
 output "rds_endpoint" {
-  description = "RDS instance endpoint"
+  description = "RDS instance endpoint (autoscaling)"
   value       = aws_db_instance.main.endpoint
+}
+
+output "rds_endpoint_batch" {
+  description = "RDS instance endpoint (batch)"
+  value       = aws_db_instance.batch.endpoint
 }
 
 output "rds_security_group_id" {

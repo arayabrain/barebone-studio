@@ -60,7 +60,6 @@ class SmkUtils:
         Example:
         - Absolute: /app/studio_data/output/1/abc123/file.pkl
         - Relative: output/1/abc123/file.pkl
-        - S3 Result: s3://bucket/app/studio_data/output/1/abc123/file.pkl
         """
         logger.debug(f"_make_relative_path called with: {absolute_path}")
 
@@ -106,30 +105,22 @@ class SmkUtils:
                     join_filepath([DIRPATH.INPUT_DIR, x]) for x in details["input"]
                 ]
                 logger.debug(f"Generated IMAGE input paths: {paths}")
-                converted_paths = [cls._make_relative_path(p) for p in paths]
-                logger.debug(f"Converted IMAGE input paths: {converted_paths}")
-                return converted_paths
+                return paths
             else:
                 path = join_filepath([DIRPATH.INPUT_DIR, details["input"]])
                 logger.debug(f"Generated DATA input path: {path}")
-                converted_path = cls._make_relative_path(path)
-                logger.debug(f"Converted DATA input path: {converted_path}")
-                return converted_path
+                return path
         else:
             paths = [join_filepath([DIRPATH.OUTPUT_DIR, x]) for x in details["input"]]
             logger.debug(f"Generated OUTPUT input paths: {paths}")
-            converted_paths = [cls._make_relative_path(p) for p in paths]
-            logger.debug(f"Converted OUTPUT input paths: {converted_paths}")
-            return converted_paths
+            return paths
 
     @classmethod
     def output(cls, details):
         logger.debug(f"SmkUtils.output() called with output: {details.get('output')}")
         path = join_filepath([DIRPATH.OUTPUT_DIR, details["output"]])
         logger.debug(f"Generated output path: {path}")
-        converted_path = cls._make_relative_path(path)
-        logger.debug(f"Converted output path: {converted_path}")
-        return converted_path
+        return path
 
     @classmethod
     def dict2leaf(cls, root_dict: dict, path_list):

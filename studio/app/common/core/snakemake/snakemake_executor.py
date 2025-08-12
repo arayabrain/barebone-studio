@@ -30,6 +30,7 @@ from studio.app.common.core.storage.remote_storage_controller import (
     RemoteSyncAction,
     RemoteSyncLockFileUtil,
     RemoteSyncStatusFileUtil,
+    upload_experiment_wrapper,
 )
 from studio.app.common.core.utils.filepath_creater import get_pickle_file, join_filepath
 from studio.app.common.core.workflow.workflow import Edge, Node
@@ -294,12 +295,25 @@ def _snakemake_execute_batch(
             # + Expected result: s3://bucket/app/studio_data/output/1/abc/file.pkl
             # Result: MissingInputException - path duplication still occurring.
             # /tmp/snakemake_storage/s3/subscr-optinist-app-storage/app/studio_data/output/
-            # Tried 14: Fix storage prefix to include OPTINIST_DIR path from environment
+            # Tried 14:
+            # Fix storage prefix to include OPTINIST_DIR path from environment
             # s3_storage=f"{s3_prefix}://{s3_bucket_name}/{DIRPATH.DATA_DIR.lstrip("/")}"
             # SmkUtils converts:
             # /app/studio_data/output/1/abc/file.pkl -> output/1/abc/file.pkl
             # Storage prefix should point to where relative paths should be stored in S3
             # Use DIRPATH.DATA_DIR which comes from OPTINIST_DIR environment variable
+            # Result: Duplicated /app/studio_data//app/studio_data paths in S3
+            # Tried 15:
+            # Use EFS/local storage for intermediate files, avoid S3 storage system
+            # + Remove default_storage_provider and default_storage_prefix
+            # + Set shared_fs_usage=frozenset(["s3"]) to treat S3 as shared filesystem
+            # + SmkUtils.input() and output() return absolute paths directly
+            # + Upload final results to S3 after workflow completion using
+            # upload_experiment_wrapper()
+            # + Expected result: No path duplication, faster intermediate I/O,
+            # final results in S3
+            # This completely bypasses all the path duplication issues with
+            # Snakemake's S3 storage
             data_dir_path = DIRPATH.DATA_DIR.lstrip(
                 "/"
             )  # Remove leading slash for S3 path
@@ -314,11 +328,9 @@ def _snakemake_execute_batch(
             )
 
             storage_settings = StorageSettings(
-                default_storage_provider=s3_prefix,  # "s3"
-                default_storage_prefix=s3_storage,  # "s3://bucket/app/studio_data"
                 local_storage_prefix=Path("/tmp/snakemake_storage"),
                 remote_job_local_storage_prefix=Path("/tmp/snakemake_storage"),
-                shared_fs_usage=frozenset(),
+                shared_fs_usage=frozenset(["s3"]),
                 retrieve_storage=True,
                 keep_storage_local=False,
             )
@@ -438,33 +450,29 @@ def _snakemake_execute_batch(
             logger.info("=" * 60)
 
             try:
-                # Use the existing DAG API with dryrun execution settings
-                # (dryrun is controlled through ExecutionSettings, not DAGSettings)
                 logger.info("Starting dryrun validation with existing DAG")
+
+                # Prepare environment variables for dryrun (same as real execution)
+                dryrun_envvars = ["USE_AWS_BATCH", "OPTINIST_DIR"]
+                if RemoteStorageController.is_available():
+                    dryrun_envvars.extend(
+                        [
+                            "S3_DEFAULT_BUCKET_NAME",
+                            "AWS_DEFAULT_REGION",
+                            "PYTHONPATH",
+                        ]
+                    )
+                    logger.info("Using S3 storage for dryrun validation")
+                else:
+                    dryrun_envvars.extend(["EFS_MOUNT_TARGET", "TMPDIR", "TMP"])
 
                 # Execute verbose dryrun validation
                 dag_api.execute_workflow(
-                    executor="aws-batch",  # Use same executor for validation
+                    executor="dryrun",  # Use same executor for validation
                     execution_settings=ExecutionSettings(
-                        dryrun=True,  # Critical: prevents actual job submission
                         retries=0,  # No retries needed for dryrun
                         keep_going=True,  # Continue validation even if some rules fail
-                        verbose=True,  # Show verbose output
-                        printreason=True,  # Show reason for each rule execution
-                        printshellcmds=True,  # Show shell commands
-                        debug=True,  # Enable debug mode for detailed execution info
                         latency_wait=0,  # Reduce latency wait for faster dryrun
-                        ignore_incomplete=True,  # Ignore incompletes during validation
-                    ),
-                    executor_settings=ExecutorSettings(
-                        region=BATCH_CONFIG.AWS_DEFAULT_REGION,
-                        job_queue=batch_executor.get_job_queue_for_user(),
-                        job_role=BATCH_CONFIG.AWS_BATCH_JOB_ROLE,
-                    ),
-                    remote_execution_settings=RemoteExecutionSettings(
-                        container_image=batch_executor.get_container_image(),
-                        envvars=["USE_AWS_BATCH", "OPTINIST_DIR"],
-                        jobname="optinist-dryrun-{rulename}",
                     ),
                 )
 
@@ -609,13 +617,9 @@ def _snakemake_execute_batch(
                         dag_api.execute_workflow(
                             executor="aws-batch",
                             execution_settings=ExecutionSettings(
-                                dryrun=False,  # Actual execution (not dryrun)
-                                retries=3,
+                                retries=1,
                                 keep_going=False,
                                 latency_wait=300,
-                                verbose=True,  # Keep verbose output
-                                printreason=True,  # Show execution reasons
-                                printshellcmds=True,  # Show shell commands
                             ),
                             executor_settings=ExecutorSettings(
                                 region=BATCH_CONFIG.AWS_DEFAULT_REGION,
@@ -736,6 +740,44 @@ def _snakemake_execute_batch(
                         raise exec_error
                     snakemake_result = True
                     logger.info("AWS Batch workflow execution succeeded.")
+
+                    # Upload final results to S3 after successful workflow completion
+                    try:
+                        logger.info("Uploading final workflow results to S3...")
+
+                        if RemoteStorageController.is_available():
+                            # Use the existing upload wrapper with proper locking
+                            # and status tracking
+                            import asyncio
+
+                            try:
+                                asyncio.get_running_loop()
+                            except RuntimeError:
+                                # No running loop, create one
+                                asyncio.run(
+                                    upload_experiment_wrapper(
+                                        s3_bucket_name, workspace_id, unique_id
+                                    )
+                                )
+                            else:
+                                # Running loop exists, run in it
+                                asyncio.create_task(
+                                    upload_experiment_wrapper(
+                                        s3_bucket_name, workspace_id, unique_id
+                                    )
+                                )
+
+                            logger.info("Final results upload initiated to S3")
+                        else:
+                            logger.warning(
+                                "Remote storage not available, skipping S3 upload"
+                            )
+
+                    except Exception as upload_error:
+                        logger.error(
+                            f"Failed to upload final results to S3: {upload_error}"
+                        )
+                        # Don't fail the entire workflow for upload issues
                 finally:
                     # Restore AWS credentials to environment
                     if aws_access_key is not None:

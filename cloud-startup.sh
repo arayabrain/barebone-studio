@@ -50,6 +50,20 @@ echo "Database ${MYSQL_DATABASE} ready"
 cd /app
 alembic upgrade head
 
+# Initialize subscription plans
+echo "Initializing subscription plans..."
+mysql -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+    INSERT IGNORE INTO subscription_plans (id, name, price, billing_cycle, currency, status)
+    VALUES (1, 'Free', 0, 30, 840, 1), (2, 'Premium', 2999, 30, 840, 1);
+EOSQL
+
+# Initialize tax rates
+echo "Initializing tax rates..."
+mysql -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+    INSERT IGNORE INTO taxes (tax_type, tax_name, tax_rate, is_active, effective_date)
+    VALUES ('sales_tax', 'Sales Tax', 0.10, 1, CURDATE());
+EOSQL
+
 # Initialize admin user and organization
 # Only proceeds if all required environment variables are set
 # This section handles first-time setup of the application
@@ -73,6 +87,26 @@ EOSQL
             VALUES ('$INITIAL_FIREBASE_UID', 1, '$INITIAL_USER_NAME', '$INITIAL_USER_EMAIL', true);
 EOSQL
         echo "Initial admin user created successfully"
+
+        # Initialize storage usage for admin user
+        if [ ! -z "$ADMIN_STORAGE_QUOTA_BYTES" ]; then
+            echo "Initializing admin user storage quota..."
+            mysql -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+                INSERT IGNORE INTO user_storage_usage (user_id, current_usage_bytes, quota_limit_bytes)
+                VALUES (1, 0, $ADMIN_STORAGE_QUOTA_BYTES);
+EOSQL
+            echo "Admin user storage quota initialized: $ADMIN_STORAGE_QUOTA_BYTES bytes"
+        else
+            echo "ADMIN_STORAGE_QUOTA_BYTES not provided, skipping storage quota initialization"
+        fi
+
+        # Set admin user to premium plan
+        echo "Setting admin user to premium plan..."
+        mysql -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+            INSERT IGNORE INTO subscription_users (plan_id, user_id, expiration)
+            VALUES (2, 1, DATE_ADD(NOW(), INTERVAL 365 DAY));
+EOSQL
+        echo "Admin user set to premium plan"
     else
         echo "Admin user already exists, skipping creation"
     fi
