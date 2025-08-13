@@ -12,12 +12,12 @@ import {
 import { createSlice, PayloadAction, isAnyOf } from "@reduxjs/toolkit"
 
 import { isInputNodePostData } from "api/run/RunUtils"
+import { REACT_FLOW_NODE_TYPE_KEY } from "config/fileTypes.config"
 import {
   ALGO_NODE_STYLE,
   DATA_NODE_STYLE,
   INITIAL_IMAGE_ELEMENT_ID,
   INITIAL_IMAGE_ELEMENT_NAME,
-  REACT_FLOW_NODE_TYPE_KEY,
 } from "const/flowchart"
 import { uploadFile } from "store/slice/FileUploader/FileUploaderActions"
 import {
