@@ -1,13 +1,18 @@
 import argparse
-import os
 import shutil
 import tempfile
 from pathlib import Path
 
-from snakemake import snakemake
+from snakemake.api import (
+    DAGSettings,
+    DeploymentMethod,
+    DeploymentSettings,
+    OutputSettings,
+    ResourceSettings,
+    SnakemakeApi,
+    StorageSettings,
+)
 
-from studio.app.common.core.experiment.experiment import ExptOutputPathIds
-from studio.app.common.core.utils.config_handler import ConfigReader
 from studio.app.common.core.utils.filepath_creater import join_filepath
 from studio.app.dir_path import DIRPATH
 
@@ -20,7 +25,6 @@ def main(args):
         print(f"Temporary work directory created at: {temp_workdir}")
 
         config_file_path = None
-        temp_config_file_path = None
 
         if args.config is None:
             raise FileNotFoundError(
@@ -37,91 +41,50 @@ def main(args):
             if not Path(config_file_path).exists():
                 raise FileNotFoundError(f"Config file not found: {args.config}")
 
-            temp_config_file_path = join_filepath(
-                [str(temp_workdir), Path(config_file_path).name]
+            shutil.copyfile(
+                config_file_path,
+                join_filepath([str(temp_workdir), "snakemake.yaml"]),
+            )
+            print(f"Config file copied from {config_file_path} to {temp_workdir}")
+
+        # Determine deployment methods
+        deployment_methods = []
+        deployment_methods.append(DeploymentMethod.CONDA)
+
+        # Use new SnakemakeApi pattern
+        with SnakemakeApi(
+            OutputSettings(
+                verbose=True,
+                show_failed_logs=True,
+            ),
+        ) as snakemake_api:
+            workflow_api = snakemake_api.workflow(
+                snakefile=Path(DIRPATH.SNAKEMAKE_FILEPATH),
+                workdir=temp_workdir,
+                storage_settings=StorageSettings(),
+                resource_settings=ResourceSettings(cores=args.cores),
+                deployment_settings=DeploymentSettings(
+                    deployment_method=deployment_methods,
+                    conda_frontend="conda",
+                    conda_prefix=DIRPATH.SNAKEMAKE_CONDA_ENV_DIR,
+                ),
             )
 
-            shutil.copyfile(config_file_path, temp_config_file_path)
-
-            print(
-                f"Config file copied from {config_file_path} to {temp_config_file_path}"
+            dag_settings = DAGSettings(
+                forceall=args.forceall,
             )
 
-        # Main snakemake execution
-        snakemake_args = {
-            "snakefile": DIRPATH.SNAKEMAKE_FILEPATH,
-            "forceall": args.forceall,
-            "cores": args.cores,
-            "use_conda": args.use_conda,
-            "workdir": f"{os.path.dirname(DIRPATH.STUDIO_DIR)}",
-        }
+            dag_api = workflow_api.dag(
+                dag_settings=dag_settings,
+            )
 
-        if config_file_path is not None:
-            snakemake_args["configfiles"] = [str(temp_config_file_path)]
-
-        if args.use_conda:
-            snakemake_args["conda_prefix"] = DIRPATH.SNAKEMAKE_CONDA_ENV_DIR
-
-        print(f"Snakemake arguments: {snakemake_args}")
-
-        try:
-            result = snakemake(**snakemake_args)
-
-            if result:
-                print("snakemake execution succeeded.")
-                # Copy config file back to output directory for future reference
-                try:
-                    # Find the output directory from the last_output in config
-                    config_data = ConfigReader.read(config_file_path)
-                    if config_data and "last_output" in config_data:
-                        # Extract the last output path
-                        last_output_path = config_data["last_output"][0]
-                        # Construct absolute path and extract directory
-                        absolute_output_path = join_filepath(
-                            [DIRPATH.OUTPUT_DIR, last_output_path]
-                        )
-                        # Extract the workspace_id and unique_id
-                        path_ids = ExptOutputPathIds(
-                            os.path.dirname(absolute_output_path)
-                        )
-
-                        # Create the output directory path to copy the config file
-                        output_config_dir = join_filepath(
-                            [
-                                DIRPATH.OUTPUT_DIR,
-                                path_ids.workspace_id,
-                                path_ids.unique_id,
-                            ]
-                        )
-                        os.makedirs(output_config_dir, exist_ok=True)
-                        output_config_path = join_filepath(
-                            [output_config_dir, DIRPATH.SNAKEMAKE_CONFIG_YML]
-                        )
-
-                        shutil.copyfile(config_file_path, output_config_path)
-                        print(
-                            f"Config copied to output directory: {output_config_path}"
-                        )
-                    else:
-                        print(
-                            "Warning: No output path found in config, "
-                            "skipping config copy"
-                        )
-                except Exception as e:
-                    print(f"Warning: Failed to copy config to output directory: {e}")
-            else:
-                print("snakemake execution failed.")
-                print("Check for errors above in the snakemake output.")
-
-        except Exception as e:
-            print(f"snakemake execution failed with exception: {e}")
-            import traceback
-
-            print("Full traceback:")
-            traceback.print_exc()
-            result = False
-
-        return result
+            try:
+                dag_api.execute_workflow()
+                print("Workflow execution completed successfully")
+                return True
+            except Exception as e:
+                print(f"Workflow execution failed: {e}")
+                return False
 
 
 if __name__ == "__main__":
