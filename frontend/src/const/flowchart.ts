@@ -1,5 +1,7 @@
 import { CSSProperties } from "react"
 
+import { REACT_FLOW_NODE_TYPE_KEY } from "config/fileTypes.config"
+
 export const INITIAL_IMAGE_ELEMENT_ID = "input_0"
 export const INITIAL_IMAGE_ELEMENT_NAME = "NoName"
 export const NANO_ID_LENGTH = 10
@@ -26,16 +28,8 @@ export const HANDLE_STYLE: CSSProperties = {
   top: 15,
 }
 
-export const REACT_FLOW_NODE_TYPE_KEY = {
-  ImageFileNode: "ImageFileNode",
-  CsvFileNode: "CsvFileNode",
-  HDF5FileNode: "HDF5FileNode",
-  FluoFileNode: "FluoFileNode",
-  AlgorithmNode: "AlgorithmNode",
-  BehaviorFileNode: "BehaviorFileNode",
-  MatlabFileNode: "MatlabFileNode",
-  MicroscopeFileNode: "MicroscopeFileNode",
-} as const
+// Re-export for backward compatibility
+export { REACT_FLOW_NODE_TYPE_KEY }
 
 export type REACT_FLOW_NODE_TYPE =
   (typeof REACT_FLOW_NODE_TYPE_KEY)[keyof typeof REACT_FLOW_NODE_TYPE_KEY]

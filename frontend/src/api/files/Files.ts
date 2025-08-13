@@ -1,18 +1,12 @@
 import { AxiosProgressEvent } from "axios"
 
+import { FILE_TREE_TYPE_SET as CONFIG_FILE_TREE_TYPE_SET } from "config/fileTypes.config"
 import { BASE_URL } from "const/API"
 import axios from "utils/axios"
 
-export const FILE_TREE_TYPE_SET = {
-  IMAGE: "image",
-  CSV: "csv",
-  HDF5: "hdf5",
-  FLUO: "fluo",
-  BEHAVIOR: "behavior",
-  MATLAB: "matlab",
-  MICROSCOPE: "microscope",
-  ALL: "all",
-} as const
+// Import from config to maintain single source of truth
+
+export const FILE_TREE_TYPE_SET = CONFIG_FILE_TREE_TYPE_SET
 
 export type FILE_TREE_TYPE =
   (typeof FILE_TREE_TYPE_SET)[keyof typeof FILE_TREE_TYPE_SET]
