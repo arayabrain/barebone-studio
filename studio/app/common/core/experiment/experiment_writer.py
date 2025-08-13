@@ -189,7 +189,7 @@ class ExptDataWriter:
 
         return ExptConfigReader.read(self.workspace_id, self.unique_id)
 
-    def copy_data(self, new_unique_id: str) -> bool:
+    def copy_data(self, new_unique_id: str, new_name: str) -> bool:
         logger = AppLogger.get_logger()
 
         try:
@@ -206,7 +206,7 @@ class ExptDataWriter:
 
             # Update experiment configuration and unique IDs
             if not self.__copy_data_update_experiment_config_name(
-                self.workspace_id, new_unique_id
+                self.workspace_id, new_unique_id, new_name
             ):
                 logger.error("Failed to update experiment.yml after copying.")
                 return False
@@ -365,15 +365,13 @@ class ExptDataWriter:
             return obj
 
     def __copy_data_update_experiment_config_name(
-        self, workspace_id: str, unique_id: str
+        self, workspace_id: str, unique_id: str, new_name: str
     ) -> bool:
         logger = AppLogger.get_logger()
 
         try:
-            config = ExptConfigReader.read(workspace_id, unique_id)
-
             # Overwrite experiment config
-            update_params = {"name": f"{config.name}_copy"}
+            update_params = {"name": new_name}
             ExptConfigWriter(workspace_id, unique_id).overwrite(update_params)
 
             logger.info(f"Updated experiment.yml: {workspace_id}/{unique_id}")
