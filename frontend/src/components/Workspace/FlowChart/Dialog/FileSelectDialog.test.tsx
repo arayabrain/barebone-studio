@@ -38,7 +38,7 @@ describe("TreeItemLabel Component", () => {
       <Provider store={store}>
         <TreeItemLabel
           multiSelect={true}
-          fileType="image"
+          fileType="all"
           shape={[100, 100]}
           label="testFile"
           isDir={false}
@@ -71,7 +71,7 @@ describe("TreeItemLabel Component", () => {
       <Provider store={store}>
         <TreeItemLabel
           multiSelect={true}
-          fileType="image"
+          fileType="all"
           shape={[100, 100]}
           label="testFile"
           isDir={false}
@@ -98,7 +98,7 @@ describe("TreeItemLabel Component", () => {
       <Provider store={store}>
         <TreeItemLabel
           multiSelect={true}
-          fileType="image"
+          fileType="all"
           shape={[100, 100]}
           label="testFile"
           isDir={false}
@@ -118,7 +118,7 @@ describe("TreeItemLabel Component", () => {
       <Provider store={store}>
         <TreeItemLabel
           multiSelect={true}
-          fileType="image"
+          fileType="all"
           shape={[100, 100]}
           label="testFile"
           isDir={false}
