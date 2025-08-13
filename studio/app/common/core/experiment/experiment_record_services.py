@@ -67,6 +67,7 @@ class ExperimentRecordService:
         workspace_id: str,
         unique_id: str,
         new_unique_id: str,
+        _new_name: str,
         auto_commit: bool = False,
     ):
         try:
