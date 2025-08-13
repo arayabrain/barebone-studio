@@ -81,7 +81,7 @@ rules:
     matPath: null
     path: suite2p/suite2p_roi
   input_6m0vw0sv6s:
-    input: 1/sample_hdf5.hdf5
+    input: 1/sample_hdf5.h5
     return_arg: input_6m0vw0sv6s
     params: {}
     output: 1/tutorial4/input_6m0vw0sv6s/sample_hdf5.pkl
@@ -90,24 +90,14 @@ rules:
     hdf5Path: data/image
     matPath: null
     path: null
-  input_d1fy5k1p6f:
-    input: 1/sample_hdf5.hdf5
-    return_arg: input_d1fy5k1p6f
-    params: {}
-    output: 1/tutorial4/input_d1fy5k1p6f/sample_hdf5.pkl
-    type: hdf5
-    nwbfile: ref:nwb_template
-    hdf5Path: data/behavior
-    matPath: null
-    path: null
   cca_e9mbfm8vck:
     input:
     - 1/tutorial4/suite2p_roi_yvqcdmsg0r/suite2p_roi.pkl
-    - 1/tutorial4/input_d1fy5k1p6f/sample_hdf5.pkl
+    - 1/tutorial4/input_cpmiuzyroh/sample_matlab.pkl
     return_arg:
       fluorescence@suite2p_roi_yvqcdmsg0r: neural_data
       iscell@suite2p_roi_yvqcdmsg0r: iscell
-      input_d1fy5k1p6f@input_d1fy5k1p6f: behaviors_data
+      input_cpmiuzyroh@input_cpmiuzyroh: behaviors_data
     params:
       I/O:
         target_index:
@@ -134,6 +124,16 @@ rules:
     hdf5Path: null
     matPath: null
     path: optinist/dimension_reduction/cca
+  input_cpmiuzyroh:
+    input: 2/sample_matlab.mat
+    return_arg: input_cpmiuzyroh
+    params: {}
+    output: 1/tutorial4/input_cpmiuzyroh/sample_matlab.pkl
+    type: matlab
+    nwbfile: ref:nwb_template
+    hdf5Path: null
+    matPath: data/behavior
+    path: null
 last_output:
 - 1/tutorial4/cca_e9mbfm8vck/cca.pkl
 nwb_template:

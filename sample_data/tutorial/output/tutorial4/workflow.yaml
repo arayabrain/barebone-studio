@@ -246,9 +246,9 @@ nodeDict:
     id: input_6m0vw0sv6s
     type: HDF5FileNode
     data:
-      label: sample_hdf5.hdf5
+      label: sample_hdf5.h5
       param: {}
-      path: sample_hdf5.hdf5
+      path: sample_hdf5.h5
       type: input
       fileType: hdf5
       hdf5Path: data/image
@@ -261,33 +261,7 @@ nodeDict:
         roi: []
     position:
       x: 41
-      y: 148
-    style:
-      border: '1px solid #777'
-      height: 140
-      padding: null
-      width: 250
-      borderRadius: null
-  input_d1fy5k1p6f:
-    id: input_d1fy5k1p6f
-    type: HDF5FileNode
-    data:
-      label: sample_hdf5.hdf5
-      param: {}
-      path: sample_hdf5.hdf5
-      type: input
-      fileType: hdf5
-      hdf5Path: data/behavior
-      matPath: null
-      dataFilterParam:
-        dim1: []
-        roi: []
-      draftDataFilterParam:
-        dim1: []
-        roi: []
-    position:
-      x: 41
-      y: 339
+      y: 146
     style:
       border: '1px solid #777'
       height: 140
@@ -379,6 +353,32 @@ nodeDict:
       padding: 0
       width: 250
       borderRadius: 0
+  input_cpmiuzyroh:
+    id: input_cpmiuzyroh
+    type: MatlabFileNode
+    data:
+      label: sample_matlab.mat
+      param: {}
+      path: sample_matlab.mat
+      type: input
+      fileType: matlab
+      hdf5Path: null
+      matPath: data/behavior
+      dataFilterParam:
+        dim1: []
+        roi: []
+      draftDataFilterParam:
+        dim1: []
+        roi: []
+    position:
+      x: 44
+      y: 359
+    style:
+      border: '1px solid #777'
+      height: 140
+      padding: null
+      width: 250
+      borderRadius: null
 edgeDict:
   ? reactflow__edge-suite2p_registration_xq4pexs8o7suite2p_registration_xq4pexs8o7--ops--Suite2pData-suite2p_roi_yvqcdmsg0rsuite2p_roi_yvqcdmsg0r--ops--Suite2pData
   : id: reactflow__edge-suite2p_registration_xq4pexs8o7suite2p_registration_xq4pexs8o7--ops--Suite2pData-suite2p_roi_yvqcdmsg0rsuite2p_roi_yvqcdmsg0r--ops--Suite2pData
@@ -450,12 +450,12 @@ edgeDict:
       padding: null
       width: 5
       borderRadius: null
-  ? reactflow__edge-input_d1fy5k1p6finput_d1fy5k1p6f--hdf5--HDF5Data-cca_e9mbfm8vckcca_e9mbfm8vck--behaviors_data--BehaviorData
-  : id: reactflow__edge-input_d1fy5k1p6finput_d1fy5k1p6f--hdf5--HDF5Data-cca_e9mbfm8vckcca_e9mbfm8vck--behaviors_data--BehaviorData
+  ? reactflow__edge-input_cpmiuzyrohinput_cpmiuzyroh--matlab--MatlabData-cca_e9mbfm8vckcca_e9mbfm8vck--behaviors_data--BehaviorData
+  : id: reactflow__edge-input_cpmiuzyrohinput_cpmiuzyroh--matlab--MatlabData-cca_e9mbfm8vckcca_e9mbfm8vck--behaviors_data--BehaviorData
     type: buttonedge
     animated: false
-    source: input_d1fy5k1p6f
-    sourceHandle: input_d1fy5k1p6f--hdf5--HDF5Data
+    source: input_cpmiuzyroh
+    sourceHandle: input_cpmiuzyroh--matlab--MatlabData
     target: cca_e9mbfm8vck
     targetHandle: cca_e9mbfm8vck--behaviors_data--BehaviorData
     style:
