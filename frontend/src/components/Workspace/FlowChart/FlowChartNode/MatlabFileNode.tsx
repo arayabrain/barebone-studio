@@ -330,7 +330,7 @@ function useMatlabTree(
   const workspaceId = useSelector(selectCurrentWorkspaceId)
   useEffect(() => {
     if (workspaceId && !isLoading && filePath) {
-      dispatch(getMatlabTree({ path: filePath, workspaceId }))
+      dispatch(getMatlabTree({ path: filePath as string, workspaceId }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, filePath])
