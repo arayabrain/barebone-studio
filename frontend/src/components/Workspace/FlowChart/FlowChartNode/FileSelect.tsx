@@ -19,6 +19,7 @@ import { FILE_TREE_TYPE, FILE_TREE_TYPE_SET } from "api/files/Files"
 import { DialogContext } from "components/Workspace/FlowChart/Dialog/DialogContext"
 import { ParamSettingDialog } from "components/Workspace/FlowChart/FlowChartNode/CsvFileNode"
 import { LinearProgressWithLabel } from "components/Workspace/FlowChart/FlowChartNode/LinerProgressWithLabel"
+import { FileNodeFactory } from "factories/FileNodeFactory"
 import { getFilesTree } from "store/slice/FilesTree/FilesTreeAction"
 import { useFileUploader } from "store/slice/FileUploader/FileUploaderHook"
 import { getLabelByPath } from "store/slice/FlowElement/FlowElementUtils"
@@ -74,7 +75,7 @@ export const FileSelect = memo(function FileSelect({
         filePath={filePath}
         onSelectFile={onChangeFilePath}
         onUploadFile={onUploadFileHandle}
-        fileTreeType={fileType}
+        fileTreeType={FileNodeFactory.getTreeType(fileType) as FILE_TREE_TYPE}
         selectButtonLabel={<ChecklistRtlIcon />}
         uploadViaUrl={<AddLinkIcon />}
         nodeId={nodeId}

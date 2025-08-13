@@ -219,7 +219,7 @@ function useHDF5Tree(
   const workspaceId = useSelector(selectCurrentWorkspaceId)
   useEffect(() => {
     if (workspaceId && !isLoading && filePath) {
-      dispatch(getHDF5Tree({ path: filePath, workspaceId }))
+      dispatch(getHDF5Tree({ path: filePath as string, workspaceId }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, filePath])
