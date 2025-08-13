@@ -56,11 +56,16 @@ class ExperimentService:
         created_unique_ids = []
         try:
             for unique_id in copyItem.uidList:
+                config = ExptConfigReader.read(workspace_id, unique_id)
                 new_unique_id = WorkflowRunner.create_workflow_unique_id()
-                ExptDataWriter(
+                new_name = f"{config.name}_copy"
+                success = ExptDataWriter(
                     workspace_id,
                     unique_id,
-                ).copy_data(new_unique_id)
+                ).copy_data(new_unique_id, new_name)
+
+                if not success:
+                    raise Exception(f"Failed to copy data for unique_id: {unique_id}")
 
                 if ExperimentRecordService.is_available():
                     ExperimentRecordService.copy_record(
@@ -68,6 +73,7 @@ class ExperimentService:
                         workspace_id,
                         unique_id,
                         new_unique_id,
+                        new_name,
                         auto_commit=True,
                     )
 
