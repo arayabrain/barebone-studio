@@ -3,18 +3,16 @@ from glob import glob
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy.exc import NoResultFound
-from sqlmodel import Session, delete
+from sqlmodel import Session
 
 from studio.app.common.core.experiment.experiment import ExptConfig
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
+from studio.app.common.core.experiment.experiment_record_services import (
+    ExperimentRecordService,
+)
 from studio.app.common.core.experiment.experiment_writer import ExptDataWriter
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.workflow.workflow_runner import WorkflowRunner
-from studio.app.common.core.workspace.workspace_data_capacity_services import (
-    WorkspaceDataCapacityService,
-)
-from studio.app.common.models.experiment import ExperimentRecord
 from studio.app.common.schemas.experiment import CopyItem
 from studio.app.const import DATE_FORMAT
 
@@ -46,42 +44,36 @@ class ExperimentService:
         result = ExptDataWriter(workspace_id, unique_id).delete_data()
 
         # Delete experiment database record
-        if WorkspaceDataCapacityService.is_available():
-            cls._delete_experiment_db(db, workspace_id, unique_id, auto_commit)
+        if ExperimentRecordService.is_available():
+            ExperimentRecordService.delete_record(
+                db, workspace_id, unique_id, auto_commit
+            )
 
         return result
-
-    @classmethod
-    def _delete_experiment_db(
-        cls, db: Session, workspace_id: str, unique_id: str, auto_commit: bool = False
-    ):
-        db.execute(
-            delete(ExperimentRecord).where(
-                ExperimentRecord.workspace_id == workspace_id,
-                ExperimentRecord.uid == unique_id,
-            )
-        )
-
-        if auto_commit:
-            db.commit()
 
     @classmethod
     def copy_experiment(cls, db: Session, workspace_id: int, copyItem: CopyItem):
         created_unique_ids = []
         try:
             for unique_id in copyItem.uidList:
+                config = ExptConfigReader.read(workspace_id, unique_id)
                 new_unique_id = WorkflowRunner.create_workflow_unique_id()
-                ExptDataWriter(
+                new_name = f"{config.name}_copy"
+                success = ExptDataWriter(
                     workspace_id,
                     unique_id,
-                ).copy_data(new_unique_id)
+                ).copy_data(new_unique_id, new_name)
 
-                if WorkspaceDataCapacityService.is_available():
-                    cls._copy_experiment_db(
+                if not success:
+                    raise Exception(f"Failed to copy data for unique_id: {unique_id}")
+
+                if ExperimentRecordService.is_available():
+                    ExperimentRecordService.copy_record(
                         db,
                         workspace_id,
                         unique_id,
                         new_unique_id,
+                        new_name,
                         auto_commit=True,
                     )
 
@@ -107,36 +99,4 @@ class ExperimentService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to copy record. created files have been removed.",
-            )
-
-    @classmethod
-    def _copy_experiment_db(
-        cls,
-        db: Session,
-        workspace_id: str,
-        unique_id: str,
-        new_unique_id: str,
-        auto_commit: bool = False,
-    ):
-        try:
-            exp = (
-                db.query(ExperimentRecord)
-                .filter(
-                    ExperimentRecord.workspace_id == workspace_id,
-                    ExperimentRecord.uid == unique_id,
-                )
-                .one()
-            )
-            new_exp = ExperimentRecord(
-                workspace_id=workspace_id,
-                uid=new_unique_id,
-                data_usage=exp.data_usage,
-            )
-            db.add(new_exp)
-            if auto_commit:
-                db.commit()
-        except NoResultFound:
-            # If it fails roll back the transaction
-            logger.error(
-                f"Experiment {unique_id} not found in workspace {workspace_id}"
             )

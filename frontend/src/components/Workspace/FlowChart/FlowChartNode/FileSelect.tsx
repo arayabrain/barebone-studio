@@ -247,12 +247,11 @@ export const FileSelectImple = memo(function FileSelectImple({
         {fileTreeType === FILE_TREE_TYPE_SET.CSV && !!filePath && !!nodeId && (
           <Tooltip title={"Settings"}>
             <span>
-              <IconButton disabled={!!isPending}>
-                <ParamSettingDialog
-                  nodeId={nodeId}
-                  filePath={filePath as string}
-                />
-              </IconButton>
+              <ParamSettingDialog
+                nodeId={nodeId}
+                filePath={filePath as string}
+                disabled={!!isPending}
+              />
             </span>
           </Tooltip>
         )}

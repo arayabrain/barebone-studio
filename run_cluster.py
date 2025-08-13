@@ -43,7 +43,7 @@ def main(args):
 
             shutil.copyfile(
                 config_file_path,
-                join_filepath([str(temp_workdir), str(Path(config_file_path).name)]),
+                join_filepath([str(temp_workdir), "snakemake.yaml"]),
             )
             print(f"Config file copied from {config_file_path} to {temp_workdir}")
 
@@ -90,12 +90,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="optinist")
     parser.add_argument("--cores", type=int, default=2)
-    parser.add_argument(  # Default true, use --no-forceall to disable forceall
-        "--forceall", default=True, action=argparse.BooleanOptionalAction
-    )
-    parser.add_argument(  # Default true, use --no-use_conda to disable conda usage
-        "--use_conda", default=True, action=argparse.BooleanOptionalAction
-    )
     parser.add_argument(  # Default true, use --no-forceall to disable forceall
         "--forceall", default=True, action=argparse.BooleanOptionalAction
     )
