@@ -99,11 +99,13 @@ const CsvFileNodeImple = memo(function CsvFileNodeImple({
 
 interface ParamSettingDialogProps extends NodeIdProps {
   filePath: string
+  disabled?: boolean
 }
 
 export const ParamSettingDialog = memo(function ParamSettingDialog({
   nodeId,
   filePath,
+  disabled = false,
 }: ParamSettingDialogProps) {
   const [open, setOpen] = useState(false)
   // OK時のみStoreに反映させるため一時的な値をuseStateで保持しておく。
@@ -135,8 +137,9 @@ export const ParamSettingDialog = memo(function ParamSettingDialog({
     <>
       <IconButton
         onClick={() => setOpen(true)}
-        sx={{ padding: 0 }}
         color={"primary"}
+        disabled={disabled}
+        size="small"
       >
         <SettingsIcon />
       </IconButton>
