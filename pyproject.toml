@@ -16,6 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Operating System :: POSIX :: Linux",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: MacOS :: MacOS X",
@@ -49,7 +50,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 fastapi = "0.104.*"
 uvicorn = "0.24.*"
 numpy = "1.24.3"
@@ -85,6 +86,7 @@ matplotlib = "3.7.*"
 concurrent-log-handler = "^0.9.25"
 numpydoc = "*"
 yapf = "*"
+setuptools = "<79"
 
 [tool.poetry.group.dev]
 optional = true

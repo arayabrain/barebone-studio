@@ -2,10 +2,13 @@
 dependencies:
   - python=3.9
   - pip
+  - h5py>=3.8.0
   - pip:
     # - pandas
     # - argparse
     # - joblib
     - numpy==1.23.*
+    - pandas==1.5.*
     - scipy==1.9.*
     - scikit-image==0.19.*
+    - matplotlib
