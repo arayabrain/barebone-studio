@@ -85,6 +85,8 @@ matplotlib = "3.7.*"
 concurrent-log-handler = "^0.9.25"
 numpydoc = "*"
 yapf = "*"
+dask = "*"
+
 
 [tool.poetry.group.dev]
 optional = true
