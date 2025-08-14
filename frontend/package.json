@@ -87,7 +87,7 @@
     "@babel/core": "^7.23.5",
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@babel/plugin-transform-private-property-in-object": "^7.23.3",
-    "@babel/runtime": "^7.23.2",
+    "@babel/runtime": "^7.26.10",
     "@types/lodash": "^4.17.16",
     "@types/plotly.js": "^2.12.30",
     "@types/react-redux": "^7.1.30",
