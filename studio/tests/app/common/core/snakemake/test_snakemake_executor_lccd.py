@@ -32,8 +32,9 @@ node_2nd_node_label = "pca"
 smk_param = SmkParam(
     use_conda=True,
     cores=2,
-    forcetargets=True,
-    lock=False,
+    forceall=True,
+    # forcetargets=True,
+    # lock=False,
 )
 
 shutil.copytree(

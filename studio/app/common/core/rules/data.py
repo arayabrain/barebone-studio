@@ -38,8 +38,7 @@ def main():
         logger.info(f"Reading rule config for: {snakemake.params.name}")
         rule_config = RuleConfigReader.read(snakemake.params.name)
 
-        logger.info(f"Resolving NWB file reference...")
-        rule_config = SmkUtils.resolve_nwbfile_reference(rule_config)
+        rule_config = SmkUtils.resolve_nwbfile_reference(rule_config, snakemake.config)
 
         if NodeTypeUtil.check_nodetype_from_filetype(rule_config.type) == NodeType.DATA:
             if rule_config.type in [FILETYPE.IMAGE]:

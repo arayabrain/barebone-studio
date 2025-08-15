@@ -22,6 +22,9 @@ from snakemake_executor_plugin_aws_batch import ExecutorSettings
 
 from studio.app.common.core.cloud_batch.batch_config import BATCH_CONFIG
 from studio.app.common.core.cloud_batch.batch_utils import BatchDebug, BatchUtils
+from studio.app.common.core.experiment.experiment_record_services import (
+    ExperimentRecordService,
+)
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.snakemake.smk import ForceRun, SmkParam
 from studio.app.common.core.snakemake.smk_status_logger import SmkStatusLogger
@@ -929,6 +932,12 @@ def _post_process_workflow(workspace_id: str, unique_id: str, result: bool = Fal
     except RuntimeError:
         # No running loop, safe to create a new one
         asyncio.run(WorkflowResult(workspace_id, unique_id).observe_overall())
+
+    # Update experiment database record
+    if ExperimentRecordService.is_available():
+        ExperimentRecordService.regist_record_on_workflow_completed(
+            workspace_id, unique_id
+        )
 
     # Data usage calculation
     WorkspaceDataCapacityService.update_experiment_data_usage(workspace_id, unique_id)

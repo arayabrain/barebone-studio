@@ -27,8 +27,9 @@ rule_config = {
 smk_config = {
     "use_conda": False,
     "cores": 2,
-    "forcetargets": True,
-    "lock": False,
+    "forceall": True,
+    # "forcetargets": True,
+    # "lock": False,
 }
 
 

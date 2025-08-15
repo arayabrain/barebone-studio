@@ -7,7 +7,6 @@ RUN apt-get --allow-releaseinfo-change update && \
     apt-get install --no-install-recommends -y git curl
 
 # Install conda & packages
-# install conda & packages
 RUN apt-get install --no-install-recommends -y gcc g++ clang libgl1 libgl1-mesa-dev libopencv-dev && \
     apt-get autoremove -y && apt-get clean
 

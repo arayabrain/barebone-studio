@@ -96,7 +96,29 @@ class WorkspaceDataCapacityService:
             db.commit()
 
     @classmethod
-    def recalculate_workspace_data_capacity(cls, db: Session, workspace_id: str):
+    def sync_workspace_data_capacity(
+        cls, db: Session, workspace_id: str, delete_existing: bool = False
+    ):
+        """
+        Sync workspace data usage and recalculate data capacity
+        This is a convenience method that combines update_workspace_data_usage
+        and recalculate_workspace_data_capacity
+
+        Args:
+            db: Database session
+            workspace_id: The workspace ID to sync
+            delete_existing: If True, delete all existing records
+              before syncing (default: False)
+        """
+        cls.update_workspace_data_usage(db, workspace_id)
+        cls.recalculate_workspace_data_capacity(
+            db, workspace_id, delete_existing=delete_existing
+        )
+
+    @classmethod
+    def recalculate_workspace_data_capacity(
+        cls, db: Session, workspace_id: str, delete_existing: bool = False
+    ):
         folder = join_filepath([DIRPATH.OUTPUT_DIR, workspace_id])
         if not os.path.exists(folder):
             logger.error(f"'{folder}' does not exist")
@@ -123,12 +145,41 @@ class WorkspaceDataCapacityService:
                 )
 
         if cls.is_available():
-            db.execute(
-                delete(ExperimentRecord).where(
-                    ExperimentRecord.workspace_id == workspace_id
+            if delete_existing:
+                # Delete all existing records and bulk insert new ones
+                db.execute(
+                    delete(ExperimentRecord).where(
+                        ExperimentRecord.workspace_id == workspace_id
+                    )
                 )
-            )
-            db.bulk_save_objects(exp_records)
+                db.bulk_save_objects(exp_records)
+                logger.info(
+                    f"Deleted and recreated {len(exp_records)} experiment records "
+                    f"for workspace [{workspace_id}]"
+                )
+            else:
+                # Upsert: Update existing records or insert new ones
+                for exp_record in exp_records:
+                    try:
+                        existing_record = (
+                            db.query(ExperimentRecord)
+                            .filter(
+                                ExperimentRecord.workspace_id
+                                == exp_record.workspace_id,
+                                ExperimentRecord.uid == exp_record.uid,
+                            )
+                            .one()
+                        )
+                        # Update only data_usage field
+                        existing_record.data_usage = exp_record.data_usage
+                    except NoResultFound:
+                        # Insert new record if it doesn't exist
+                        db.add(exp_record)
+
+                logger.info(
+                    f"Updated/inserted {len(exp_records)} experiment records "
+                    f"for workspace [{workspace_id}]"
+                )
 
         logger.info(
             "Workspace capacity recalculation succeeded. "
