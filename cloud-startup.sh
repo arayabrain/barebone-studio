@@ -21,7 +21,7 @@ echo "DB_NAME: ${MYSQL_DATABASE}"
 # Tries 30 times with 2 second intervals (total 60 seconds timeout)
 max_tries=30
 counter=0
-until mysql --ssl-mode=DISABLED -h "${MYSQL_SERVER}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e 'SELECT 1;'
+until mysql --skip-ssl -h "${MYSQL_SERVER}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e 'SELECT 1;'
 do
     sleep 2
     [[ counter -eq $max_tries ]] && echo "Failed to connect to Database" && exit 1
@@ -33,12 +33,12 @@ echo 'Database connection successful'
 
 # Create database if it doesn't exist
 # This ensures the application's database exists before proceeding
-mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" <<-EOSQL
+mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" <<-EOSQL
     CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
     USE ${MYSQL_DATABASE};
 EOSQL
 
-if ! mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -e "USE ${MYSQL_DATABASE}"; then
+if ! mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -e "USE ${MYSQL_DATABASE}"; then
     echo "Failed to create/access database ${MYSQL_DATABASE}"
     exit 1
 fi
@@ -52,14 +52,14 @@ alembic upgrade head
 
 # Initialize subscription plans
 echo "Initializing subscription plans..."
-mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
     INSERT IGNORE INTO subscription_plans (id, name, price, billing_cycle, currency, status)
     VALUES (1, 'Free', 0, 30, 840, 1), (2, 'Premium', 2999, 30, 840, 1);
 EOSQL
 
 # Initialize tax rates
 echo "Initializing tax rates..."
-mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
     INSERT IGNORE INTO taxes (tax_type, tax_name, tax_rate, is_active, effective_date)
     VALUES ('sales_tax', 'Sales Tax', 0.10, 1, CURDATE());
 EOSQL
@@ -70,19 +70,19 @@ EOSQL
 if [ ! -z "$INITIAL_FIREBASE_UID" ] && [ ! -z "$INITIAL_USER_NAME" ] && [ ! -z "$INITIAL_USER_EMAIL" ]; then
     echo "Checking for existing admin user..."
     # Check if user already exists to prevent duplicate creation
-    USER_EXISTS=$(mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -N -s -e \
+    USER_EXISTS=$(mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -N -s -e \
         "SELECT COUNT(*) FROM ${MYSQL_DATABASE}.users WHERE uid='$INITIAL_FIREBASE_UID';")
 
     if [ "$USER_EXISTS" -eq "0" ]; then
         # Create default organization first (required due to foreign key constraint)
         echo "Creating default organization..."
-        mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+        mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
             INSERT IGNORE INTO organization (id, name) VALUES (1, 'Default Organization');
 EOSQL
 
         # Create the initial admin user
         echo "Creating initial admin user..."
-        mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+        mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
             INSERT INTO users (uid, organization_id, name, email, active)
             VALUES ('$INITIAL_FIREBASE_UID', 1, '$INITIAL_USER_NAME', '$INITIAL_USER_EMAIL', true);
 EOSQL
@@ -91,7 +91,7 @@ EOSQL
         # Initialize storage usage for admin user
         if [ ! -z "$ADMIN_STORAGE_QUOTA_BYTES" ]; then
             echo "Initializing admin user storage quota..."
-            mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+            mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
                 INSERT IGNORE INTO user_storage_usage (user_id, current_usage_bytes, quota_limit_bytes)
                 VALUES (1, 0, $ADMIN_STORAGE_QUOTA_BYTES);
 EOSQL
@@ -102,7 +102,7 @@ EOSQL
 
         # Set admin user to premium plan
         echo "Setting admin user to premium plan..."
-        mysql --ssl-mode=DISABLED -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
+        mysql --skip-ssl -h "$MYSQL_SERVER" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" ${MYSQL_DATABASE} <<-EOSQL
             INSERT IGNORE INTO subscription_users (plan_id, user_id, expiration)
             VALUES (2, 1, DATE_ADD(NOW(), INTERVAL 365 DAY));
 EOSQL
