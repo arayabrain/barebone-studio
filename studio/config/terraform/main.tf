@@ -472,6 +472,21 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
+# RDS Parameter Group (Custom)
+resource "aws_db_parameter_group" "main" {
+  family = "mysql8.0"
+  name   = "subscr-optinist-no-ssl"
+
+  parameter {
+    name  = "require_secure_transport"
+    value = "0"
+  }
+
+  tags = {
+    Name = "subscr-optinist-no-ssl"
+  }
+}
+
 # RDS Instance
 resource "aws_db_instance" "main" {
   identifier              = "subscr-optinist-cloud-rds"
@@ -480,7 +495,7 @@ resource "aws_db_instance" "main" {
   engine                  = "mysql"
   engine_version          = "8.0"
   instance_class          = "db.t4g.micro"
-  parameter_group_name    = "default.mysql8.0"
+  parameter_group_name    = aws_db_parameter_group.main.name
   db_name                 = var.mysql_database
   username                = var.mysql_user
   password                = var.mysql_password
@@ -511,7 +526,7 @@ resource "aws_db_instance" "batch" {
   engine                  = "mysql"
   engine_version          = "8.0"
   instance_class          = "db.t4g.micro"
-  parameter_group_name    = "default.mysql8.0"
+  parameter_group_name    = aws_db_parameter_group.main.name
   db_name                 = var.mysql_database
   username                = var.mysql_user
   password                = var.mysql_password
@@ -2031,7 +2046,7 @@ resource "aws_iam_role_policy" "ecs_task_ecr_access" {
 
 # Store AWS credentials in Secrets Manager
 resource "aws_secretsmanager_secret" "aws_credentials" {
-  name = "subscr-optinist-cloud-aws-credentials"
+  name = "subscr-optinist-cloud-aws-credentials-${formatdate("YYYYMMDD-hhmm", timestamp())}"
   description = "AWS credentials for optinist cloud user"
 }
 
@@ -2870,7 +2885,7 @@ resource "aws_s3_object" "app_setup_script" {
   bucket = aws_s3_bucket.app_storage.id
   key    = "scripts/app_setup.sh"
   source = local_file.app_setup_script.filename
-  etag   = filemd5(local_file.app_setup_script.filename)
+  etag   = local_file.app_setup_script.content_md5
 
   depends_on = [local_file.app_setup_script]
 
