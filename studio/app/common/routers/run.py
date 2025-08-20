@@ -211,7 +211,7 @@ async def batch_run(
                         node_id
                     ].type = (
                         NodeType.IMAGE
-                    )  # Node type is forced to be replaced from batch-type to normal-type.
+                    )  # Replace node type with corresponding standard node type.
                     break
             run_items.append(new_run_item)
 
