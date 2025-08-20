@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux"
 
 import { useSnackbar } from "notistack"
 
-import { PlayArrow } from "@mui/icons-material"
+import { FastForward, PlayArrow } from "@mui/icons-material"
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown"
 import BlockIcon from "@mui/icons-material/Block"
 import ReplayIcon from "@mui/icons-material/Replay"
@@ -217,7 +217,7 @@ export const RunButtons = memo(function RunButtons(
         sx={{ margin: 1 }}
         onClick={onClickBatchRun}
         disabled={runDisabled}
-        startIcon={<PlayArrow />}
+        startIcon={<FastForward />}
       >
         Batch Run
       </Button>

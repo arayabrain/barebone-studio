@@ -207,7 +207,9 @@ async def batch_run(
                     new_run_item.nodeDict[node_id].data.path = [image]
                     new_run_item.nodeDict[node_id].data.fileType = FILETYPE.IMAGE
                     new_run_item.nodeDict[node_id].data.label = image
-                    new_run_item.nodeDict[node_id].type = (
+                    new_run_item.nodeDict[
+                        node_id
+                    ].type = (
                         NodeType.IMAGE
                     )  # Node type is forced to be replaced from batch-type to normal-type.
                     break
