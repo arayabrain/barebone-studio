@@ -129,7 +129,7 @@ export const pipelineSlice = createSlice({
         },
       )
       .addMatcher(
-        isAnyOf(run.fulfilled, runByCurrentUid.fulfilled, batchRun.fulfilled),
+        isAnyOf(run.fulfilled, runByCurrentUid.fulfilled),
         (state, action) => {
           const runPostData = action.meta.arg.runPostData
           const uid = action.payload
@@ -140,10 +140,23 @@ export const pipelineSlice = createSlice({
             runPostData: { name: "", ...runPostData },
           }
           state.currentPipeline = {
-            uid: action.payload,
+            uid: uid,
           }
         },
       )
+      .addMatcher(isAnyOf(batchRun.fulfilled), (state, action) => {
+        const runPostData = action.meta.arg.runPostData
+        const uid = action.payload
+        state.run = {
+          uid,
+          status: RUN_STATUS.FINISHED,
+          runResult: getInitialRunResult({ ...runPostData }),
+          runPostData: { ...runPostData },
+        }
+        state.currentPipeline = {
+          uid: uid,
+        }
+      })
       .addMatcher(
         isAnyOf(run.rejected, runByCurrentUid.rejected, batchRun.rejected),
         (state) => {
