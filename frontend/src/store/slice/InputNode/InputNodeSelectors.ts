@@ -8,6 +8,7 @@ import {
   isMatlabInputNode,
   isMicroscopeInputNode,
   isBatchImageInputNode,
+  isBatchCsvInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import { RootState } from "store/store"
 
@@ -63,6 +64,7 @@ const generateTypedSelectors = () => {
       matlab: isMatlabInputNode,
       microscope: isMicroscopeInputNode,
       batch_image: isBatchImageInputNode,
+      batch_csv: isBatchCsvInputNode,
     }
 
   getAllFileTypeConfigs().forEach((config) => {
@@ -120,7 +122,7 @@ export const selectInputNodeParam = (nodeId: string) => (state: RootState) =>
 
 const selectCsvInputNodeParam = (nodeId: string) => (state: RootState) => {
   const inputNode = selectInputNodeById(nodeId)(state)
-  if (isCsvInputNode(inputNode)) {
+  if (isCsvInputNode(inputNode) || isBatchCsvInputNode(inputNode)) {
     return inputNode.param
   } else {
     throw new Error(`The InputNode is not CsvInputNode. (nodeId: ${nodeId})`)

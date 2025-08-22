@@ -198,13 +198,16 @@ async def batch_run(
         # Search for Batch Input Data
         # TODO: Tentatively, only BatchImageFileNode is searched.
         target_images = []
+        target_csvs = []
         for node_id, node in runItem.nodeDict.items():
             if node.type == "BatchImageFileNode":  # TODO: Needs to be constantized
                 target_images = node.data.path
-                break
+            elif node.type == "BatchCsvFileNode":  # TODO: Needs to be constantized
+                target_csvs = node.data.path
 
         # TODO: debug print
         print("========================== target_images:", target_images)
+        print("========================== target_csvs:", target_csvs)
 
         # TODO: Assertion when target_images is missing
         assert target_images, "Batch Image Files is not specified."
@@ -213,11 +216,11 @@ async def batch_run(
         for idx, image in enumerate(target_images):
             new_run_item = copy.deepcopy(runItem)
 
+            new_run_item.name = f"{new_run_item.name} ({idx})"
+
             for node_id, node in new_run_item.nodeDict.items():
                 # if node.type == NodeType.IMAGE:
                 if node.type == "BatchImageFileNode":
-                    new_run_item.name = f"{new_run_item.name} ({idx})"
-
                     new_run_item.nodeDict[node_id].data.path = [image]
                     new_run_item.nodeDict[node_id].data.fileType = FILETYPE.IMAGE
                     new_run_item.nodeDict[node_id].data.label = image
@@ -225,7 +228,16 @@ async def batch_run(
                     # Replace node type with corresponding standard node type.
                     new_run_item.nodeDict[node_id].type = NodeType.IMAGE
 
-                    break
+                elif node.type == "BatchCsvFileNode":
+                    csv = target_csvs[idx]  # TODO: Other data types must be supported.
+
+                    new_run_item.nodeDict[node_id].data.path = csv
+                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.CSV
+                    new_run_item.nodeDict[node_id].data.label = csv
+
+                    # Replace node type with corresponding standard node type.
+                    new_run_item.nodeDict[node_id].type = NodeType.CSV
+
             run_items.append(new_run_item)
 
         # TODO: debug print

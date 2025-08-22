@@ -3,6 +3,7 @@ import { NodeProps } from "reactflow"
 
 // Import all node components
 import { AlgorithmNode } from "components/Workspace/FlowChart/FlowChartNode/AlgorithmNode"
+import { BatchCsvFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchCsvFileNode"
 import { BatchImageFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchImageFileNode"
 import { BehaviorFileNode } from "components/Workspace/FlowChart/FlowChartNode/BehaviorFileNode"
 import { CsvFileNode } from "components/Workspace/FlowChart/FlowChartNode/CsvFileNode"
@@ -26,6 +27,7 @@ export const nodeComponentRegistry: Record<string, NodeComponentType> = {
   BehaviorFileNode,
   MicroscopeFileNode,
   BatchImageFileNode,
+  BatchCsvFileNode,
 }
 
 // Get component by node type name

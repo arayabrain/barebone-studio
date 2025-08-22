@@ -54,6 +54,7 @@ export const REACT_FLOW_NODE_TYPE_KEY = {
   MatlabFileNode: "MatlabFileNode",
   MicroscopeFileNode: "MicroscopeFileNode",
   BatchImageFileNode: "BatchImageFileNode",
+  BatchCsvFileNode: "BatchCsvFileNode",
 } as const
 
 // Streamlined config - nodeType references REACT_FLOW_NODE_TYPE_KEY
@@ -145,6 +146,20 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     defaultParam: {},
     treeType: "image",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchImageFileNode,
+    treeHierarchy: "Batch Data",
+  },
+  BATCH_CSV: {
+    key: "batch_csv",
+    displayName: "batchCsvData",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {
+      setHeader: null,
+      setIndex: false,
+      transpose: false,
+    },
+    treeType: "csv",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchCsvFileNode,
     treeHierarchy: "Batch Data",
   },
 } as const

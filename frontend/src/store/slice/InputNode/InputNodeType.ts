@@ -17,6 +17,7 @@ export type InputNodeType =
   | MatlabInputNode
   | MicroscopeInputNode
   | BatchImageInputNode
+  | BatchCsvInputNode
 
 interface InputNodeBaseType<
   T extends FILE_TYPE,
@@ -62,5 +63,10 @@ export interface MicroscopeInputNode
 
 export interface BatchImageInputNode
   extends InputNodeBaseType<"batch_image", Record<never, never>> {
+  selectedFilePath?: string[]
+}
+
+export interface BatchCsvInputNode
+  extends InputNodeBaseType<"batch_csv", CsvInputParamType> {
   selectedFilePath?: string[]
 }
