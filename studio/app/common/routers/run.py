@@ -179,6 +179,20 @@ async def batch_run(
     workspace_id: str, runItem: RunItem, background_tasks: BackgroundTasks
 ):
     try:
+        # ------------------------------------------------------------
+        # Save "Batch Run" Workflow
+        # ------------------------------------------------------------
+
+        # TODO: Saving to the database (experiment_record) also needs to be considered.
+        new_unique_id = WorkflowRunner.create_workflow_unique_id()
+        WorkflowRunner(
+            workspace_id, new_unique_id, runItem
+        ).finish_workflow_without_run()
+
+        # ------------------------------------------------------------
+        # Process "Batch Run"
+        # ------------------------------------------------------------
+
         run_items = []
 
         # Search for Batch Input Data
@@ -207,11 +221,10 @@ async def batch_run(
                     new_run_item.nodeDict[node_id].data.path = [image]
                     new_run_item.nodeDict[node_id].data.fileType = FILETYPE.IMAGE
                     new_run_item.nodeDict[node_id].data.label = image
-                    new_run_item.nodeDict[
-                        node_id
-                    ].type = (
-                        NodeType.IMAGE
-                    )  # Replace node type with corresponding standard node type.
+
+                    # Replace node type with corresponding standard node type.
+                    new_run_item.nodeDict[node_id].type = NodeType.IMAGE
+
                     break
             run_items.append(new_run_item)
 
@@ -228,13 +241,9 @@ async def batch_run(
                 background_tasks
             )
 
-        last_unique_id = unique_id
-
         logger.info("run snakemake")
 
-        # TODO As a temporary measure, the UID of the executed workflow is returned.
-        # Eventually, the batch workflow itself will be saved and the UID returned.
-        return last_unique_id
+        return new_unique_id
 
     except KeyError as e:
         logger.error(e, exc_info=True)
