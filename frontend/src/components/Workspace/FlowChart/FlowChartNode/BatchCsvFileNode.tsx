@@ -11,7 +11,7 @@ import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
   selectInputNodeDefined,
-  selectInputNodeSelectedFilePath,
+  selectBatchCsvInputNodeSelectedFilePath,
 } from "store/slice/InputNode/InputNodeSelectors"
 import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 import { arrayEqualityFn } from "utils/EqualityUtils"
@@ -33,11 +33,13 @@ const BatchCsvFileNodeImple = memo(function BatchCsvFileNodeImple({
 }: NodeProps) {
   const dispatch = useDispatch()
   const filePath = useSelector(
-    selectInputNodeSelectedFilePath(nodeId),
-    (a, b) =>
-      a != null && b != null && Array.isArray(a) && Array.isArray(b)
-        ? arrayEqualityFn(a, b)
-        : a === b,
+    selectBatchCsvInputNodeSelectedFilePath(nodeId),
+    (a, b) => {
+      if (Array.isArray(a) && Array.isArray(b)) {
+        return arrayEqualityFn(a, b)
+      }
+      return a === b
+    },
   )
   const onChangeFilePath = (path: string[]) => {
     dispatch(setInputNodeFilePath({ nodeId, filePath: path }))

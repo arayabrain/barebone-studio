@@ -139,10 +139,12 @@ export class FileNodeFactory {
     const config = getFileTypeConfig(fileType)
     if (!config) return `selectGeneric${suffix}`
 
-    // Capitalize first letter for function name
-    const capitalizedName =
-      config.key.charAt(0).toUpperCase() + config.key.slice(1)
-    return `select${capitalizedName}InputNode${suffix}`
+    // Convert snake_case to PascalCase (e.g., batch_csv -> BatchCsv)
+    const pascalCaseName = config.key
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join("")
+    return `select${pascalCaseName}InputNode${suffix}`
   }
 
   /**

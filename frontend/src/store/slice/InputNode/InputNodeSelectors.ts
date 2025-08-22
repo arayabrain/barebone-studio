@@ -99,6 +99,10 @@ export const selectMatlabInputNodeSelectedFilePath =
   typedSelectors.selectMatlabInputNodeSelectedFilePath
 export const selectMicroscopeInputNodeSelectedFilePath =
   typedSelectors.selectMicroscopeInputNodeSelectedFilePath
+export const selectBatchImageInputNodeSelectedFilePath =
+  typedSelectors.selectBatchImageInputNodeSelectedFilePath
+export const selectBatchCsvInputNodeSelectedFilePath =
+  typedSelectors.selectBatchCsvInputNodeSelectedFilePath
 
 // Dynamic selectors generation capability is available for future extensions via getAllFileTypeConfigs()
 
