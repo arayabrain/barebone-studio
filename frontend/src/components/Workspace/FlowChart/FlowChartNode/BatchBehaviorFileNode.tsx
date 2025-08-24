@@ -11,42 +11,40 @@ import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
   selectInputNodeDefined,
-  selectBatchCsvInputNodeSelectedFilePath,
+  selectInputNodeSelectedFilePath,
 } from "store/slice/InputNode/InputNodeSelectors"
 import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 import { arrayEqualityFn } from "utils/EqualityUtils"
 
-export const BatchCsvFileNode = memo(function BatchCsvFileNode(
+export const BatchBehaviorFileNode = memo(function BatchBehaviorFileNode(
   element: NodeProps,
 ) {
   const defined = useSelector(selectInputNodeDefined(element.id))
   if (defined) {
-    return <BatchCsvFileNodeImple {...element} />
+    return <BatchBehaviorFileNodeImple {...element} />
   } else {
     return null
   }
 })
 
-const BatchCsvFileNodeImple = memo(function BatchCsvFileNodeImple({
+const BatchBehaviorFileNodeImple = memo(function BatchBehaviorFileNodeImple({
   id: nodeId,
   selected: elementSelected,
 }: NodeProps) {
   const dispatch = useDispatch()
   const filePath = useSelector(
-    selectBatchCsvInputNodeSelectedFilePath(nodeId),
-    (a, b) => {
-      if (Array.isArray(a) && Array.isArray(b)) {
-        return arrayEqualityFn(a, b)
-      }
-      return a === b
-    },
+    selectInputNodeSelectedFilePath(nodeId),
+    (a, b) =>
+      a != null && b != null && Array.isArray(a) && Array.isArray(b)
+        ? arrayEqualityFn(a, b)
+        : a === b,
   )
   const onChangeFilePath = (path: string[]) => {
     dispatch(setInputNodeFilePath({ nodeId, filePath: path }))
   }
 
-  const returnType = "CsvData"
-  const csvColor = useHandleColor(returnType)
+  const returnType = "BehaviorData"
+  const behaviorColor = useHandleColor(returnType)
 
   const onClickDeleteIcon = () => {
     dispatch(deleteFlowNodeById(nodeId))
@@ -69,16 +67,18 @@ const BatchCsvFileNodeImple = memo(function BatchCsvFileNodeImple({
             onChangeFilePath(path)
           }
         }}
-        fileType={FILE_TYPE_SET.BATCH_CSV}
-        filePath={typeof filePath === "string" ? [filePath] : filePath || []}
+        fileType={FILE_TYPE_SET.BATCH_BEHAVIOR}
+        filePath={
+          Array.isArray(filePath) ? filePath : filePath ? [filePath] : []
+        }
       />
       <Handle
         type="source"
         position={Position.Right}
-        id={toHandleId(nodeId, "csv", returnType)}
+        id={toHandleId(nodeId, "behavior", returnType)}
         style={{
           ...HANDLE_STYLE,
-          background: csvColor,
+          background: behaviorColor,
         }}
       />
     </NodeContainer>

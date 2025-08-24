@@ -18,6 +18,11 @@ export type InputNodeType =
   | MicroscopeInputNode
   | BatchImageInputNode
   | BatchCsvInputNode
+  | BatchFluoInputNode
+  | BatchBehaviorInputNode
+  | BatchMicroscopeInputNode
+  | BatchHDF5InputNode
+  | BatchMatlabInputNode
 
 interface InputNodeBaseType<
   T extends FILE_TYPE,
@@ -69,4 +74,31 @@ export interface BatchImageInputNode
 export interface BatchCsvInputNode
   extends InputNodeBaseType<"batch_csv", CsvInputParamType> {
   selectedFilePath?: string[]
+}
+
+export interface BatchFluoInputNode
+  extends InputNodeBaseType<"batch_fluo", CsvInputParamType> {
+  selectedFilePath?: string[]
+}
+
+export interface BatchBehaviorInputNode
+  extends InputNodeBaseType<"batch_behavior", CsvInputParamType> {
+  selectedFilePath?: string[]
+}
+
+export interface BatchMicroscopeInputNode
+  extends InputNodeBaseType<"batch_microscope", Record<never, never>> {
+  selectedFilePath?: string[]
+}
+
+export interface BatchHDF5InputNode
+  extends InputNodeBaseType<"batch_hdf5", Record<never, never>> {
+  selectedFilePath?: string[]
+  hdf5Path?: string
+}
+
+export interface BatchMatlabInputNode
+  extends InputNodeBaseType<"batch_matlab", Record<never, never>> {
+  selectedFilePath?: string[]
+  matPath?: string
 }

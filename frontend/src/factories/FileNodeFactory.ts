@@ -32,15 +32,24 @@ export class FileNodeFactory {
       throw new Error(`Unsupported file type: ${fileType}`)
     }
 
-    // Map special cases
+    // Map special cases using config's stateFileType
     let actualFileType: FILE_TYPE
-    switch (fileType) {
-      case FILE_TYPE_SET.FLUO:
-      case FILE_TYPE_SET.BEHAVIOR:
-        actualFileType = FILE_TYPE_SET.CSV
-        break
-      default:
-        actualFileType = fileType
+    if (config.stateFileType) {
+      actualFileType = config.stateFileType as FILE_TYPE
+    } else {
+      // Fallback to legacy switch statement
+      switch (fileType) {
+        case FILE_TYPE_SET.FLUO:
+        case FILE_TYPE_SET.BEHAVIOR:
+          actualFileType = FILE_TYPE_SET.CSV
+          break
+        case FILE_TYPE_SET.BATCH_FLUO:
+        case FILE_TYPE_SET.BATCH_BEHAVIOR:
+          actualFileType = FILE_TYPE_SET.BATCH_CSV
+          break
+        default:
+          actualFileType = fileType
+      }
     }
 
     // Return proper typed InputNode based on fileType

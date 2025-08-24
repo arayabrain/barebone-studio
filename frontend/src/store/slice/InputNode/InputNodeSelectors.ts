@@ -9,6 +9,11 @@ import {
   isMicroscopeInputNode,
   isBatchImageInputNode,
   isBatchCsvInputNode,
+  isBatchFluoInputNode,
+  isBatchBehaviorInputNode,
+  isBatchMicroscopeInputNode,
+  isBatchHDF5InputNode,
+  isBatchMatlabInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import { RootState } from "store/store"
 
@@ -65,6 +70,11 @@ const generateTypedSelectors = () => {
       microscope: isMicroscopeInputNode,
       batch_image: isBatchImageInputNode,
       batch_csv: isBatchCsvInputNode,
+      batch_fluo: isBatchFluoInputNode,
+      batch_behavior: isBatchBehaviorInputNode,
+      batch_microscope: isBatchMicroscopeInputNode,
+      batch_hdf5: isBatchHDF5InputNode,
+      batch_matlab: isBatchMatlabInputNode,
     }
 
   getAllFileTypeConfigs().forEach((config) => {
@@ -103,13 +113,23 @@ export const selectBatchImageInputNodeSelectedFilePath =
   typedSelectors.selectBatchImageInputNodeSelectedFilePath
 export const selectBatchCsvInputNodeSelectedFilePath =
   typedSelectors.selectBatchCsvInputNodeSelectedFilePath
+export const selectBatchFluoInputNodeSelectedFilePath =
+  typedSelectors.selectBatchFluoInputNodeSelectedFilePath
+export const selectBatchBehaviorInputNodeSelectedFilePath =
+  typedSelectors.selectBatchBehaviorInputNodeSelectedFilePath
+export const selectBatchMicroscopeInputNodeSelectedFilePath =
+  typedSelectors.selectBatchMicroscopeInputNodeSelectedFilePath
+export const selectBatchHdf5InputNodeSelectedFilePath =
+  typedSelectors.selectBatchHdf5InputNodeSelectedFilePath
+export const selectBatchMatlabInputNodeSelectedFilePath =
+  typedSelectors.selectBatchMatlabInputNodeSelectedFilePath
 
 // Dynamic selectors generation capability is available for future extensions via getAllFileTypeConfigs()
 
 export const selectFilePathIsUndefined = (state: RootState) =>
   Object.keys(state.inputNode).length === 0 ||
   Object.values(state.inputNode).filter((inputNode) => {
-    if (isHDF5InputNode(inputNode)) {
+    if (isHDF5InputNode(inputNode) || isBatchHDF5InputNode(inputNode)) {
       return inputNode.selectedFilePath == null || inputNode.hdf5Path == null
     } else {
       const filePath = inputNode.selectedFilePath
@@ -126,7 +146,12 @@ export const selectInputNodeParam = (nodeId: string) => (state: RootState) =>
 
 const selectCsvInputNodeParam = (nodeId: string) => (state: RootState) => {
   const inputNode = selectInputNodeById(nodeId)(state)
-  if (isCsvInputNode(inputNode) || isBatchCsvInputNode(inputNode)) {
+  if (
+    isCsvInputNode(inputNode) ||
+    isBatchCsvInputNode(inputNode) ||
+    isBatchFluoInputNode(inputNode) ||
+    isBatchBehaviorInputNode(inputNode)
+  ) {
     return inputNode.param
   } else {
     throw new Error(`The InputNode is not CsvInputNode. (nodeId: ${nodeId})`)
@@ -148,7 +173,7 @@ export const selectCsvInputNodeParamTranspose =
 export const selectInputNodeHDF5Path =
   (nodeId: string) => (state: RootState) => {
     const item = selectInputNodeById(nodeId)(state)
-    if (isHDF5InputNode(item)) {
+    if (isHDF5InputNode(item) || isBatchHDF5InputNode(item)) {
       return item.hdf5Path
     } else {
       return undefined
@@ -158,7 +183,7 @@ export const selectInputNodeHDF5Path =
 export const selectInputNodeMatlabPath =
   (nodeId: string) => (state: RootState) => {
     const item = selectInputNodeById(nodeId)(state)
-    if (isMatlabInputNode(item)) {
+    if (isMatlabInputNode(item) || isBatchMatlabInputNode(item)) {
       return item.matPath
     } else {
       return undefined

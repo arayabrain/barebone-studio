@@ -55,6 +55,11 @@ export const REACT_FLOW_NODE_TYPE_KEY = {
   MicroscopeFileNode: "MicroscopeFileNode",
   BatchImageFileNode: "BatchImageFileNode",
   BatchCsvFileNode: "BatchCsvFileNode",
+  BatchFluoFileNode: "BatchFluoFileNode",
+  BatchBehaviorFileNode: "BatchBehaviorFileNode",
+  BatchMicroscopeFileNode: "BatchMicroscopeFileNode",
+  BatchHDF5FileNode: "BatchHDF5FileNode",
+  BatchMatlabFileNode: "BatchMatlabFileNode",
 } as const
 
 // Streamlined config - nodeType references REACT_FLOW_NODE_TYPE_KEY
@@ -160,6 +165,74 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     },
     treeType: "csv",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchCsvFileNode,
+    treeHierarchy: "Batch Data",
+  },
+  BATCH_HDF5: {
+    key: "batch_hdf5",
+    displayName: "batchHdf5Data",
+    hasFilePath: true,
+    filePathType: "array",
+    hasSpecialPath: {
+      name: "hdf5Path",
+      type: "hdf5Path",
+    },
+    defaultParam: {},
+    treeType: "hdf5",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchHDF5FileNode,
+    treeHierarchy: "Batch Data",
+  },
+  BATCH_FLUO: {
+    key: "batch_fluo",
+    displayName: "batchFluoData",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {
+      setHeader: null,
+      setIndex: false,
+      transpose: false,
+    },
+    stateFileType: "batch_csv", // Special: stored as batch_csv in state
+    treeType: "csv",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchFluoFileNode,
+    treeHierarchy: "Batch Data",
+  },
+  BATCH_BEHAVIOR: {
+    key: "batch_behavior",
+    displayName: "batchBehaviorData",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {
+      setHeader: null,
+      setIndex: false,
+      transpose: false,
+    },
+    stateFileType: "batch_csv", // Special: stored as batch_csv in state
+    treeType: "csv",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchBehaviorFileNode,
+    treeHierarchy: "Batch Data",
+  },
+  BATCH_MATLAB: {
+    key: "batch_matlab",
+    displayName: "batchMatlabData",
+    hasFilePath: true,
+    filePathType: "array",
+    hasSpecialPath: {
+      name: "matPath",
+      type: "matPath",
+    },
+    defaultParam: {},
+    treeType: "matlab",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchMatlabFileNode,
+    treeHierarchy: "Batch Data",
+  },
+  BATCH_MICROSCOPE: {
+    key: "batch_microscope",
+    displayName: "batchMicroscopeData",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {},
+    treeType: "microscope",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchMicroscopeFileNode,
     treeHierarchy: "Batch Data",
   },
 } as const

@@ -16,15 +16,22 @@ import {
   CsvInputParamType,
   FILE_TYPE_SET,
   HDF5InputNode,
+  BatchHDF5InputNode,
   InputNode,
   InputNodeType,
   INPUT_NODE_SLICE_NAME,
   MatlabInputNode,
+  BatchMatlabInputNode,
 } from "store/slice/InputNode/InputNodeType"
 import {
   isCsvInputNode,
   isHDF5InputNode,
   isMatlabInputNode,
+  isBatchHDF5InputNode,
+  isBatchMatlabInputNode,
+  isBatchCsvInputNode,
+  isBatchFluoInputNode,
+  isBatchBehaviorInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import {
   reproduceWorkflow,
@@ -55,7 +62,12 @@ export const inputNodeSlice = createSlice({
     ) {
       const { nodeId, param } = action.payload
       const inputNode = state[nodeId]
-      if (isCsvInputNode(inputNode)) {
+      if (
+        isCsvInputNode(inputNode) ||
+        isBatchCsvInputNode(inputNode) ||
+        isBatchFluoInputNode(inputNode) ||
+        isBatchBehaviorInputNode(inputNode)
+      ) {
         inputNode.param = param
       }
     },
@@ -68,7 +80,7 @@ export const inputNodeSlice = createSlice({
     ) {
       const { nodeId, path } = action.payload
       const item = state[nodeId]
-      if (isMatlabInputNode(item)) {
+      if (isMatlabInputNode(item) || isBatchMatlabInputNode(item)) {
         item.matPath = path
       }
     },
@@ -81,7 +93,7 @@ export const inputNodeSlice = createSlice({
     ) {
       const { nodeId, path } = action.payload
       const item = state[nodeId]
-      if (isHDF5InputNode(item)) {
+      if (isHDF5InputNode(item) || isBatchHDF5InputNode(item)) {
         item.hdf5Path = path
       }
     },
@@ -92,8 +104,14 @@ export const inputNodeSlice = createSlice({
         const { nodeId, filePath } = action.payload
         const targetNode = state[nodeId]
         targetNode.selectedFilePath = filePath
-        if (isHDF5InputNode(targetNode)) {
+        if (isHDF5InputNode(targetNode) || isBatchHDF5InputNode(targetNode)) {
           targetNode.hdf5Path = undefined
+        }
+        if (
+          isMatlabInputNode(targetNode) ||
+          isBatchMatlabInputNode(targetNode)
+        ) {
+          targetNode.matPath = undefined
         }
       })
       .addCase(addInputNode, (state, action) => {
@@ -208,17 +226,21 @@ export const inputNodeSlice = createSlice({
                     if (
                       specialPath.type === "hdf5Path" &&
                       "hdf5Path" in node.data &&
-                      isHDF5InputNode(nodeState)
+                      (isHDF5InputNode(nodeState) ||
+                        isBatchHDF5InputNode(nodeState))
                     ) {
-                      ;(nodeState as HDF5InputNode).hdf5Path =
-                        node.data.hdf5Path
+                      ;(
+                        nodeState as HDF5InputNode | BatchHDF5InputNode
+                      ).hdf5Path = node.data.hdf5Path
                     } else if (
                       specialPath.type === "matPath" &&
                       "matPath" in node.data &&
-                      isMatlabInputNode(nodeState)
+                      (isMatlabInputNode(nodeState) ||
+                        isBatchMatlabInputNode(nodeState))
                     ) {
-                      ;(nodeState as MatlabInputNode).matPath =
-                        node.data.matPath
+                      ;(
+                        nodeState as MatlabInputNode | BatchMatlabInputNode
+                      ).matPath = node.data.matPath
                     }
                   }
 

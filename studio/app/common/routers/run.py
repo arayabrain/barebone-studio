@@ -199,26 +199,46 @@ async def batch_run(
         # TODO: Tentatively, only BatchImageFileNode is searched.
         target_images = []
         target_csvs = []
+        target_hdf5s = []
+        target_matlabs = []
         for node_id, node in runItem.nodeDict.items():
             if node.type == "BatchImageFileNode":  # TODO: Needs to be constantized
                 target_images = node.data.path
             elif node.type == "BatchCsvFileNode":  # TODO: Needs to be constantized
                 target_csvs = node.data.path
+            elif node.type == "BatchFluoFileNode":  # TODO: Needs to be constantized
+                target_csvs = node.data.path
+            elif node.type == "BatchBehaviorFileNode":  # TODO: Needs to be constantized
+                target_csvs = node.data.path
+            elif (
+                node.type == "BatchMicroscopeFileNode"
+            ):  # TODO: Needs to be constantized
+                target_images = node.data.path
+            elif node.type == "BatchHDF5FileNode":  # TODO: Needs to be constantized
+                target_hdf5s = node.data.path
+            elif node.type == "BatchMatlabFileNode":  # TODO: Needs to be constantized
+                target_matlabs = node.data.path
 
         # TODO: debug print
         print("========================== target_images:", target_images)
         print("========================== target_csvs:", target_csvs)
 
         # TODO: Assertion when target_images is missing
-        assert target_images, "Batch Image Files is not specified."
+        assert (
+            target_images or target_csvs or target_hdf5s or target_matlabs
+        ), "Batch Image Files is not specified."
+
+        target_data = target_images or target_csvs or target_hdf5s or target_matlabs
 
         # Build workflow execution target data (RunItem)
-        for idx, image in enumerate(target_images):
+        for idx, image in enumerate(target_data):
             new_run_item = copy.deepcopy(runItem)
 
-            new_run_item.name = f"{new_run_item.name} ({idx})"
+            new_run_item.name = f"{new_run_item.name} ({new_unique_id} - {idx+1})"
 
             for node_id, node in new_run_item.nodeDict.items():
+                # TODO: node.type だけではなく、node_id でリンクさせる必要がある
+                #   （同一の node.type の Batch Input Node が復数発生しうるため）
                 # if node.type == NodeType.IMAGE:
                 if node.type == "BatchImageFileNode":
                     new_run_item.nodeDict[node_id].data.path = [image]
@@ -229,14 +249,66 @@ async def batch_run(
                     new_run_item.nodeDict[node_id].type = NodeType.IMAGE
 
                 elif node.type == "BatchCsvFileNode":
-                    csv = target_csvs[idx]  # TODO: Other data types must be supported.
+                    data = target_csvs[idx]  # TODO: Other data types must be supported.
 
-                    new_run_item.nodeDict[node_id].data.path = csv
+                    new_run_item.nodeDict[node_id].data.path = data
                     new_run_item.nodeDict[node_id].data.fileType = FILETYPE.CSV
-                    new_run_item.nodeDict[node_id].data.label = csv
+                    new_run_item.nodeDict[node_id].data.label = data
 
                     # Replace node type with corresponding standard node type.
                     new_run_item.nodeDict[node_id].type = NodeType.CSV
+
+                elif node.type == "BatchFluoFileNode":
+                    data = target_csvs[idx]  # TODO: Other data types must be supported.
+
+                    new_run_item.nodeDict[node_id].data.path = data
+                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.CSV
+                    new_run_item.nodeDict[node_id].data.label = data
+
+                    # Replace node type with corresponding standard node type.
+                    new_run_item.nodeDict[node_id].type = NodeType.FLUO
+
+                elif node.type == "BatchBehaviorFileNode":
+                    data = target_csvs[idx]  # TODO: Other data types must be supported.
+
+                    new_run_item.nodeDict[node_id].data.path = data
+                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.BEHAVIOR
+                    new_run_item.nodeDict[node_id].data.label = data
+
+                    # Replace node type with corresponding standard node type.
+                    new_run_item.nodeDict[node_id].type = NodeType.BEHAVIOR
+
+                elif node.type == "BatchMicroscopeFileNode":
+                    new_run_item.nodeDict[node_id].data.path = image
+                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.MICROSCOPE
+                    new_run_item.nodeDict[node_id].data.label = image
+
+                    # Replace node type with corresponding standard node type.
+                    new_run_item.nodeDict[node_id].type = NodeType.MICROSCOPE
+
+                elif node.type == "BatchHDF5FileNode":
+                    data = target_hdf5s[
+                        idx
+                    ]  # TODO: Other data types must be supported.
+
+                    new_run_item.nodeDict[node_id].data.path = data
+                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.HDF5
+                    new_run_item.nodeDict[node_id].data.label = data
+
+                    # Replace node type with corresponding standard node type.
+                    new_run_item.nodeDict[node_id].type = NodeType.HDF5
+
+                elif node.type == "BatchMatlabFileNode":
+                    data = target_matlabs[
+                        idx
+                    ]  # TODO: Other data types must be supported.
+
+                    new_run_item.nodeDict[node_id].data.path = data
+                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.MATLAB
+                    new_run_item.nodeDict[node_id].data.label = data
+
+                    # Replace node type with corresponding standard node type.
+                    new_run_item.nodeDict[node_id].type = NodeType.MATLAB
 
             run_items.append(new_run_item)
 
@@ -246,6 +318,12 @@ async def batch_run(
         pprint.pprint(run_items)
 
         # Executes processing for the number of input data items
+
+        # TODO: (Tentative) Wait a short time before starting a batch run
+        import time
+
+        time.sleep(1)
+
         # TODO: Parallel processing is required for performance.
         for run_item in run_items:
             unique_id = WorkflowRunner.create_workflow_unique_id()

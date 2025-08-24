@@ -3,8 +3,13 @@ import { NodeProps } from "reactflow"
 
 // Import all node components
 import { AlgorithmNode } from "components/Workspace/FlowChart/FlowChartNode/AlgorithmNode"
+import { BatchBehaviorFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchBehaviorFileNode"
 import { BatchCsvFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchCsvFileNode"
+import { BatchFluoFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchFluoFileNode"
+import { BatchHDF5FileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchHDF5FileNode"
 import { BatchImageFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchImageFileNode"
+import { BatchMatlabFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchMatlabFileNode"
+import { BatchMicroscopeFileNode } from "components/Workspace/FlowChart/FlowChartNode/BatchMicroscopeFileNode"
 import { BehaviorFileNode } from "components/Workspace/FlowChart/FlowChartNode/BehaviorFileNode"
 import { CsvFileNode } from "components/Workspace/FlowChart/FlowChartNode/CsvFileNode"
 import { FluoFileNode } from "components/Workspace/FlowChart/FlowChartNode/FluoFileNode"
@@ -28,6 +33,11 @@ export const nodeComponentRegistry: Record<string, NodeComponentType> = {
   MicroscopeFileNode,
   BatchImageFileNode,
   BatchCsvFileNode,
+  BatchFluoFileNode,
+  BatchBehaviorFileNode,
+  BatchMicroscopeFileNode,
+  BatchHDF5FileNode,
+  BatchMatlabFileNode,
 }
 
 // Get component by node type name
