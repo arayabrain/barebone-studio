@@ -22,6 +22,7 @@ import Paper from "@mui/material/Paper"
 import Popper from "@mui/material/Popper"
 import TextField from "@mui/material/TextField"
 
+import { WORKSPACE_TYPE } from "const/Workspace"
 import { UseRunPipelineReturnType } from "store/slice/Pipeline/PipelineHook"
 import {
   selectPipelineIsStartedSuccess,
@@ -33,6 +34,7 @@ import {
   RUN_BTN_OPTIONS,
   RUN_BTN_TYPE,
 } from "store/slice/Pipeline/PipelineType"
+import { selectCurrentWorkspaceType } from "store/slice/Workspace/WorkspaceSelector"
 
 export const RunButtons = memo(function RunButtons(
   props: UseRunPipelineReturnType,
@@ -52,6 +54,7 @@ export const RunButtons = memo(function RunButtons(
 
   const runBtnOption = useSelector(selectPipelineRunBtn)
   const isStartedSuccess = useSelector(selectPipelineIsStartedSuccess)
+  const workspaceType = useSelector(selectCurrentWorkspaceType)
 
   const sendingRunRequest = useRef(false)
 
@@ -143,68 +146,79 @@ export const RunButtons = memo(function RunButtons(
     setMenuOpen(false)
   }
   const uidExists = uid != null
+  const isBatchWorkspace = workspaceType === WORKSPACE_TYPE.BATCH
+
   return (
     <>
-      <ButtonGroup
-        sx={{
-          margin: 1,
-        }}
-        variant="contained"
-        ref={anchorRef}
-        disabled={runDisabled}
-      >
-        <Button
-          onClick={handleClick}
-          startIcon={
-            runBtnOption === RUN_BTN_OPTIONS.RUN_ALREADY ? (
-              <ReplayIcon />
-            ) : (
-              <PlayArrow />
-            )
-          }
-        >
-          {RUN_BTN_LABELS[runBtnOption]}
-        </Button>
-        <Button size="small" onClick={handleToggle}>
-          <ArrowDropDownIcon />
-        </Button>
-      </ButtonGroup>
-      <Popper
-        open={menuOpen}
-        anchorEl={anchorRef.current}
-        role={undefined}
-        transition
-        disablePortal
-      >
-        {({ TransitionProps, placement }) => (
-          <Grow
-            {...TransitionProps}
-            style={{
-              transformOrigin:
-                placement === "bottom" ? "center top" : "center bottom",
+      {/* Show Run All/Run buttons only for non-batch workspaces */}
+      {!isBatchWorkspace && (
+        <>
+          <ButtonGroup
+            sx={{
+              margin: 1,
             }}
+            variant="contained"
+            ref={anchorRef}
+            disabled={runDisabled}
           >
-            <Paper>
-              <ClickAwayListener onClickAway={handleClose}>
-                <MenuList>
-                  {Object.values(RUN_BTN_OPTIONS).map((option) => (
-                    <MenuItem
-                      key={option}
-                      disabled={
-                        !uidExists && option === RUN_BTN_OPTIONS.RUN_ALREADY
-                      }
-                      selected={option === runBtnOption}
-                      onClick={(event) => handleMenuItemClick(event, option)}
-                    >
-                      {RUN_BTN_LABELS[option]}
-                    </MenuItem>
-                  ))}
-                </MenuList>
-              </ClickAwayListener>
-            </Paper>
-          </Grow>
-        )}
-      </Popper>
+            <Button
+              onClick={handleClick}
+              startIcon={
+                runBtnOption === RUN_BTN_OPTIONS.RUN_ALREADY ? (
+                  <ReplayIcon />
+                ) : (
+                  <PlayArrow />
+                )
+              }
+            >
+              {RUN_BTN_LABELS[runBtnOption]}
+            </Button>
+            <Button size="small" onClick={handleToggle}>
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
+          <Popper
+            open={menuOpen}
+            anchorEl={anchorRef.current}
+            role={undefined}
+            transition
+            disablePortal
+          >
+            {({ TransitionProps, placement }) => (
+              <Grow
+                {...TransitionProps}
+                style={{
+                  transformOrigin:
+                    placement === "bottom" ? "center top" : "center bottom",
+                }}
+              >
+                <Paper>
+                  <ClickAwayListener onClickAway={handleClose}>
+                    <MenuList>
+                      {Object.values(RUN_BTN_OPTIONS).map((option) => (
+                        <MenuItem
+                          key={option}
+                          disabled={
+                            !uidExists && option === RUN_BTN_OPTIONS.RUN_ALREADY
+                          }
+                          selected={option === runBtnOption}
+                          onClick={(event) =>
+                            handleMenuItemClick(event, option)
+                          }
+                        >
+                          {RUN_BTN_LABELS[option]}
+                        </MenuItem>
+                      ))}
+                    </MenuList>
+                  </ClickAwayListener>
+                </Paper>
+              </Grow>
+            )}
+          </Popper>
+        </>
+      )}
+
+      {/* Show Cancel button for all workspace types when workflow is running */}
       {isStartedSuccess && (
         <Tooltip title="Cancel Workflow">
           <IconButton onClick={onClickCancel}>
@@ -212,15 +226,19 @@ export const RunButtons = memo(function RunButtons(
           </IconButton>
         </Tooltip>
       )}
-      <Button
-        variant="contained"
-        sx={{ margin: 1 }}
-        onClick={onClickBatchRun}
-        disabled={runDisabled}
-        startIcon={<FastForward />}
-      >
-        Batch Run
-      </Button>
+
+      {/* Show Batch Run button only for batch workspaces */}
+      {isBatchWorkspace && (
+        <Button
+          variant="contained"
+          sx={{ margin: 1 }}
+          onClick={onClickBatchRun}
+          disabled={runDisabled}
+          startIcon={<FastForward />}
+        >
+          Batch Run
+        </Button>
+      )}
       <RunDialog
         open={dialogOpen}
         handleRun={onClickDialogRun}
