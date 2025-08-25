@@ -1,3 +1,14 @@
+import { WORKSPACE_TYPE } from "const/Workspace"
+
+// Define tree hierarchy constants for better maintainability
+export const TREE_HIERARCHY = {
+  DATA: "Data",
+  BATCH_DATA: "Batch Data",
+} as const
+
+export type TreeHierarchyType =
+  (typeof TREE_HIERARCHY)[keyof typeof TREE_HIERARCHY]
+
 export interface FileTypeConfig {
   key: string
   displayName: string
@@ -15,7 +26,7 @@ export interface FileTypeConfig {
   nodeType?: string // Unified: replaces nodeComponent and reactFlowNodeType
   componentPath?: string
   // Tree hierarchy configuration
-  treeHierarchy?: string // Parent node in tree hierarchy (e.g., "Data", "Sample Data")
+  treeHierarchy?: TreeHierarchyType // Parent node in tree hierarchy (e.g., "Data", "Sample Data")
 }
 
 // Enhanced config with computed properties
@@ -25,7 +36,7 @@ export interface EnhancedFileTypeConfig
   > {
   hasSpecialPath?: FileTypeConfig["hasSpecialPath"]
   stateFileType?: string
-  treeHierarchy: string // Required in enhanced config with default value
+  treeHierarchy: TreeHierarchyType // Required in enhanced config with default value
   // Backward compatibility properties
   nodeComponent: string // Same as nodeType for compatibility
   reactFlowNodeType: string // Same as nodeType for compatibility
@@ -151,7 +162,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     defaultParam: {},
     treeType: "image",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchImageFileNode,
-    treeHierarchy: "Batch Data",
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
   BATCH_CSV: {
     key: "batch_csv",
@@ -165,7 +176,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     },
     treeType: "csv",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchCsvFileNode,
-    treeHierarchy: "Batch Data",
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
   BATCH_HDF5: {
     key: "batch_hdf5",
@@ -179,7 +190,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     defaultParam: {},
     treeType: "hdf5",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchHDF5FileNode,
-    treeHierarchy: "Batch Data",
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
   BATCH_FLUO: {
     key: "batch_fluo",
@@ -194,7 +205,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     stateFileType: "batch_csv", // Special: stored as batch_csv in state
     treeType: "csv",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchFluoFileNode,
-    treeHierarchy: "Batch Data",
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
   BATCH_BEHAVIOR: {
     key: "batch_behavior",
@@ -209,7 +220,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     stateFileType: "batch_csv", // Special: stored as batch_csv in state
     treeType: "csv",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchBehaviorFileNode,
-    treeHierarchy: "Batch Data",
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
   BATCH_MATLAB: {
     key: "batch_matlab",
@@ -223,7 +234,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     defaultParam: {},
     treeType: "matlab",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchMatlabFileNode,
-    treeHierarchy: "Batch Data",
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
   BATCH_MICROSCOPE: {
     key: "batch_microscope",
@@ -233,7 +244,7 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     defaultParam: {},
     treeType: "microscope",
     nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchMicroscopeFileNode,
-    treeHierarchy: "Batch Data",
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
 } as const
 
@@ -254,7 +265,7 @@ const ENHANCED_FILE_TYPE_CONFIGS: Record<string, EnhancedFileTypeConfig> =
           treeType: config.treeType || config.key,
           dataType: config.dataType || config.key,
           nodeType,
-          treeHierarchy: config.treeHierarchy || "Data", // Default to "Data" hierarchy
+          treeHierarchy: config.treeHierarchy || TREE_HIERARCHY.DATA, // Default to "Data" hierarchy
           // Backward compatibility - both point to the same nodeType
           nodeComponent: nodeType,
           reactFlowNodeType: nodeType,
