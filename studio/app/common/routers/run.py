@@ -1,14 +1,15 @@
 import copy
-from typing import Dict, Optional
+import time
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from studio.app.common.core.logger import AppLogger
 from studio.app.common.core.workflow.workflow import (
+    BatchInputNodeType,
     DataFilterParam,
     Message,
     NodeItem,
-    NodeType,
     RunItem,
 )
 from studio.app.common.core.workflow.workflow_filter import WorkflowNodeDataFilter
@@ -24,7 +25,6 @@ from studio.app.common.core.workspace.workspace_dependencies import (
     is_workspace_available,
     is_workspace_owner,
 )
-from studio.app.const import FILETYPE
 
 router = APIRouter(prefix="/run", tags=["run"])
 
@@ -169,7 +169,6 @@ async def apply_filter(
         )
 
 
-# TODO: Demo version of batch_run API
 @router.post(
     "/util/batch_run/{workspace_id}",
     response_model=str,
@@ -180,158 +179,111 @@ async def batch_run(
 ):
     try:
         # ------------------------------------------------------------
-        # Save "Batch Run" Workflow
+        # Save Batch Run Template Workflow
         # ------------------------------------------------------------
 
-        # TODO: Saving to the database (experiment_record) also needs to be considered.
         new_unique_id = WorkflowRunner.create_workflow_unique_id()
+
         WorkflowRunner(
             workspace_id, new_unique_id, runItem
         ).finish_workflow_without_run()
 
         # ------------------------------------------------------------
-        # Process "Batch Run"
+        # Process each Batch Run Workflows
+        # #1) Data Construction
         # ------------------------------------------------------------
 
-        run_items = []
-
-        # Search for Batch Input Data
-        # TODO: Tentatively, only BatchImageFileNode is searched.
-        target_images = []
-        target_csvs = []
-        target_hdf5s = []
-        target_matlabs = []
+        # Search for batch input nodes
+        batch_input_files = {}
+        batch_input_counts = {}
         for node_id, node in runItem.nodeDict.items():
-            if node.type == "BatchImageFileNode":  # TODO: Needs to be constantized
-                target_images = node.data.path
-            elif node.type == "BatchCsvFileNode":  # TODO: Needs to be constantized
-                target_csvs = node.data.path
-            elif node.type == "BatchFluoFileNode":  # TODO: Needs to be constantized
-                target_csvs = node.data.path
-            elif node.type == "BatchBehaviorFileNode":  # TODO: Needs to be constantized
-                target_csvs = node.data.path
-            elif (
-                node.type == "BatchMicroscopeFileNode"
-            ):  # TODO: Needs to be constantized
-                target_images = node.data.path
-            elif node.type == "BatchHDF5FileNode":  # TODO: Needs to be constantized
-                target_hdf5s = node.data.path
-            elif node.type == "BatchMatlabFileNode":  # TODO: Needs to be constantized
-                target_matlabs = node.data.path
+            if BatchInputNodeType.is_batch_input_node(node.type):
+                data_paths = getattr(
+                    getattr(node, "data", None), "path", None
+                )  # get `node.data.path`
+                batch_input_record = {node_id: node}
+                batch_input_files[node_id] = (
+                    data_paths if type(data_paths) is list else [data_paths]
+                )
+                batch_input_counts[node_id] = (
+                    len(data_paths) if type(data_paths) is list else 1
+                )
 
-        # TODO: debug print
-        print("========================== target_images:", target_images)
-        print("========================== target_csvs:", target_csvs)
+        # Validations
+        assert batch_input_files, "No batch input nodes specified."
+        batch_input_counts_min = min(batch_input_counts.values())
+        batch_input_counts_max = max(batch_input_counts.values())
+        if batch_input_counts_min != batch_input_counts_max:
+            logger.error(
+                "The number of input files in the batch nodes does not match. [%s]",
+                batch_input_counts,
+            )
+            assert False, (
+                "The number of input files in the batch nodes does not match."
+                f" [{batch_input_counts_min} - {batch_input_counts_max}]"
+            )
+        batch_input_fixed_count = batch_input_counts_max
+        del batch_input_counts_min, batch_input_counts_max
 
-        # TODO: Assertion when target_images is missing
-        assert (
-            target_images or target_csvs or target_hdf5s or target_matlabs
-        ), "Batch Image Files is not specified."
+        # Transform batch input data paths
+        #   into a structure suitable for batch processing.
+        batch_input_records = []
+        for idx in range(batch_input_fixed_count):
+            batch_input_record = {}
+            for node_id, data_paths in batch_input_files.items():
+                batch_input_record[node_id] = data_paths[idx]
 
-        target_data = target_images or target_csvs or target_hdf5s or target_matlabs
+            batch_input_records.append(batch_input_record)
 
-        # Build workflow execution target data (RunItem)
-        for idx, image in enumerate(target_data):
+        # Build workflow execution data (RunItem type data)
+        batch_runItems: List[RunItem] = []
+        for idx, batch_input_record in enumerate(batch_input_records):
+            # Duplicate and use the original RunItem
             new_run_item = copy.deepcopy(runItem)
 
             new_run_item.name = f"{new_run_item.name} ({new_unique_id} - {idx+1})"
 
-            for node_id, node in new_run_item.nodeDict.items():
-                # TODO: node.type だけではなく、node_id でリンクさせる必要がある
-                #   （同一の node.type の Batch Input Node が復数発生しうるため）
-                # if node.type == NodeType.IMAGE:
-                if node.type == "BatchImageFileNode":
-                    new_run_item.nodeDict[node_id].data.path = [image]
-                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.IMAGE
-                    new_run_item.nodeDict[node_id].data.label = image
+            # Scan batch input records
+            for node_id, data_path in batch_input_record.items():
+                node_type = new_run_item.nodeDict[node_id].type
 
-                    # Replace node type with corresponding standard node type.
-                    new_run_item.nodeDict[node_id].type = NodeType.IMAGE
+                # Construct RunItem parameters
+                new_run_item.nodeDict[node_id].data.path = (
+                    [data_path]
+                    if node_type == BatchInputNodeType.BATCH_IMAGE
+                    else data_path
+                )
+                new_run_item.nodeDict[node_id].data.label = data_path
 
-                elif node.type == "BatchCsvFileNode":
-                    data = target_csvs[idx]  # TODO: Other data types must be supported.
+                # Replace node type with corresponding standard node type.
+                normal_node_type = BatchInputNodeType.refer_corresponding_node_type(
+                    node_type
+                )
+                assert normal_node_type, f"Invalid batch node type: {node_type}"
+                new_run_item.nodeDict[node_id].type = normal_node_type[0]
+                new_run_item.nodeDict[node_id].data.fileType = normal_node_type[1]
 
-                    new_run_item.nodeDict[node_id].data.path = data
-                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.CSV
-                    new_run_item.nodeDict[node_id].data.label = data
+            batch_runItems.append(new_run_item)
 
-                    # Replace node type with corresponding standard node type.
-                    new_run_item.nodeDict[node_id].type = NodeType.CSV
-
-                elif node.type == "BatchFluoFileNode":
-                    data = target_csvs[idx]  # TODO: Other data types must be supported.
-
-                    new_run_item.nodeDict[node_id].data.path = data
-                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.CSV
-                    new_run_item.nodeDict[node_id].data.label = data
-
-                    # Replace node type with corresponding standard node type.
-                    new_run_item.nodeDict[node_id].type = NodeType.FLUO
-
-                elif node.type == "BatchBehaviorFileNode":
-                    data = target_csvs[idx]  # TODO: Other data types must be supported.
-
-                    new_run_item.nodeDict[node_id].data.path = data
-                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.BEHAVIOR
-                    new_run_item.nodeDict[node_id].data.label = data
-
-                    # Replace node type with corresponding standard node type.
-                    new_run_item.nodeDict[node_id].type = NodeType.BEHAVIOR
-
-                elif node.type == "BatchMicroscopeFileNode":
-                    new_run_item.nodeDict[node_id].data.path = image
-                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.MICROSCOPE
-                    new_run_item.nodeDict[node_id].data.label = image
-
-                    # Replace node type with corresponding standard node type.
-                    new_run_item.nodeDict[node_id].type = NodeType.MICROSCOPE
-
-                elif node.type == "BatchHDF5FileNode":
-                    data = target_hdf5s[
-                        idx
-                    ]  # TODO: Other data types must be supported.
-
-                    new_run_item.nodeDict[node_id].data.path = data
-                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.HDF5
-                    new_run_item.nodeDict[node_id].data.label = data
-
-                    # Replace node type with corresponding standard node type.
-                    new_run_item.nodeDict[node_id].type = NodeType.HDF5
-
-                elif node.type == "BatchMatlabFileNode":
-                    data = target_matlabs[
-                        idx
-                    ]  # TODO: Other data types must be supported.
-
-                    new_run_item.nodeDict[node_id].data.path = data
-                    new_run_item.nodeDict[node_id].data.fileType = FILETYPE.MATLAB
-                    new_run_item.nodeDict[node_id].data.label = data
-
-                    # Replace node type with corresponding standard node type.
-                    new_run_item.nodeDict[node_id].type = NodeType.MATLAB
-
-            run_items.append(new_run_item)
-
-        # TODO: debug print
-        import pprint
-
-        pprint.pprint(run_items)
-
-        # Executes processing for the number of input data items
+        # ------------------------------------------------------------
+        # Process each Batch Run Workflows
+        # #2) Start multiple workflows
+        # ------------------------------------------------------------
 
         # TODO: (Tentative) Wait a short time before starting a batch run
-        import time
-
         time.sleep(1)
 
+        # Executes processing for the number of input data items
         # TODO: Parallel processing is required for performance.
-        for run_item in run_items:
+        for run_item in batch_runItems:
             unique_id = WorkflowRunner.create_workflow_unique_id()
             WorkflowRunner(workspace_id, unique_id, run_item).run_workflow(
                 background_tasks
             )
 
-        logger.info("run snakemake")
+        logger.info(
+            "Start processing batch workflows. [%d workflows]",
+        )
 
         return new_unique_id
 

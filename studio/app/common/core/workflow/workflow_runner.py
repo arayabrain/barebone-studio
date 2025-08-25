@@ -4,6 +4,9 @@ from datetime import datetime
 from typing import Dict, List
 
 from studio.app.common.core.experiment.experiment_reader import ExptConfigReader
+from studio.app.common.core.experiment.experiment_record_services import (
+    ExperimentRecordService,
+)
 from studio.app.common.core.experiment.experiment_writer import ExptConfigWriter
 from studio.app.common.core.rules.runner import Runner
 from studio.app.common.core.snakemake.smk import FlowConfig, Rule, SmkParam
@@ -119,6 +122,12 @@ class WorkflowRunner:
         ExptConfigWriter(self.workspace_id, self.unique_id).overwrite(
             update_expt_config_dict
         )
+
+        # Update experiment database record
+        if ExperimentRecordService.is_available():
+            ExperimentRecordService.regist_record_on_workflow_completed(
+                self.workspace_id, self.unique_id
+            )
 
     def set_smk_config(self):
         rules, last_output = self.rulefile()
