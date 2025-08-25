@@ -23,6 +23,7 @@ describe("RunButtons component", () => {
     algorithmNodeNotExist: false,
     handleCancelPipeline: jest.fn(),
     handleRunPipeline: jest.fn(),
+    handleBatchRunPipeline: jest.fn(),
     handleRunPipelineByUid: jest.fn(),
   }
 
@@ -37,6 +38,11 @@ describe("RunButtons component", () => {
         uid: "test-uid",
       },
       runBtn: RUN_BTN_OPTIONS.RUN_NEW,
+      workspace: {
+        currentWorkspace: {
+          type: 1, // WORKSPACE_TYPE.NORMAL
+        },
+      },
     })
   })
 

@@ -17,6 +17,7 @@ import {
   pollRunResult,
   runByCurrentUid,
   cancelResult,
+  batchRun,
 } from "store/slice/Pipeline/PipelineActions"
 import {
   selectPipelineIsCanceled,
@@ -91,21 +92,28 @@ export function useRunPipeline() {
   const runPostData = useSelector(selectRunPostData)
   const { enqueueSnackbar } = useSnackbar()
 
-  const handleRunPipeline = useCallback(
+  const prepareRunPostData = useCallback(
     (name: string) => {
-      const newNodeDict = runPostData.nodeDict
+      const newNodeDict = { ...runPostData.nodeDict }
       Object.keys(newNodeDict).forEach((key) => {
         delete newNodeDict[key].data.dataFilterParam
         delete newNodeDict[key].data.draftDataFilterParam
       })
+      return {
+        name,
+        ...runPostData,
+        nodeDict: newNodeDict,
+        forceRunList: [],
+      }
+    },
+    [runPostData],
+  )
+
+  const handleRunPipeline = useCallback(
+    (name: string) => {
       dispatch(
         run({
-          runPostData: {
-            name,
-            ...runPostData,
-            nodeDict: newNodeDict,
-            forceRunList: [],
-          },
+          runPostData: prepareRunPostData(name),
         }),
       )
         .unwrap()
@@ -113,7 +121,22 @@ export function useRunPipeline() {
           handleWorkflowYamlError(error, enqueueSnackbar)
         })
     },
-    [dispatch, enqueueSnackbar, runPostData],
+    [dispatch, enqueueSnackbar, prepareRunPostData],
+  )
+
+  const handleBatchRunPipeline = useCallback(
+    (name: string) => {
+      dispatch(
+        batchRun({
+          runPostData: prepareRunPostData(name),
+        }),
+      )
+        .unwrap()
+        .catch((error) => {
+          handleWorkflowYamlError(error, enqueueSnackbar)
+        })
+    },
+    [dispatch, enqueueSnackbar, prepareRunPostData],
   )
 
   const handleRunPipelineByUid = useCallback(() => {
@@ -192,6 +215,7 @@ export function useRunPipeline() {
     status,
     runDisabled,
     handleRunPipeline,
+    handleBatchRunPipeline,
     handleRunPipelineByUid,
     handleCancelPipeline,
   }

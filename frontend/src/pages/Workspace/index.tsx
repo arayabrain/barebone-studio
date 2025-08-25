@@ -36,6 +36,7 @@ import DeleteConfirmModal from "components/common/DeleteConfirmModal"
 import Loading from "components/common/Loading"
 import PaginationCustom from "components/common/PaginationCustom"
 import PopupShare from "components/Workspace/PopupShare"
+import { WORKSPACE_TYPE, WORKSPACE_TYPE_LABEL } from "const/Workspace"
 import { selectCurrentUser } from "store/slice/User/UserSelector"
 import { resetVisualizeLayout } from "store/slice/VisualizeItem/VisualizeItemSlice"
 import {
@@ -145,6 +146,20 @@ const columns = (
           </>
         ) : null}
       </Box>
+    ),
+  },
+  {
+    field: "type",
+    headerName: "Type",
+    filterable: false,
+    sortable: false,
+    flex: 1,
+    minWidth: 80,
+    renderCell: (params: GridRenderCellParams<GridValidRowModel>) => (
+      <span>
+        {WORKSPACE_TYPE_LABEL[params.value as WORKSPACE_TYPE] ||
+          WORKSPACE_TYPE_LABEL[WORKSPACE_TYPE.DEFAULT]}
+      </span>
     ),
   },
   {

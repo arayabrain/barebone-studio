@@ -81,6 +81,17 @@ export async function runByUidApi(
   return response.data
 }
 
+export async function batchRunApi(
+  workspaceId: number,
+  data: RunPostData,
+): Promise<string> {
+  const response = await axios.post(
+    `${BASE_URL}/run/util/batch_run/${workspaceId}`,
+    data,
+  )
+  return response.data
+}
+
 export type RunResultDTO = {
   [nodeId: string]: {
     status: string
