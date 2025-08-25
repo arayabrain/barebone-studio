@@ -37,4 +37,4 @@ export const selectIsWorkspaceOwner = (state: RootState) =>
     : state.workspace.currentWorkspace.ownerId === state.user.currentUser?.id
 
 export const selectCurrentWorkspaceType = (state: RootState) =>
-  state.workspace.currentWorkspace.type
+  state.workspace?.currentWorkspace?.type
