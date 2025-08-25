@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy.dialects.mysql import BIGINT
+from sqlalchemy.dialects.mysql import BIGINT, TINYINT
 from sqlalchemy.sql.functions import current_timestamp
 from sqlmodel import Column, Field, ForeignKey, Relationship, String, UniqueConstraint
 
@@ -35,6 +35,9 @@ class Workspace(Base, TimestampMixin, table=True):
         sa_column=Column(
             BIGINT(unsigned=True), ForeignKey("users.id", name="user"), nullable=False
         ),
+    )
+    type: int = Field(
+        sa_column=Column(TINYINT(unsigned=True), nullable=False),
     )
     deleted: bool = Field(nullable=False)
     input_data_usage: int = Field(

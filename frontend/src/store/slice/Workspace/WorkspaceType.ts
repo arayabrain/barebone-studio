@@ -6,6 +6,7 @@ export const WORKSPACE_SLICE_NAME = "workspace"
 export type ItemsWorkspace = {
   id: number
   name: string
+  type: number
   user: {
     id: number
     name: string
@@ -33,6 +34,7 @@ export type Workspace = {
     workspaceName?: string
     selectedTab: number
     ownerId?: number
+    type?: number
   }
   loading: boolean
   listUserShare?: ListUserShareWorkspaceDTO

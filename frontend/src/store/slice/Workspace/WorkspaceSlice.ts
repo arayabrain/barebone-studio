@@ -71,6 +71,7 @@ export const workspaceSlice = createSlice({
         state.currentWorkspace.workspaceId = action.payload.id
         state.currentWorkspace.workspaceName = action.payload.name
         state.currentWorkspace.ownerId = action.payload.user.id
+        state.currentWorkspace.type = action.payload.type
         state.loading = false
       })
       .addCase(getWorkspaceList.fulfilled, (state, action) => {
