@@ -8,4 +8,5 @@ Other
 
   host_for_multiuser/index
   cli_execution
+  workflow_batch_run
   debugging

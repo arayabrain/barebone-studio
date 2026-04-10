@@ -48,6 +48,7 @@ describe("Pipeline State Test", () => {
           uid: "response data",
         },
         runBtn: 1,
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -60,6 +61,7 @@ describe("Pipeline State Test", () => {
       const expectState = {
         run: { status: RUN_STATUS.START_PENDING },
         runBtn: 1,
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -69,7 +71,11 @@ describe("Pipeline State Test", () => {
         reducer(initialState, createPendingWithRequestIdAction(run)),
         createRejectedAction(run),
       )
-      const expectState = { run: { status: RUN_STATUS.START_ERROR }, runBtn: 1 }
+      const expectState = {
+        run: { status: RUN_STATUS.START_ERROR },
+        runBtn: 1,
+        isBatchRun: false,
+      }
       expect(targetState).toEqual(expectState)
     })
   })
@@ -92,6 +98,7 @@ describe("Pipeline State Test", () => {
           uid: "response data",
         },
         runBtn: 1,
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -104,6 +111,7 @@ describe("Pipeline State Test", () => {
       const expectState = {
         run: { status: RUN_STATUS.START_PENDING },
         runBtn: 1,
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -113,7 +121,11 @@ describe("Pipeline State Test", () => {
         reducer(initialState, createPendingAction(runByCurrentUid)),
         createRejectedAction(runByCurrentUid),
       )
-      const expectState = { run: { status: RUN_STATUS.START_ERROR }, runBtn: 1 }
+      const expectState = {
+        run: { status: RUN_STATUS.START_ERROR },
+        runBtn: 1,
+        isBatchRun: false,
+      }
       expect(targetState).toEqual(expectState)
     })
   })
@@ -176,6 +188,7 @@ describe("Pipeline State Test", () => {
           status: RUN_STATUS.FINISHED,
           uid: "test-uid",
         },
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -188,6 +201,7 @@ describe("Pipeline State Test", () => {
       const expectState = {
         ...initialState,
         run: { ...initialState.run, status: RUN_STATUS.ABORTED },
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -209,6 +223,7 @@ describe("Pipeline State Test", () => {
           ...initialState.run,
           status: RUN_STATUS.CANCELED,
         },
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -222,6 +237,7 @@ describe("Pipeline State Test", () => {
       const expectState = {
         run: { status: RUN_STATUS.START_UNINITIALIZED },
         runBtn: 1,
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })
@@ -235,6 +251,7 @@ describe("Pipeline State Test", () => {
       const expectState = {
         ...initialState,
         run: { ...initialState.run, status: RUN_STATUS.START_UNINITIALIZED },
+        isBatchRun: false,
       }
       expect(targetState).toEqual(expectState)
     })

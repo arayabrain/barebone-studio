@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux"
 
 import { useSnackbar } from "notistack"
 
-import { PlayArrow } from "@mui/icons-material"
+import { FastForward, PlayArrow } from "@mui/icons-material"
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown"
 import BlockIcon from "@mui/icons-material/Block"
 import ReplayIcon from "@mui/icons-material/Replay"
@@ -22,6 +22,10 @@ import Paper from "@mui/material/Paper"
 import Popper from "@mui/material/Popper"
 import TextField from "@mui/material/TextField"
 
+import { WORKSPACE_TYPE } from "const/Workspace"
+import { selectFlowNodes } from "store/slice/FlowElement/FlowElementSelectors"
+import { selectInputNode } from "store/slice/InputNode/InputNodeSelectors"
+import { isBatchAnyInputNode } from "store/slice/InputNode/InputNodeUtils"
 import { UseRunPipelineReturnType } from "store/slice/Pipeline/PipelineHook"
 import {
   selectPipelineIsStartedSuccess,
@@ -33,6 +37,7 @@ import {
   RUN_BTN_OPTIONS,
   RUN_BTN_TYPE,
 } from "store/slice/Pipeline/PipelineType"
+import { selectCurrentWorkspaceType } from "store/slice/Workspace/WorkspaceSelector"
 
 export const RunButtons = memo(function RunButtons(
   props: UseRunPipelineReturnType,
@@ -44,6 +49,7 @@ export const RunButtons = memo(function RunButtons(
     algorithmNodeNotExist,
     handleCancelPipeline,
     handleRunPipeline,
+    handleBatchRunPipeline,
     handleRunPipelineByUid,
   } = props
 
@@ -51,10 +57,14 @@ export const RunButtons = memo(function RunButtons(
 
   const runBtnOption = useSelector(selectPipelineRunBtn)
   const isStartedSuccess = useSelector(selectPipelineIsStartedSuccess)
+  const workspaceType = useSelector(selectCurrentWorkspaceType)
+  const flowNodes = useSelector(selectFlowNodes)
+  const inputNodes = useSelector(selectInputNode)
 
   const sendingRunRequest = useRef(false)
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false)
   const { enqueueSnackbar } = useSnackbar()
   const handleClick = () => {
     let errorMessage: string | null = null
@@ -93,6 +103,77 @@ export const RunButtons = memo(function RunButtons(
   const onClickCancel = () => {
     handleCancelPipeline()
   }
+  /**
+   * Validates batch input nodes in the flowchart
+   * @returns Error message if validation fails, null otherwise
+   */
+  const validateBatchInputNodes = (): string | null => {
+    // Find all batch input nodes in the flowchart
+    const batchInputNodes = flowNodes
+      .filter((node) => {
+        const inputNode = inputNodes[node.id]
+        return inputNode && isBatchAnyInputNode(inputNode)
+      })
+      .map((node) => ({
+        nodeId: node.id,
+        inputNode: inputNodes[node.id],
+      }))
+
+    // Check if there are any batch nodes
+    if (batchInputNodes.length === 0) {
+      return "There are no batch input nodes."
+    }
+
+    // Check file count consistency across all batch nodes
+    const fileCounts = batchInputNodes.map((node) => {
+      const filePath = node.inputNode.selectedFilePath
+      if (Array.isArray(filePath)) {
+        return filePath.length
+      }
+      return filePath ? 1 : 0
+    })
+
+    const minCount = Math.min(...fileCounts)
+    const maxCount = Math.max(...fileCounts)
+
+    if (minCount !== maxCount) {
+      return `Number of batch input files does not match. [${minCount} - ${maxCount}]`
+    }
+
+    return null
+  }
+
+  const onClickBatchRun = () => {
+    let errorMessage: string | null = null
+    if (algorithmNodeNotExist) {
+      errorMessage = "please add some algorithm nodes to the flowchart"
+    }
+    if (filePathIsUndefined) {
+      errorMessage = "please select input file"
+    }
+
+    // Validate batch nodes
+    if (errorMessage == null) {
+      errorMessage = validateBatchInputNodes()
+    }
+
+    if (errorMessage != null) {
+      enqueueSnackbar(errorMessage, {
+        variant: "error",
+      })
+    } else {
+      setBatchDialogOpen(true)
+    }
+  }
+  const onClickDialogBatchRun = (name: string) => {
+    if (sendingRunRequest.current) return
+    sendingRunRequest.current = true
+    handleBatchRunPipeline(name)
+    setTimeout(() => {
+      sendingRunRequest.current = false
+    }, 3000)
+    setBatchDialogOpen(false)
+  }
   const [menuOpen, setMenuOpen] = useState(false)
   const anchorRef = useRef<HTMLDivElement>(null)
 
@@ -116,68 +197,79 @@ export const RunButtons = memo(function RunButtons(
     setMenuOpen(false)
   }
   const uidExists = uid != null
+  const isBatchWorkspace = workspaceType === WORKSPACE_TYPE.BATCH
+
   return (
     <>
-      <ButtonGroup
-        sx={{
-          margin: 1,
-        }}
-        variant="contained"
-        ref={anchorRef}
-        disabled={runDisabled}
-      >
-        <Button
-          onClick={handleClick}
-          startIcon={
-            runBtnOption === RUN_BTN_OPTIONS.RUN_ALREADY ? (
-              <ReplayIcon />
-            ) : (
-              <PlayArrow />
-            )
-          }
-        >
-          {RUN_BTN_LABELS[runBtnOption]}
-        </Button>
-        <Button size="small" onClick={handleToggle}>
-          <ArrowDropDownIcon />
-        </Button>
-      </ButtonGroup>
-      <Popper
-        open={menuOpen}
-        anchorEl={anchorRef.current}
-        role={undefined}
-        transition
-        disablePortal
-      >
-        {({ TransitionProps, placement }) => (
-          <Grow
-            {...TransitionProps}
-            style={{
-              transformOrigin:
-                placement === "bottom" ? "center top" : "center bottom",
+      {/* Show Run All/Run buttons only for non-batch workspaces */}
+      {!isBatchWorkspace && (
+        <>
+          <ButtonGroup
+            sx={{
+              margin: 1,
             }}
+            variant="contained"
+            ref={anchorRef}
+            disabled={runDisabled}
           >
-            <Paper>
-              <ClickAwayListener onClickAway={handleClose}>
-                <MenuList>
-                  {Object.values(RUN_BTN_OPTIONS).map((option) => (
-                    <MenuItem
-                      key={option}
-                      disabled={
-                        !uidExists && option === RUN_BTN_OPTIONS.RUN_ALREADY
-                      }
-                      selected={option === runBtnOption}
-                      onClick={(event) => handleMenuItemClick(event, option)}
-                    >
-                      {RUN_BTN_LABELS[option]}
-                    </MenuItem>
-                  ))}
-                </MenuList>
-              </ClickAwayListener>
-            </Paper>
-          </Grow>
-        )}
-      </Popper>
+            <Button
+              onClick={handleClick}
+              startIcon={
+                runBtnOption === RUN_BTN_OPTIONS.RUN_ALREADY ? (
+                  <ReplayIcon />
+                ) : (
+                  <PlayArrow />
+                )
+              }
+            >
+              {RUN_BTN_LABELS[runBtnOption]}
+            </Button>
+            <Button size="small" onClick={handleToggle}>
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
+          <Popper
+            open={menuOpen}
+            anchorEl={anchorRef.current}
+            role={undefined}
+            transition
+            disablePortal
+          >
+            {({ TransitionProps, placement }) => (
+              <Grow
+                {...TransitionProps}
+                style={{
+                  transformOrigin:
+                    placement === "bottom" ? "center top" : "center bottom",
+                }}
+              >
+                <Paper>
+                  <ClickAwayListener onClickAway={handleClose}>
+                    <MenuList>
+                      {Object.values(RUN_BTN_OPTIONS).map((option) => (
+                        <MenuItem
+                          key={option}
+                          disabled={
+                            !uidExists && option === RUN_BTN_OPTIONS.RUN_ALREADY
+                          }
+                          selected={option === runBtnOption}
+                          onClick={(event) =>
+                            handleMenuItemClick(event, option)
+                          }
+                        >
+                          {RUN_BTN_LABELS[option]}
+                        </MenuItem>
+                      ))}
+                    </MenuList>
+                  </ClickAwayListener>
+                </Paper>
+              </Grow>
+            )}
+          </Popper>
+        </>
+      )}
+
+      {/* Show Cancel button for all workspace types when workflow is running */}
       {isStartedSuccess && (
         <Tooltip title="Cancel Workflow">
           <IconButton onClick={onClickCancel}>
@@ -185,10 +277,28 @@ export const RunButtons = memo(function RunButtons(
           </IconButton>
         </Tooltip>
       )}
+
+      {/* Show Batch Run button only for batch workspaces */}
+      {isBatchWorkspace && (
+        <Button
+          variant="contained"
+          sx={{ margin: 1 }}
+          onClick={onClickBatchRun}
+          disabled={runDisabled}
+          startIcon={<FastForward />}
+        >
+          Batch Run
+        </Button>
+      )}
       <RunDialog
         open={dialogOpen}
         handleRun={onClickDialogRun}
         handleClose={() => setDialogOpen(false)}
+      />
+      <BatchRunDialog
+        open={batchDialogOpen}
+        handleRun={onClickDialogBatchRun}
+        handleClose={() => setBatchDialogOpen(false)}
       />
     </>
   )
@@ -198,14 +308,18 @@ interface RunDialogProps {
   open: boolean
   handleRun: (name: string) => void
   handleClose: () => void
+  title?: string
+  defaultName?: string
 }
 
 const RunDialog = memo(function RunDialog({
   open,
   handleClose,
   handleRun,
+  title = "Name and run workflow",
+  defaultName = "New flow",
 }: RunDialogProps) {
-  const [name, setName] = useState("New flow")
+  const [name, setName] = useState(defaultName)
   const [error, setError] = useState<string | null>(null)
   const onClickRun = () => {
     if (name !== "") {
@@ -222,7 +336,7 @@ const RunDialog = memo(function RunDialog({
   }
   return (
     <Dialog open={open} onClose={handleClose}>
-      <DialogTitle>Name and run workflow</DialogTitle>
+      <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <TextField
           label="name"
@@ -245,5 +359,27 @@ const RunDialog = memo(function RunDialog({
         </Button>
       </DialogActions>
     </Dialog>
+  )
+})
+
+interface BatchRunDialogProps {
+  open: boolean
+  handleRun: (name: string) => void
+  handleClose: () => void
+}
+
+const BatchRunDialog = memo(function BatchRunDialog({
+  open,
+  handleClose,
+  handleRun,
+}: BatchRunDialogProps) {
+  return (
+    <RunDialog
+      open={open}
+      handleRun={handleRun}
+      handleClose={handleClose}
+      title="Name and run batch workflow"
+      defaultName="New batch flow"
+    />
   )
 })

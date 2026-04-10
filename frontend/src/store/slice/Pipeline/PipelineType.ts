@@ -9,6 +9,7 @@ export type Pipeline = {
     uid: string
   }
   runBtn: RUN_BTN_TYPE
+  isBatchRun?: boolean
 }
 
 export const RUN_STATUS = {

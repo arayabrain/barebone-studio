@@ -23,7 +23,10 @@ import {
 import {
   getFileTypeConfigsByHierarchy,
   REACT_FLOW_NODE_TYPE_KEY,
+  WORKSPACE_TYPE_HIERARCHY_MAPPING,
+  TreeHierarchyType,
 } from "config/fileTypes.config"
+import { WORKSPACE_TYPE } from "const/Workspace"
 import { FileNodeFactory } from "factories/FileNodeFactory"
 import { getAlgoList } from "store/slice/AlgorithmList/AlgorithmListActions"
 import {
@@ -42,6 +45,7 @@ import {
 import { NODE_TYPE_SET } from "store/slice/FlowElement/FlowElementType"
 import { FILE_TYPE } from "store/slice/InputNode/InputNodeType"
 import { selectPipelineLatestUid } from "store/slice/Pipeline/PipelineSelectors"
+import { selectCurrentWorkspaceType } from "store/slice/Workspace/WorkspaceSelector"
 import { AppDispatch } from "store/store"
 import { getNanoId } from "utils/nanoid/NanoIdUtils"
 
@@ -50,6 +54,7 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
   const algoList = useSelector(selectAlgorithmListTree)
   const isLatest = useSelector(selectAlgorithmListIsLatest)
   const workflowId = useSelector(selectPipelineLatestUid)
+  const workspaceType = useSelector(selectCurrentWorkspaceType)
   const runAlready = typeof workflowId !== "undefined"
 
   useEffect(() => {
@@ -86,6 +91,19 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
   // Get file type configs grouped by hierarchy
   const fileTypesByHierarchy = getFileTypeConfigsByHierarchy()
 
+  // Get allowed hierarchies for the current workspace type
+  const allowedHierarchies =
+    WORKSPACE_TYPE_HIERARCHY_MAPPING[
+      (workspaceType ?? WORKSPACE_TYPE.DEFAULT) as WORKSPACE_TYPE
+    ]
+
+  // Filter hierarchies based on workspace type
+  const filteredHierarchies = Object.entries(fileTypesByHierarchy).filter(
+    ([hierarchyName]) => {
+      return allowedHierarchies.includes(hierarchyName as TreeHierarchyType)
+    },
+  )
+
   return (
     <TreeView
       sx={{
@@ -96,7 +114,7 @@ export const AlgorithmTreeView = memo(function AlgorithmTreeView() {
       defaultExpandIcon={<ChevronRightIcon />}
     >
       {/* Dynamically generate hierarchy nodes for file types */}
-      {Object.entries(fileTypesByHierarchy).map(([hierarchyName, configs]) => (
+      {filteredHierarchies.map(([hierarchyName, configs]) => (
         <TreeItem
           key={hierarchyName}
           nodeId={hierarchyName}

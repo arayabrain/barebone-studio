@@ -3,7 +3,14 @@ import { useDispatch, useSelector } from "react-redux"
 
 import FolderIcon from "@mui/icons-material/Folder"
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined"
-import { Box, Checkbox, Typography, Tooltip, Divider } from "@mui/material"
+import {
+  Box,
+  Checkbox,
+  Typography,
+  Tooltip,
+  Divider,
+  Chip,
+} from "@mui/material"
 import Button from "@mui/material/Button"
 import { CheckboxProps } from "@mui/material/Checkbox"
 import Dialog from "@mui/material/Dialog"
@@ -29,6 +36,7 @@ type StructureItemSelectProps = {
   open: boolean
   setOpen: (value: boolean) => void
   config: FileNodeConfig
+  filePath?: string
 } & NodeIdProps
 
 export const StructureItemSelectDialog = memo(
@@ -37,6 +45,7 @@ export const StructureItemSelectDialog = memo(
     open,
     setOpen,
     config,
+    filePath,
   }: StructureItemSelectProps) {
     const dispatch = useDispatch<AppDispatch>()
     const [fileSelect, setFileSelect] = useState("")
@@ -61,7 +70,17 @@ export const StructureItemSelectDialog = memo(
             : "No structure is selected."}
         </Typography>
         <Dialog open={open} onClose={() => setOpen(false)} fullWidth>
-          <DialogTitle>Select Structure</DialogTitle>
+          <DialogTitle>
+            Select Structure
+            {filePath && (
+              <Chip
+                label={filePath}
+                color="info"
+                variant="outlined"
+                sx={{ ml: 2 }}
+              />
+            )}
+          </DialogTitle>
           <StructureView
             nodeId={nodeId}
             fileSelect={fileSelect}

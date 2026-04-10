@@ -5,6 +5,10 @@ import { Handle, Position, NodeProps } from "reactflow"
 import { Action, ThunkAction } from "@reduxjs/toolkit"
 
 import { StructureItemSelectDialog } from "components/Workspace/FlowChart/Dialog/StructureItemSelectDialog"
+import {
+  TreeNodeType,
+  FileNodeConfig,
+} from "components/Workspace/FlowChart/FlowChartNode/BaseStructuredFileNode"
 import { FileSelect } from "components/Workspace/FlowChart/FlowChartNode/FileSelect"
 import { toHandleId } from "components/Workspace/FlowChart/FlowChartNode/FlowChartUtils"
 import { NodeContainer } from "components/Workspace/FlowChart/FlowChartNode/NodeContainer"
@@ -13,27 +17,9 @@ import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import { selectInputNodeDefined } from "store/slice/InputNode/InputNodeSelectors"
 import { RootState } from "store/store"
+import { arrayEqualityFn } from "utils/EqualityUtils"
 
-export type TreeNodeType = TreeDirType | TreeFileType
-
-export interface TreeDirType {
-  path: string
-  name: string
-  isDir: true
-  nodes: TreeNodeType[]
-  dataType?: string | null
-}
-
-export interface TreeFileType {
-  path: string
-  name: string
-  isDir: false
-  dataType?: string | null
-  shape?: number[] | null
-  nbytes?: string
-}
-
-export interface FileNodeConfig {
+export interface BatchFileNodeConfig {
   fileType: string
   handleId: string
   handleType: string
@@ -56,30 +42,49 @@ export interface FileNodeConfig {
   selectIsLoading: () => (state: RootState) => boolean
 }
 
-export function createStructuredFileNode(config: FileNodeConfig) {
-  const FileNode = memo(function FileNode(element: NodeProps) {
+function createBatchConfigAdapter(
+  config: BatchFileNodeConfig,
+  _filePath: string[] | undefined,
+): FileNodeConfig {
+  return {
+    ...config,
+    selectFilePath: (nodeId: string) => (state: RootState) => {
+      const paths = config.selectFilePath(nodeId)(state)
+      if (Array.isArray(paths) && paths.length > 0) {
+        return paths[0]
+      }
+      return paths
+    },
+  }
+}
+
+export function createBatchStructuredFileNode(config: BatchFileNodeConfig) {
+  const BatchFileNode = memo(function BatchFileNode(element: NodeProps) {
     const defined = useSelector(selectInputNodeDefined(element.id))
     if (defined) {
-      return <FileNodeImple {...element} config={config} />
+      return <BatchFileNodeImple {...element} config={config} />
     } else {
       return null
     }
   })
-  FileNode.displayName = `${config.fileType}FileNode`
-  return FileNode
+  BatchFileNode.displayName = `Batch${config.fileType}FileNode`
+  return BatchFileNode
 }
 
-const FileNodeImple = memo(function FileNodeImple({
+const BatchFileNodeImple = memo(function BatchFileNodeImple({
   id: nodeId,
   selected,
   config,
-}: NodeProps & { config: FileNodeConfig }) {
+}: NodeProps & { config: BatchFileNodeConfig }) {
   const dispatch = useDispatch()
-  const filePathRaw = useSelector(config.selectFilePath(nodeId))
-  const filePath = Array.isArray(filePathRaw) ? filePathRaw[0] : filePathRaw
+  const filePath = useSelector(config.selectFilePath(nodeId), (a, b) =>
+    a != null && b != null && Array.isArray(a) && Array.isArray(b)
+      ? arrayEqualityFn(a, b)
+      : a === b,
+  )
 
   const [open, setOpen] = useState(false)
-  const onChangeFilePath = (path: string) => {
+  const onChangeFilePath = (path: string[]) => {
     dispatch(setInputNodeFilePath({ nodeId, filePath: path }))
   }
 
@@ -98,24 +103,29 @@ const FileNodeImple = memo(function FileNodeImple({
       </button>
       <FileSelect
         nodeId={nodeId}
+        multiSelect
         onChangeFilePath={(path) => {
-          if (!Array.isArray(path)) {
+          if (Array.isArray(path)) {
             onChangeFilePath(path)
           }
         }}
         setOpen={setOpen}
         fileType={config.fileType}
-        filePath={filePath ?? ""}
+        filePath={
+          Array.isArray(filePath) ? filePath : filePath ? [filePath] : []
+        }
       />
-      {filePath !== undefined && (
-        <StructureItemSelectDialog
-          open={open}
-          setOpen={setOpen}
-          nodeId={nodeId}
-          config={config}
-          filePath={filePath}
-        />
-      )}
+      {filePath !== undefined &&
+        Array.isArray(filePath) &&
+        filePath.length > 0 && (
+          <StructureItemSelectDialog
+            open={open}
+            setOpen={setOpen}
+            nodeId={nodeId}
+            config={createBatchConfigAdapter(config, filePath)}
+            filePath={filePath[0]}
+          />
+        )}
       <Handle
         type="source"
         position={Position.Right}

@@ -13,7 +13,7 @@ import { HANDLE_STYLE } from "const/flowchart"
 import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
-  selectMicroscopeInputNodeSelectedFilePath,
+  selectMicroscopeLikeInputNodeSelectedFilePath,
   selectInputNodeDefined,
 } from "store/slice/InputNode/InputNodeSelectors"
 import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
@@ -35,7 +35,7 @@ const MicroscopeFileNodeImple = memo(function MicroscopeFileNodeImple({
 }: NodeProps) {
   const dispatch = useDispatch()
   const filePath = useSelector(
-    selectMicroscopeInputNodeSelectedFilePath(nodeId),
+    selectMicroscopeLikeInputNodeSelectedFilePath(nodeId),
   )
   const onChangeFilePath = (path: string) => {
     dispatch(setInputNodeFilePath({ nodeId, filePath: path }))

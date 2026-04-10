@@ -10,6 +10,7 @@ class Workspace(BaseModel):
     id: Optional[int]
     name: str
     user: Optional[UserInfo]
+    type: int
     shared_count: int
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
@@ -22,6 +23,7 @@ class Workspace(BaseModel):
 
 class WorkspaceCreate(BaseModel):
     name: str
+    type: Optional[int]
 
 
 class WorkspaceUpdate(WorkspaceCreate):

@@ -8,6 +8,7 @@ import {
   RunPostData,
   cancelResultApi,
   runFilterApi,
+  batchRunApi,
 } from "api/run/Run"
 import { TDataFilterParam } from "store/slice/AlgorithmNode/AlgorithmNodeType"
 import {
@@ -98,6 +99,24 @@ export const runByCurrentUid = createAsyncThunk<
     }
   },
 )
+
+export const batchRun = createAsyncThunk<
+  string,
+  { runPostData: RunPostData },
+  ThunkApiConfig
+>(`${PIPELINE_SLICE_NAME}/batchRun`, async ({ runPostData }, thunkAPI) => {
+  const workspaceId = selectCurrentWorkspaceId(thunkAPI.getState())
+  if (workspaceId) {
+    try {
+      const responseData = await batchRunApi(workspaceId, runPostData)
+      return responseData
+    } catch (e) {
+      return thunkAPI.rejectWithValue(e)
+    }
+  } else {
+    return thunkAPI.rejectWithValue("workspace id does not exist.")
+  }
+})
 
 export const pollRunResult = createAsyncThunk<
   RunResultDTO,

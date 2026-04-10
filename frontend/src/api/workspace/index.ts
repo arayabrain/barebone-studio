@@ -1,5 +1,6 @@
 import { stringify } from "qs"
 
+import { WORKSPACE_TYPE } from "const/Workspace"
 import {
   ItemsWorkspace,
   WorkspaceDataDTO,
@@ -7,7 +8,11 @@ import {
 } from "store/slice/Workspace/WorkspaceType"
 import axios from "utils/axios"
 
-export type WorkspacePostDataDTO = { name: string; id?: number }
+export type WorkspacePostDataDTO = {
+  id?: number
+  name: string
+  type: WORKSPACE_TYPE
+}
 
 export const getWorkspaceApi = async (id: number): Promise<ItemsWorkspace> => {
   const response = await axios.get(`/workspace/${id}`)

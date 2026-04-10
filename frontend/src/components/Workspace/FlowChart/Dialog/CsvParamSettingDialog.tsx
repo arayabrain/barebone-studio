@@ -15,6 +15,7 @@ import {
   LinearProgress,
   Typography,
   IconButton,
+  Chip,
 } from "@mui/material"
 
 import { PresentationalCsvPlot } from "components/Workspace/Visualize/Plot/CsvPlot"
@@ -82,7 +83,15 @@ export const CsvParamSettingDialog = memo(function CsvParamSettingDialog({
         <SettingsIcon />
       </IconButton>
       <Dialog open={open} onClose={onClickCancel}>
-        <DialogTitle>Csv Setting</DialogTitle>
+        <DialogTitle>
+          Csv Setting
+          <Chip
+            label={filePath}
+            color="info"
+            variant="outlined"
+            sx={{ ml: 2 }}
+          />
+        </DialogTitle>
         <DialogContent dividers>
           <Box
             sx={{

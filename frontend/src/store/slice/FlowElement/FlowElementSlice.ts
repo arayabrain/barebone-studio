@@ -44,8 +44,10 @@ import { getWorkspace } from "store/slice/Workspace/WorkspaceActions"
 /**
  * Get the appropriate React Flow node type for the initial node
  */
-const getInitialNodeType = (_workspaceType?: number): string => {
-  return REACT_FLOW_NODE_TYPE_KEY.ImageFileNode
+const getInitialNodeType = (workspaceType?: number): string => {
+  return workspaceType === WORKSPACE_TYPE.BATCH
+    ? REACT_FLOW_NODE_TYPE_KEY.BatchImageFileNode
+    : REACT_FLOW_NODE_TYPE_KEY.ImageFileNode
 }
 
 const createInitialNodes = (workspaceType?: number): Node<NodeData>[] => [
@@ -178,9 +180,9 @@ export const flowElementSlice = createSlice({
   },
   extraReducers: (builder) =>
     builder
-      .addCase(getWorkspace.fulfilled, (state) => {
+      .addCase(getWorkspace.fulfilled, (state, action) => {
         // Save workspace type for later use
-        const workspaceType = WORKSPACE_TYPE.DEFAULT // Currently a fixed value
+        const workspaceType = action.payload.type
         state.currentWorkspaceType = workspaceType
 
         // Update the initial node type based on workspace type

@@ -17,16 +17,21 @@ import {
   CsvInputParamType,
   FILE_TYPE_SET,
   HDF5InputNode,
+  BatchHDF5InputNode,
   InputNode,
   InputNodeType,
   INPUT_NODE_SLICE_NAME,
   MatlabInputNode,
+  BatchMatlabInputNode,
   WORKSPACE_TYPE_KEY,
 } from "store/slice/InputNode/InputNodeType"
 import {
-  isCsvInputNode,
   isHDF5InputNode,
   isMatlabInputNode,
+  isBatchHDF5InputNode,
+  isBatchMatlabInputNode,
+  isCsvBasedFileType,
+  isCsvBasedInputNode,
 } from "store/slice/InputNode/InputNodeUtils"
 import {
   reproduceWorkflow,
@@ -38,8 +43,10 @@ import { getWorkspace } from "store/slice/Workspace/WorkspaceActions"
 /**
  * Get the appropriate file type for the initial node
  */
-const getInitialNodeFileType = (_workspaceType?: number) => {
-  return FILE_TYPE_SET.IMAGE
+const getInitialNodeFileType = (workspaceType?: number) => {
+  return workspaceType === WORKSPACE_TYPE.BATCH
+    ? FILE_TYPE_SET.BATCH_IMAGE
+    : FILE_TYPE_SET.IMAGE
 }
 
 /**
@@ -94,7 +101,7 @@ export const inputNodeSlice = createSlice({
     ) {
       const { nodeId, param } = action.payload
       const inputNode = state[nodeId]
-      if (isCsvInputNode(inputNode)) {
+      if (isCsvBasedInputNode(inputNode)) {
         inputNode.param = param
       }
     },
@@ -107,7 +114,7 @@ export const inputNodeSlice = createSlice({
     ) {
       const { nodeId, path } = action.payload
       const item = state[nodeId]
-      if (isMatlabInputNode(item)) {
+      if (isMatlabInputNode(item) || isBatchMatlabInputNode(item)) {
         item.matPath = path
       }
     },
@@ -120,16 +127,16 @@ export const inputNodeSlice = createSlice({
     ) {
       const { nodeId, path } = action.payload
       const item = state[nodeId]
-      if (isHDF5InputNode(item)) {
+      if (isHDF5InputNode(item) || isBatchHDF5InputNode(item)) {
         item.hdf5Path = path
       }
     },
   },
   extraReducers: (builder) =>
     builder
-      .addCase(getWorkspace.fulfilled, (state) => {
+      .addCase(getWorkspace.fulfilled, (state, action) => {
         // Save workspace type for later use
-        const workspaceType = WORKSPACE_TYPE.DEFAULT // Currently a fixed value
+        const workspaceType = action.payload.type
         state[WORKSPACE_TYPE_KEY] = workspaceType
 
         // Update the initial node based on workspace type
@@ -143,10 +150,13 @@ export const inputNodeSlice = createSlice({
         const { nodeId, filePath } = action.payload
         const targetNode = state[nodeId]
         targetNode.selectedFilePath = filePath
-        if (isHDF5InputNode(targetNode)) {
+        if (isHDF5InputNode(targetNode) || isBatchHDF5InputNode(targetNode)) {
           targetNode.hdf5Path = undefined
         }
-        if (isMatlabInputNode(targetNode)) {
+        if (
+          isMatlabInputNode(targetNode) ||
+          isBatchMatlabInputNode(targetNode)
+        ) {
           targetNode.matPath = undefined
         }
       })
@@ -209,11 +219,10 @@ export const inputNodeSlice = createSlice({
                 const baseNode = FileNodeFactory.createInputNode(
                   node.data.fileType,
                 )
-                // Use specific param for CSV nodes
-                const param =
-                  node.data.fileType === FILE_TYPE_SET.CSV
-                    ? (node.data.param as CsvInputParamType)
-                    : baseNode.param
+                // Use specific param for CSV-based nodes
+                const param = isCsvBasedFileType(node.data.fileType)
+                  ? (node.data.param as CsvInputParamType)
+                  : baseNode.param
                 newState[node.id] = {
                   ...baseNode,
                   param,
@@ -249,11 +258,10 @@ export const inputNodeSlice = createSlice({
                     node.data.fileType,
                   )
 
-                  // Use specific param for CSV nodes
-                  const param =
-                    node.data.fileType === FILE_TYPE_SET.CSV
-                      ? (node.data.param as CsvInputParamType)
-                      : baseNode.param
+                  // Use specific param for CSV-based nodes
+                  const param = isCsvBasedFileType(node.data.fileType)
+                    ? (node.data.param as CsvInputParamType)
+                    : baseNode.param
 
                   const nodeState: InputNodeType = {
                     ...baseNode,
@@ -269,17 +277,21 @@ export const inputNodeSlice = createSlice({
                     if (
                       specialPath.type === "hdf5Path" &&
                       "hdf5Path" in node.data &&
-                      isHDF5InputNode(nodeState)
+                      (isHDF5InputNode(nodeState) ||
+                        isBatchHDF5InputNode(nodeState))
                     ) {
-                      ;(nodeState as HDF5InputNode).hdf5Path =
-                        node.data.hdf5Path
+                      ;(
+                        nodeState as HDF5InputNode | BatchHDF5InputNode
+                      ).hdf5Path = node.data.hdf5Path
                     } else if (
                       specialPath.type === "matPath" &&
                       "matPath" in node.data &&
-                      isMatlabInputNode(nodeState)
+                      (isMatlabInputNode(nodeState) ||
+                        isBatchMatlabInputNode(nodeState))
                     ) {
-                      ;(nodeState as MatlabInputNode).matPath =
-                        node.data.matPath
+                      ;(
+                        nodeState as MatlabInputNode | BatchMatlabInputNode
+                      ).matPath = node.data.matPath
                     }
                   }
 

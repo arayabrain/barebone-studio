@@ -10,7 +10,7 @@ import { HANDLE_STYLE } from "const/flowchart"
 import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
-  selectCsvInputNodeSelectedFilePath,
+  selectFluoLikeInputNodeSelectedFilePath,
   selectInputNodeDefined,
 } from "store/slice/InputNode/InputNodeSelectors"
 import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
@@ -29,7 +29,7 @@ const FluoFileNodeImple = memo(function FluoFileNodeImple({
   selected,
 }: NodeProps) {
   const dispatch = useDispatch()
-  const filePath = useSelector(selectCsvInputNodeSelectedFilePath(nodeId))
+  const filePath = useSelector(selectFluoLikeInputNodeSelectedFilePath(nodeId))
   const onChangeFilePath = (path: string) => {
     dispatch(setInputNodeFilePath({ nodeId, filePath: path }))
   }
@@ -58,7 +58,7 @@ const FluoFileNodeImple = memo(function FluoFileNodeImple({
         }}
         nameNode={FILE_TYPE_SET.FLUO}
         fileType={FILE_TYPE_SET.CSV}
-        filePath={filePath ?? ""}
+        filePath={typeof filePath === "string" ? filePath : ""}
       />
       <Handle
         type="source"

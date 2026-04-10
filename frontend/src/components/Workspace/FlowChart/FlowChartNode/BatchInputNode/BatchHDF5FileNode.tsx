@@ -1,7 +1,7 @@
 import {
-  createStructuredFileNode,
-  FileNodeConfig,
-} from "components/Workspace/FlowChart/FlowChartNode/BaseStructuredFileNode"
+  createBatchStructuredFileNode,
+  BatchFileNodeConfig,
+} from "components/Workspace/FlowChart/FlowChartNode/BatchInputNode/BatchBaseStructuredFileNode"
 import { FILE_TYPE_SET } from "config/fileTypes.config"
 import { getHDF5Tree } from "store/slice/HDF5/HDF5Action"
 import {
@@ -14,8 +14,8 @@ import {
 } from "store/slice/InputNode/InputNodeSelectors"
 import { setInputNodeHDF5Path } from "store/slice/InputNode/InputNodeSlice"
 
-const hdf5Config: FileNodeConfig = {
-  fileType: FILE_TYPE_SET.HDF5,
+const batchHdf5Config: BatchFileNodeConfig = {
+  fileType: FILE_TYPE_SET.BATCH_HDF5,
   handleId: "hdf5",
   handleType: "HDF5Data",
   treeKeyPrefix: "hdf5tree",
@@ -27,4 +27,4 @@ const hdf5Config: FileNodeConfig = {
   selectIsLoading: selectHDF5IsLoading,
 }
 
-export const HDF5FileNode = createStructuredFileNode(hdf5Config)
+export const BatchHDF5FileNode = createBatchStructuredFileNode(batchHdf5Config)

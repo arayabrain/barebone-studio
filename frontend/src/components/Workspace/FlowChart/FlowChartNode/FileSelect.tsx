@@ -12,7 +12,7 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import AddLinkIcon from "@mui/icons-material/AddLink"
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate"
 import ChecklistRtlIcon from "@mui/icons-material/ChecklistRtl"
-import { IconButton, Tooltip, Typography } from "@mui/material"
+import { IconButton, Tooltip, Typography, Chip, Box } from "@mui/material"
 import ButtonGroup from "@mui/material/ButtonGroup"
 
 import { FILE_TREE_TYPE, FILE_TREE_TYPE_SET } from "api/files/Files"
@@ -191,6 +191,7 @@ export const FileSelectImple = memo(function FileSelectImple({
 
   const accept = getFileInputAccept(fileTreeType)
   const fileName = getLabelByPath(filePath)
+  const fileCount = Array.isArray(filePath) ? filePath.length : 1
 
   return (
     <div>
@@ -250,21 +251,25 @@ export const FileSelectImple = memo(function FileSelectImple({
             </span>
           </Tooltip>
         ) : null}
-        {fileTreeType === FILE_TREE_TYPE_SET.CSV && !!filePath && !!nodeId && (
-          <Tooltip title={"Settings"}>
-            <span>
-              <CsvParamSettingDialog
-                nodeId={nodeId}
-                filePath={filePath as string}
-                disabled={!!isPending}
-              />
-            </span>
-          </Tooltip>
-        )}
+        {fileTreeType === FILE_TREE_TYPE_SET.CSV &&
+          !!filePath &&
+          (Array.isArray(filePath) ? filePath.length > 0 : true) &&
+          !!nodeId && (
+            <Tooltip title={"Settings"}>
+              <span>
+                <CsvParamSettingDialog
+                  nodeId={nodeId}
+                  filePath={Array.isArray(filePath) ? filePath[0] : filePath}
+                  disabled={!!isPending}
+                />
+              </span>
+            </Tooltip>
+          )}
         {(
           [FILE_TREE_TYPE_SET.HDF5, FILE_TREE_TYPE_SET.MATLAB] as string[]
         ).includes(fileTreeType as string) &&
           !!filePath &&
+          (Array.isArray(filePath) ? filePath.length > 0 : true) &&
           !!nodeId && (
             <Tooltip title={"Structure"}>
               <span>
@@ -289,12 +294,24 @@ export const FileSelectImple = memo(function FileSelectImple({
             visibility: "hidden",
             width: 0,
             height: 0,
+            position: "absolute",
           }}
         />
         <Tooltip title={fileName ? fileName : null} placement="right">
-          <Typography className="selectFilePath" variant="body2">
-            {fileName ? fileName : "No file is selected."}
-          </Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            {fileCount > 1 && (
+              <Chip
+                label={fileCount}
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ fontSize: "0.75rem", height: "20px", fontWeight: "bold" }}
+              />
+            )}
+            <Typography className="selectFilePath" variant="body2">
+              {fileName ? fileName : "No file is selected."}
+            </Typography>
+          </Box>
         </Tooltip>
       </div>
     </div>

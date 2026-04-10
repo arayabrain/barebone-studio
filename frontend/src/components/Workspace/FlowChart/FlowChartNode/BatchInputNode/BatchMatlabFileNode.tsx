@@ -1,7 +1,7 @@
 import {
-  createStructuredFileNode,
-  FileNodeConfig,
-} from "components/Workspace/FlowChart/FlowChartNode/BaseStructuredFileNode"
+  createBatchStructuredFileNode,
+  BatchFileNodeConfig,
+} from "components/Workspace/FlowChart/FlowChartNode/BatchInputNode/BatchBaseStructuredFileNode"
 import { FILE_TYPE_SET } from "config/fileTypes.config"
 import {
   selectInputNodeMatlabPath,
@@ -14,8 +14,8 @@ import {
   selectMatlabNodes,
 } from "store/slice/Matlab/MatlabSelectors"
 
-const matlabConfig: FileNodeConfig = {
-  fileType: FILE_TYPE_SET.MATLAB,
+const batchMatlabConfig: BatchFileNodeConfig = {
+  fileType: FILE_TYPE_SET.BATCH_MATLAB,
   handleId: "matlab",
   handleType: "MatlabData",
   treeKeyPrefix: "matlabtree",
@@ -27,4 +27,5 @@ const matlabConfig: FileNodeConfig = {
   selectIsLoading: selectMatlabIsLoading,
 }
 
-export const MatlabFileNode = createStructuredFileNode(matlabConfig)
+export const BatchMatlabFileNode =
+  createBatchStructuredFileNode(batchMatlabConfig)

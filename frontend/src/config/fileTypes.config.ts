@@ -1,10 +1,23 @@
+import { WORKSPACE_TYPE } from "const/Workspace"
+
 // Define tree hierarchy constants for better maintainability
 export const TREE_HIERARCHY = {
   DATA: "Data",
+  BATCH_DATA: "Batch Data",
 } as const
 
 export type TreeHierarchyType =
   (typeof TREE_HIERARCHY)[keyof typeof TREE_HIERARCHY]
+
+// Define mapping between workspace types and allowed tree hierarchies
+export const WORKSPACE_TYPE_HIERARCHY_MAPPING: Record<
+  WORKSPACE_TYPE,
+  TreeHierarchyType[]
+> = {
+  [WORKSPACE_TYPE.DEFAULT]: [TREE_HIERARCHY.DATA],
+  [WORKSPACE_TYPE.NORMAL]: [TREE_HIERARCHY.DATA],
+  [WORKSPACE_TYPE.BATCH]: [TREE_HIERARCHY.DATA, TREE_HIERARCHY.BATCH_DATA],
+}
 
 export interface FileTypeConfig {
   key: string
@@ -65,6 +78,13 @@ export const REACT_FLOW_NODE_TYPE_KEY = {
   BehaviorFileNode: "BehaviorFileNode",
   MatlabFileNode: "MatlabFileNode",
   MicroscopeFileNode: "MicroscopeFileNode",
+  BatchImageFileNode: "BatchImageFileNode",
+  BatchCsvFileNode: "BatchCsvFileNode",
+  BatchFluoFileNode: "BatchFluoFileNode",
+  BatchBehaviorFileNode: "BatchBehaviorFileNode",
+  BatchMicroscopeFileNode: "BatchMicroscopeFileNode",
+  BatchHDF5FileNode: "BatchHDF5FileNode",
+  BatchMatlabFileNode: "BatchMatlabFileNode",
 } as const
 
 // Streamlined config - nodeType references REACT_FLOW_NODE_TYPE_KEY
@@ -140,6 +160,91 @@ export const FILE_TYPE_CONFIGS: Record<string, FileTypeConfig> = {
     defaultParam: {},
     dataType: "matlab", // Special: uses matlab data type
     nodeType: REACT_FLOW_NODE_TYPE_KEY.MicroscopeFileNode,
+  },
+  BATCH_IMAGE: {
+    key: "batch_image",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {},
+    treeType: "image",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchImageFileNode,
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
+  },
+  BATCH_CSV: {
+    key: "batch_csv",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {
+      setHeader: null,
+      setIndex: false,
+      transpose: false,
+    },
+    treeType: "csv",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchCsvFileNode,
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
+  },
+  BATCH_HDF5: {
+    key: "batch_hdf5",
+    hasFilePath: true,
+    filePathType: "array",
+    hasSpecialPath: {
+      name: "hdf5Path",
+      type: "hdf5Path",
+    },
+    defaultParam: {},
+    treeType: "hdf5",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchHDF5FileNode,
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
+  },
+  BATCH_FLUO: {
+    key: "batch_fluo",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {
+      setHeader: null,
+      setIndex: false,
+      transpose: false,
+    },
+    stateFileType: "batch_csv", // Special: stored as batch_csv in state
+    treeType: "csv",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchFluoFileNode,
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
+  },
+  BATCH_BEHAVIOR: {
+    key: "batch_behavior",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {
+      setHeader: null,
+      setIndex: false,
+      transpose: false,
+    },
+    stateFileType: "batch_csv", // Special: stored as batch_csv in state
+    treeType: "csv",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchBehaviorFileNode,
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
+  },
+  BATCH_MATLAB: {
+    key: "batch_matlab",
+    hasFilePath: true,
+    filePathType: "array",
+    hasSpecialPath: {
+      name: "matPath",
+      type: "matPath",
+    },
+    defaultParam: {},
+    treeType: "matlab",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchMatlabFileNode,
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
+  },
+  BATCH_MICROSCOPE: {
+    key: "batch_microscope",
+    hasFilePath: true,
+    filePathType: "array",
+    defaultParam: {},
+    treeType: "microscope",
+    nodeType: REACT_FLOW_NODE_TYPE_KEY.BatchMicroscopeFileNode,
+    treeHierarchy: TREE_HIERARCHY.BATCH_DATA,
   },
 } as const
 

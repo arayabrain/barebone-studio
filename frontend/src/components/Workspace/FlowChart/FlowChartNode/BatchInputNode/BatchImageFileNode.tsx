@@ -1,51 +1,60 @@
 import { memo } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
 import { Handle, Position, NodeProps } from "reactflow"
 
 import { FileSelect } from "components/Workspace/FlowChart/FlowChartNode/FileSelect"
-import { toHandleId } from "components/Workspace/FlowChart/FlowChartNode/FlowChartUtils"
+import {
+  toHandleId,
+  isValidConnection,
+} from "components/Workspace/FlowChart/FlowChartNode/FlowChartUtils"
 import { useHandleColor } from "components/Workspace/FlowChart/FlowChartNode/HandleColorHook"
 import { NodeContainer } from "components/Workspace/FlowChart/FlowChartNode/NodeContainer"
 import { HANDLE_STYLE } from "const/flowchart"
 import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
-  selectBehaviorLikeInputNodeSelectedFilePath,
   selectInputNodeDefined,
+  selectImageLikeInputNodeSelectedFilePath,
 } from "store/slice/InputNode/InputNodeSelectors"
 import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
+import { arrayEqualityFn } from "utils/EqualityUtils"
 
-export const BehaviorFileNode = memo(function BehaviorFileNode(
+export const BatchImageFileNode = memo(function BatchImageFileNode(
   element: NodeProps,
 ) {
   const defined = useSelector(selectInputNodeDefined(element.id))
   if (defined) {
-    return <BehaviorFileNodeImple {...element} />
+    return <BatchImageFileNodeImple {...element} />
   } else {
     return null
   }
 })
 
-const BehaviorFileNodeImple = memo(function BehaviorFileNodeImple({
+const BatchImageFileNodeImple = memo(function BatchImageFileNodeImple({
   id: nodeId,
-  selected,
+  selected: elementSelected,
 }: NodeProps) {
   const dispatch = useDispatch()
   const filePath = useSelector(
-    selectBehaviorLikeInputNodeSelectedFilePath(nodeId),
+    selectImageLikeInputNodeSelectedFilePath(nodeId),
+    (a, b) =>
+      a != null && b != null && Array.isArray(a) && Array.isArray(b)
+        ? arrayEqualityFn(a, b)
+        : a === b,
   )
-  const onChangeFilePath = (path: string) => {
+  const onChangeFilePath = (path: string[]) => {
     dispatch(setInputNodeFilePath({ nodeId, filePath: path }))
   }
-  const returnType = "BehaviorData"
-  const behaviorColor = useHandleColor(returnType)
+
+  const returnType = "ImageData"
+  const imageColor = useHandleColor(returnType)
 
   const onClickDeleteIcon = () => {
     dispatch(deleteFlowNodeById(nodeId))
   }
 
   return (
-    <NodeContainer nodeId={nodeId} selected={selected}>
+    <NodeContainer nodeId={nodeId} selected={elementSelected}>
       <button
         className="flowbutton"
         onClick={onClickDeleteIcon}
@@ -55,23 +64,24 @@ const BehaviorFileNodeImple = memo(function BehaviorFileNodeImple({
       </button>
       <FileSelect
         nodeId={nodeId}
-        onChangeFilePath={(path: string | string[]) => {
-          if (!Array.isArray(path)) {
+        multiSelect
+        onChangeFilePath={(path) => {
+          if (Array.isArray(path)) {
             onChangeFilePath(path)
           }
         }}
-        nameNode={FILE_TYPE_SET.BEHAVIOR}
-        fileType={FILE_TYPE_SET.CSV}
-        filePath={typeof filePath === "string" ? filePath : ""}
+        fileType={FILE_TYPE_SET.BATCH_IMAGE}
+        filePath={typeof filePath === "string" ? [filePath] : filePath || []}
       />
       <Handle
         type="source"
         position={Position.Right}
-        id={toHandleId(nodeId, "behavior", returnType)}
+        id={toHandleId(nodeId, "batch_image", returnType)}
         style={{
           ...HANDLE_STYLE,
-          background: behaviorColor,
+          background: imageColor,
         }}
+        isValidConnection={isValidConnection}
       />
     </NodeContainer>
   )

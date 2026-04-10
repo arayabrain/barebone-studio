@@ -13,8 +13,8 @@ import { HANDLE_STYLE } from "const/flowchart"
 import { deleteFlowNodeById } from "store/slice/FlowElement/FlowElementSlice"
 import { setInputNodeFilePath } from "store/slice/InputNode/InputNodeActions"
 import {
-  selectImageInputNodeSelectedFilePath,
   selectInputNodeDefined,
+  selectImageLikeInputNodeSelectedFilePath,
 } from "store/slice/InputNode/InputNodeSelectors"
 import { FILE_TYPE_SET } from "store/slice/InputNode/InputNodeType"
 import { arrayEqualityFn } from "utils/EqualityUtils"
@@ -34,10 +34,10 @@ const ImageFileNodeImple = memo(function ImageFileNodeImple({
 }: NodeProps) {
   const dispatch = useDispatch()
   const filePath = useSelector(
-    selectImageInputNodeSelectedFilePath(nodeId),
+    selectImageLikeInputNodeSelectedFilePath(nodeId),
     (a, b) =>
-      a != null && b != null
-        ? arrayEqualityFn(a as string[], b as string[])
+      a != null && b != null && Array.isArray(a) && Array.isArray(b)
+        ? arrayEqualityFn(a, b)
         : a === b,
   )
   const onChangeFilePath = (path: string[]) => {

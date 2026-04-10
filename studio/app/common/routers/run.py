@@ -9,6 +9,7 @@ from studio.app.common.core.workflow.workflow import (
     NodeItem,
     RunItem,
 )
+from studio.app.common.core.workflow.workflow_batch_runner import WorkflowBatchRunner
 from studio.app.common.core.workflow.workflow_filter import WorkflowNodeDataFilter
 from studio.app.common.core.workflow.workflow_result import (
     WorkflowMonitor,
@@ -163,4 +164,39 @@ async def apply_filter(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to filter data.",
+        )
+
+
+@router.post(
+    "/util/batch_run/{workspace_id}",
+    response_model=str,
+    dependencies=[Depends(is_workspace_owner)],
+)
+async def batch_run(
+    workspace_id: str, runItem: RunItem, background_tasks: BackgroundTasks
+):
+    try:
+        new_unique_id = WorkflowRunner.create_workflow_unique_id()
+        WorkflowBatchRunner(workspace_id, new_unique_id, runItem).run_batch_workflow(
+            background_tasks
+        )
+
+        logger.info("Start processing batch workflows.")
+
+        return new_unique_id
+
+    except KeyError as e:
+        logger.error(e, exc_info=True)
+        # Pass through the specific error message for KeyErrors
+        raise HTTPException(
+            # Changed to 422 since it's a client configuration issue
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e).strip('"'),  # Remove quotes from the KeyError message
+        )
+
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to run workflow.",
         )

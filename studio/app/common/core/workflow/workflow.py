@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Union
@@ -64,6 +65,35 @@ class NodeType:
 
     # Algo Type
     ALGO: str = "AlgorithmNode"
+
+
+@dataclass
+class BatchInputNodeType:
+    BATCH_IMAGE: str = "BatchImageFileNode"
+    BATCH_CSV: str = "BatchCsvFileNode"
+    BATCH_FLUO: str = "BatchFluoFileNode"
+    BATCH_BEHAVIOR: str = "BatchBehaviorFileNode"
+    BATCH_HDF5: str = "BatchHDF5FileNode"
+    BATCH_MATLAB: str = "BatchMatlabFileNode"
+    BATCH_MICROSCOPE: str = "BatchMicroscopeFileNode"
+
+    @staticmethod
+    def is_batch_input_node(node_type: str) -> bool:
+        return re.match("Batch.*FileNode", node_type)
+
+    @classmethod
+    def refer_corresponding_node_type(cls, batch_node_type: str) -> list:
+        RELATION_TO_NODE_TYPES = {
+            cls.BATCH_IMAGE: (NodeType.IMAGE, FILETYPE.IMAGE),
+            cls.BATCH_CSV: (NodeType.CSV, FILETYPE.CSV),
+            cls.BATCH_FLUO: (NodeType.FLUO, FILETYPE.CSV),
+            cls.BATCH_BEHAVIOR: (NodeType.BEHAVIOR, FILETYPE.CSV),
+            cls.BATCH_HDF5: (NodeType.HDF5, FILETYPE.HDF5),
+            cls.BATCH_MATLAB: (NodeType.MATLAB, FILETYPE.MATLAB),
+            cls.BATCH_MICROSCOPE: (NodeType.MICROSCOPE, FILETYPE.MICROSCOPE),
+        }
+
+        return RELATION_TO_NODE_TYPES.get(batch_node_type)
 
 
 class NodeTypeUtil:
